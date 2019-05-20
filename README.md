@@ -27,12 +27,11 @@ sudo chmod 0777 /usr/bin/coin
 sudo mkdir /var/log/vfc
 sudo chmod 0777 /var/log/vfc
 ```
+Then use the 'coin help' command in the console for a full command list.
 
 **Windows**
 
 For a Windows installation you can follow the steps above but first install the terminal Ubuntu Terminal software on Windows first: https://www.microsoft.com/en-us/p/ubuntu/9nblggh4msv6
-
-Then use the 'coin help' command in the console for a full command list.
 
 **To become an active part of the network leave the coin program running in a screen and make sure any necessary ports are forwarded, VFC uses UDP Port 58008.** You will need to make atleast one valid transaction on the network before the mainnet indexes you as a peer and will commuicate with your node.
 
