@@ -205,7 +205,7 @@ uint qRand(const uint min, const uint max)
         srand(time(0));
         ls = time(0) + 33;
     }
-	return ((rand() / RAND_MAX) * (max-min))+min; //(rand()%(max-min))+min;
+    return ((rand() / RAND_MAX) * (max-min))+min; //(rand()%(max-min))+min;
 }
 
 void timestamp()
