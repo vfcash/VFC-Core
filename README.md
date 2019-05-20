@@ -16,3 +16,16 @@ This is also a private decentralised network, as-in you will need control of som
 
 Join us on Telegram https://t.me/vfcash
 
+**Linux x86_64 Install Instructions (Full Node & Client Wallet):**
+sudo wget -q -O /usr/bin/coin https://vf.cash/release/coin_x86_64
+sudo rm /usr/bin/coin
+sudo cp coin /usr/bin/coin
+sudo chmod 0777 /usr/bin/coin
+sudo mkdir /var/log/vfc
+sudo chmod 0777 /var/log/vfc
+
+Then use the 'coin help' command in the console for a full command list.
+
+**To become an active part of the network leave the coin program running in a screen and make sure any necessary ports are forwarded, VFC uses UDP Port 58008.** You will need to make atleast one valid transaction on the network before the mainnet indexes you as a peer and will commuicate with your node.
+
+Each address is limited to one transaction every 3 seconds, once a transaction is made both the sender and receievers addresses are limited for a total of 3 seconds. 
