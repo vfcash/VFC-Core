@@ -16,6 +16,8 @@ This is also a private decentralised network, as-in you will need control of som
 
 Join us on Telegram https://t.me/vfcash
 
+# Installation & Running a Full Node
+
 **Linux x86_64 Install Instructions (Full Node & Client Wallet):**
 ```
 sudo wget -q -O /usr/bin/coin https://vf.cash/release/coin_x86_64
