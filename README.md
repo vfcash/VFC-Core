@@ -14,5 +14,5 @@ What about Double Spending? So with double-spending, we restrict addresses on th
 
 This is also a private decentralised network, as-in you will need control of some currency before the rest of the network considers your dedicated node viable for indexing.
 
-Join us on Telegram @vfcash
+Join us on Telegram https://t.me/vfcash
 
