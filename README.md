@@ -20,7 +20,7 @@ Join us on Telegram [@vfcash](https://t.me/vfcash)
 
 **Linux x86_64 Install Instructions (Full Node & Client Wallet):**
 ```
-sudo wget -q -O /usr/bin/coin https://vf.cash/release/coin_x86_64
+sudo wget -q -O /usr/bin/coin https://github.com/vfcash/RELEASES/raw/master/coin_x86_64
 sudo rm /usr/bin/coin
 sudo cp coin /usr/bin/coin
 sudo chmod 0777 /usr/bin/coin
