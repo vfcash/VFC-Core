@@ -14,7 +14,7 @@ Transactions are truly free, there is no charge for making a transaction on the 
 
 This is also a private decentralised network, as-in you will need control of some currency before the rest of the network considers your dedicated node viable for indexing.
 
-Join us on Telegram https://t.me/vfcash
+Join us on Telegram [@vfcash](https://t.me/vfcash)
 
 # Installation & Running a Full Node
 
@@ -33,3 +33,13 @@ Then use the 'coin help' command in the console for a full command list.
 **To become an active part of the network leave the coin program running in a screen and make sure any necessary ports are forwarded, VFC uses UDP Port 58008.** You will need to make atleast one valid transaction on the network before the mainnet indexes you as a peer and will commuicate with your node.
 
 Each address is limited to one transaction every 3 seconds, once a transaction is made both the sender and receievers addresses are limited for a total of 3 seconds. 
+
+# Third-Party Dependencies
+
+**CRYPTO:**
+- https://github.com/brainhub/SHA3IUF   [SHA3]
+- https://github.com/esxgx/easy-ecc     [ECDSA]
+
+**Additional Dependencies:**
+- CRC64.c - Salvatore Sanfilippo
+- Base58.c - Luke Dashjr
