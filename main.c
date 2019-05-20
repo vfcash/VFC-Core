@@ -300,9 +300,9 @@ int csend(const uint32_t ip, const char* send, const size_t len)
     if((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 		return 0;
 
-	memset((char*)&server, 0, sizeof(server));
-	server.sin_family = AF_INET;
-	server.sin_port = htons(gport);
+    memset((char*)&server, 0, sizeof(server));
+    server.sin_family = AF_INET;
+    server.sin_port = htons(gport);
     server.sin_addr.s_addr = ip;
 
     if(sendto(s, send, len, 0, (struct sockaddr*)&server, sizeof(server)) < 0)
