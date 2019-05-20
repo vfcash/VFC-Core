@@ -1263,12 +1263,12 @@ int main(int argc , char *argv[])
     printf("\x1B[33mYou will have to make a transaction before your IPv4 address registers\nwith the mainnet when running a full time node/daemon.\x1B[0m\n\n");
     printf("\x1B[33mTo get a full command list use:\x1B[0m\n ./coin help\n\n");
 
-    //Resync Blocks
-    resyncBlocks();
-
     //Launch the Transaction Processing thread
     pthread_t tid;
     pthread_create(&tid, NULL, processThread, NULL);
+	
+    //Resync Blocks
+    resyncBlocks();
      
     //Loop, until sigterm
     while(1)
