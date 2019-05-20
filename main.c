@@ -388,7 +388,8 @@ void resyncBlocks()
         replay_allow = peers[1];
 
     //Alright ask this peer to replay to us too
-    csend(replay_allow, "r", 1);    
+    if(num_peers > 1 && replay_allow != 0)
+        csend(replay_allow, "r", 1);   
 }
 
 int sendMaster(const char* dat, const size_t len)
@@ -408,7 +409,7 @@ int isPeer(const uint32_t ip)
 void addPeer(const uint32_t ip)
 {
     //Never add local host
-    if(ip == 0x7F000001)
+    if(ip == 0x0100007F)
         return;
 
     //Is already in peers?
@@ -611,7 +612,7 @@ void replayBlocks(const uint32_t ip)
                 ofs += sizeof(mval);
                 memcpy(ofs, t.owner.key, ECC_CURVE*2);
                 csend(ip, pc, len);
-                usleep(333); //3k, 211 byte packets / 618kb a second
+                usleep(10000); //3k, 211 byte packets / 618kb a second
             }
             else
             {
