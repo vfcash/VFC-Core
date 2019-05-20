@@ -17,12 +17,14 @@ This is also a private decentralised network, as-in you will need control of som
 Join us on Telegram https://t.me/vfcash
 
 **Linux x86_64 Install Instructions (Full Node & Client Wallet):**
+```
 sudo wget -q -O /usr/bin/coin https://vf.cash/release/coin_x86_64
 sudo rm /usr/bin/coin
 sudo cp coin /usr/bin/coin
 sudo chmod 0777 /usr/bin/coin
 sudo mkdir /var/log/vfc
 sudo chmod 0777 /var/log/vfc
+```
 
 Then use the 'coin help' command in the console for a full command list.
 
