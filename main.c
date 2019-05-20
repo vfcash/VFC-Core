@@ -348,7 +348,6 @@ int verifyChain(const char* path)
         return 0;
     }
     
-
     //Look's legit
     return 1;
 }
