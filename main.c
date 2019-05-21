@@ -627,7 +627,7 @@ void replayBlocks(const uint32_t ip)
 }
 void *replayBlocksThread(void *arg)
 {
-    nice(19); //Very low priority thread
+    nice(1); //low priority thread
     const uint32_t *ip = arg;
     replayBlocks(*ip);
 }
@@ -1072,21 +1072,12 @@ int main(int argc , char *argv[])
             setMasterNode();
             resyncBlocks();
             
-            time_t ct = time(0)+33;
-            __off_t ls = 0;
             while(1)
             {
                 printf("\033[H\033[J");
                 struct stat st;
                 stat(CHAIN_FILE, &st);
-                if(st.st_size != ls)
-                {
-                    ls = st.st_size;
-                    ct = time(0)+33;
-                }
                 printf("\x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit.\n", (double)st.st_size / 1000);
-                if(time(0) > ct)
-                    break;
                 sleep(1);
             }
             printf("\x1B[33mLooks like you have the entire chain now.\x1B[0m\n");
