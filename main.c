@@ -1416,5 +1416,3 @@ int main(int argc , char *argv[])
     //Daemon
     return 0;
 }
-
-
