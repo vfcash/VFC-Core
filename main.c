@@ -1070,6 +1070,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "sync") == 0)
         {
             setMasterNode();
+	    loadmem();
             resyncBlocks();
             
             while(1)
@@ -1089,6 +1090,7 @@ int main(int argc , char *argv[])
         {
             makGenesis(); //Erases chain and resets it for a full resync
             setMasterNode();
+	    loadmem();
             resyncBlocks();
             printf("\x1B[33mResync Executed.\x1B[0m\n\n");
             exit(0);
