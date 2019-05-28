@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    20th of May   (2019)
+    Project updated:    28th of May   (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -87,6 +87,9 @@
     But it's a DAG thus you don't need the full block chain to process transactions !
     So .. 20ms or less most of the time if you are that way inclined ! :-)
 
+    TODO:
+    Scanning for peers could do with some work.
+
     Distributed under the MIT software license, see the accompanying
     file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -125,14 +128,14 @@
 #define ERROR_AMOUNT -5
 #define ERROR_UIDEXIST -6
 
-#define MAX_TRANS_QUEUE 512
+#define MAX_TRANS_QUEUE 4096
 #define MAX_THREADS 128
 #define MAX_PEERS 8192
 #define MAX_TRANS_PER_TSEC 8192 //must be divisable by 2 [this is actually transactions per MAX_SECONDS_PER_TRANS seconds.]
 #define MAX_SECONDS_PER_TRANS 1 //3 sec
 
 #define MAX_TRANS_PER_TSEC_MEM MAX_TRANS_PER_TSEC*2
-#define RECV_BUFF_SIZE 1024
+#define RECV_BUFF_SIZE 256
 #define MIN_LEN 256
 #define MAX_LEN 1024
 
@@ -144,11 +147,12 @@
 
 //Make sure everyone on same level chain
 ulong err = 0;
-const char version[]="0.19";
+const char version[]="0.20";
 const uint16_t gport = 58008;
 const char master_ip[] = "68.183.49.225"; //1152856545 / 0x44B731E1;
 uint32_t replay_allow = 0;
 uint threads = 0;
+char mid[6];
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
@@ -288,9 +292,13 @@ void makHash(uint8_t *hash, const struct trans* t)
 
 */
 
-uint32_t peers[MAX_PEERS];
-time_t peer_timeouts[MAX_PEERS];
-uint num_peers = 0;
+//General peer tracking
+uint32_t peers[MAX_PEERS]; //Peer IPv4 addresses
+time_t peer_timeouts[MAX_PEERS]; //Peer timeout UNIX epoch stamps
+uint num_peers = 0; //Current number of indexed peers
+
+//Peer Reward Tracking
+uint peer_tcount[MAX_PEERS]; //Amount of transactions relayed by peer
 
 uint countPeers()
 {
@@ -326,6 +334,24 @@ int csend(const uint32_t ip, const char* send, const size_t len)
     
     close(s);
     return 1;
+}
+
+void scanPeers()
+{
+    printf("\x1B[33m\nIt seems the Masternode is offline? We will now scan the entire IPv4 range of ~4.3 billion checking for peers.\x1B[0m\n");
+
+    time_t s = 0;
+    for(uint i = 0; i < 4294967294; ++i)
+    {
+        if(time(0) > s)
+        {
+            setlocale(LC_NUMERIC, "");
+            printf("%'u of 4,294,967,294 scanned.\n", i);
+            s = time(0)+3;
+        }
+
+        csend(i, mid, 8);
+    }
 }
 
 int verifyChain(const char* path)
@@ -418,11 +444,11 @@ int isPeer(const uint32_t ip)
 }
 
 //Peers are only replaced if they have not responded in a week, otherwise we still consider them contactable until replaced.
-void addPeer(const uint32_t ip)
+int addPeer(const uint32_t ip)
 {
     //Never add local host
     if(ip == 0x0100007F) //inet_addr("127.0.0.1")
-        return;
+        return 0;
 
     //Is already in peers?
     uint freeindex = 0;
@@ -431,7 +457,8 @@ void addPeer(const uint32_t ip)
         if(peers[i] == ip)
         {
             peer_timeouts[i] = time(0) + 604800; //Renew 1 week expirary
-            return;
+            peer_tcount[i]++;
+            return 0; //exists
         }
 
         if(freeindex == 0 && i != 0 && peer_timeouts[i] < time(0)) //0 = Master, never a free slot.
@@ -443,13 +470,19 @@ void addPeer(const uint32_t ip)
     {
         peers[freeindex] = ip;
         peer_timeouts[freeindex] = time(0) + 604800; //1 week expire
+        peer_tcount[freeindex] = 0;
+        return 1;
     }
     else if(num_peers < MAX_PEERS-1)
     {
         peers[num_peers] = ip;
         peer_timeouts[num_peers] = time(0) + 604800; //1 week expire
+        peer_tcount[num_peers] = 0;
         num_peers++;
+        return 1;
     }
+
+    return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -962,6 +995,20 @@ void savemem()
         fclose(f);
     }
 
+    f = fopen("/var/log/vfc/peers1.mem", "w");
+    if(f)
+    {
+        fwrite(peer_tcount, sizeof(uint), MAX_PEERS, f);
+        fclose(f);
+    }
+
+    f = fopen("/var/log/vfc/peers2.mem", "w");
+    if(f)
+    {
+        fwrite(peer_timeouts, sizeof(time_t), MAX_PEERS, f);
+        fclose(f);
+    }
+
     f = fopen("/var/log/vfc/lim.mem", "w");
     if(f)
     {
@@ -980,6 +1027,23 @@ void loadmem()
         fclose(f);
     }
     num_peers = countPeers();
+
+    f = fopen("/var/log/vfc/peers1.mem", "r");
+    if(f)
+    {
+        if(fread(peer_tcount, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
+            printf("\033[1m\x1B[31mPeers1 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
+        fclose(f);
+    }
+
+    f = fopen("/var/log/vfc/peers2.mem", "r");
+    if(f)
+    {
+        if(fread(peer_timeouts, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
+            printf("\033[1m\x1B[31mPeers2 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
+        fclose(f);
+    }
+    
     f = fopen("/var/log/vfc/lim.mem", "r");
     if(f)
     {
@@ -1092,6 +1156,16 @@ int main(int argc , char *argv[])
     //create vfc dir
     mkdir("/var/log/vfc", 0777);
 
+    //Set the MID
+    mid[0] = '\t';
+    mid[1] = qRand(0, 255);
+    mid[2] = qRand(0, 255);
+    mid[3] = qRand(0, 255);
+    mid[4] = qRand(0, 255);
+    mid[5] = qRand(0, 255);
+    mid[6] = qRand(0, 255);
+    mid[7] = qRand(0, 255);
+
     //Outgoings and Incomings
     if(argc == 3)
     {
@@ -1127,6 +1201,10 @@ int main(int argc , char *argv[])
             printf("\x1B[33mTo manually trigger blockchain resync use:\x1B[0m\n ./coin resync\x1B[0m\n\n");
             printf("\x1B[33mTo manually trigger blockchain sync use:\x1B[0m\n ./coin sync\x1B[0m\n\n");
             printf("\x1B[33mTo create a new Address, Public / Private Key-Pair:\x1B[0m\n ./coin new\x1B[0m\n\n");
+            printf("\x1B[33mTo manually add a peer use:\x1B[0m\n ./coin addpeer <peer ip-address>\n\n");
+            printf("\x1B[33mList all locally indexed peers and info:\x1B[0m\n ./coin peers\n\n");
+            printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./coin scan\x1B[0m\n\n");
+            
             printf("\x1B[33mTo get started running a dedicated node, execute ./coin on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
             exit(0);
         }
@@ -1138,12 +1216,25 @@ int main(int argc , char *argv[])
             loadmem();
             resyncBlocks('s');
             
+            __off_t ls = 0;
+            uint tc = 0;
             while(1)
             {
                 printf("\033[H\033[J");
+                if(tc >= 9)
+                {
+                    tc = 0;
+                    resyncBlocks('s'); //Sync from a new random peer if no data after x seconds
+                }
                 struct stat st;
                 stat(CHAIN_FILE, &st);
+                if(st.st_size != ls)
+                {
+                    ls = st.st_size;
+                    tc = 0;
+                }
                 printf("\x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Authorized Peer: %u.\n", (double)st.st_size / 1000, replay_allow);
+                tc++;
                 sleep(1);
             }
 
@@ -1166,6 +1257,44 @@ int main(int argc , char *argv[])
         {
             addr pub, priv;
             makAddr(&pub, &priv);
+            exit(0);
+        }
+
+        //Scan for peers
+        if(strcmp(argv[1], "scan") == 0)
+        {
+            loadmem();
+            scanPeers();
+            savemem();
+            exit(0);
+        }
+
+        //Force add a peer
+        if(strcmp(argv[1], "addpeer") == 0)
+        {
+            loadmem();
+            printf("\x1B[33mPlease input Peer IP Address: \x1B[0m");
+            char in[32];
+            fgets(in, 32, stdin); 
+            addPeer(inet_addr(in));
+            printf("\nThank you peer %s has been added to your peer list. Please restart your full node process to load the changes.\n\n", in);
+            savemem();
+            exit(0);
+        }
+
+        //List all peers and their total throughput
+        if(strcmp(argv[1], "peers") == 0)
+        {
+            loadmem();
+            printf("\n\x1B[33mTip; If you are running a full-node then consider hosting a website on port 80 where you can declare a little about your operation and a VFC address people can use to donate to you on. Thus you should be able to visit any of these IP addresses in a web-browser and find out a little about each node or obtain a VFC Address to donate to the node operator on.\x1B[0m\n\n");
+            printf("\x1B[33mIP Address / Number of Transactions Relayed / Time since last trans\x1B[0m\n");
+            for(uint i = 0; i < num_peers; ++i)
+            {
+                struct in_addr ip_addr;
+                ip_addr.s_addr = peers[i];
+                printf("%s / %u / %li\n", inet_ntoa(ip_addr), peer_tcount[i], time(0)-(peer_timeouts[i]-604800));
+            }
+            printf("\n");
             exit(0);
         }
     }
@@ -1467,6 +1596,27 @@ int main(int argc , char *argv[])
                     
                     //Increment Requests
                     reqs++;
+                }
+            }
+
+            //Is some one looking for peers? We can tell them we exist, but that doesn't make them part of the network until they make a verified transaction
+            else if(rb[0] == '\t')
+            {
+                rb[0] = '\r';
+                csend(client.sin_addr.s_addr, rb, read_size);
+            }
+            else if(rb[0] == '\r')
+            {
+                if( rb[1] == mid[0] && //Only add as a peer if they responded with our private mid code
+                    rb[2] == mid[1] &&
+                    rb[3] == mid[2] &&
+                    rb[4] == mid[3] &&
+                    rb[5] == mid[4] &&
+                    rb[6] == mid[5] &&
+                    rb[7] == mid[6] &&
+                    rb[8] == mid[7] )
+                {
+                    addPeer(client.sin_addr.s_addr);
                 }
             }
 
