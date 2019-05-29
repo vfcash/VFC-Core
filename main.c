@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    28th of May   (2019)
+    Project updated:    29th of May   (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -129,10 +129,10 @@
 #define ERROR_UIDEXIST -6
 
 #define MAX_TRANS_QUEUE 4096
-#define MAX_THREADS 128
+#define MAX_THREADS 6
 #define MAX_PEERS 8192
 #define MAX_TRANS_PER_TSEC 8192 //must be divisable by 2 [this is actually transactions per MAX_SECONDS_PER_TRANS seconds.]
-#define MAX_SECONDS_PER_TRANS 1 //3 sec
+#define MAX_SECONDS_PER_TRANS 1 //1 sec
 
 #define MAX_TRANS_PER_TSEC_MEM MAX_TRANS_PER_TSEC*2
 #define RECV_BUFF_SIZE 256
@@ -145,11 +145,10 @@
 #define ulong unsigned long long int
 #define mval uint32_t
 
-//Make sure everyone on same level chain
 ulong err = 0;
-const char version[]="0.20";
-const uint16_t gport = 58008;
-const char master_ip[] = "68.183.49.225"; //1152856545 / 0x44B731E1;
+const char version[]="0.21";
+const uint16_t gport = 58008; //8173
+const char master_ip[] = "68.183.49.225";
 uint32_t replay_allow = 0;
 uint threads = 0;
 char mid[6];
@@ -658,6 +657,7 @@ void replayBlocks(const uint32_t ip)
                 ofs += sizeof(mval);
                 memcpy(ofs, t.owner.key, ECC_CURVE*2);
                 csend(ip, pc, len);
+                usleep(10000); //333 = 3k, 211 byte packets / 618kb a second
             }
             else
             {
@@ -676,6 +676,7 @@ void *replayBlocksThread(void *arg)
     nice(19); //Very low priority thread
     const uint32_t *ip = arg;
     replayBlocks(*ip);
+    threads--;
 }
 
 //(in reverse, latest first to oldest last)
@@ -724,9 +725,11 @@ void replayBlocksRev(const uint32_t ip)
 }
 void *replayBlocksRevThread(void *arg)
 {
+    sleep(3); //Offset threads--; collisions
     nice(19); //Very low priority thread
     const uint32_t *ip = arg;
     replayBlocksRev(*ip);
+    threads--;
 }
 
 //print received transactions
@@ -1221,7 +1224,7 @@ int main(int argc , char *argv[])
             while(1)
             {
                 printf("\033[H\033[J");
-                if(tc >= 9)
+                if(tc >= 33)
                 {
                     tc = 0;
                     resyncBlocks('s'); //Sync from a new random peer if no data after x seconds
@@ -1233,7 +1236,15 @@ int main(int argc , char *argv[])
                     ls = st.st_size;
                     tc = 0;
                 }
-                printf("\x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Authorized Peer: %u.\n", (double)st.st_size / 1000, replay_allow);
+                struct in_addr ip_addr;
+                ip_addr.s_addr = replay_allow;
+                FILE* f = fopen("/var/log/vfc/rp.mem", "w");
+                if(f)
+                {
+                    fwrite(&replay_allow, sizeof(uint32_t), 1, f);
+                    fclose(f);
+                }
+                printf("\x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Authorized Peer: %s.\n", (double)st.st_size / 1000, inet_ntoa(ip_addr));
                 tc++;
                 sleep(1);
             }
@@ -1248,6 +1259,12 @@ int main(int argc , char *argv[])
             setMasterNode();
             loadmem();
             resyncBlocks('r');
+            FILE* f = fopen("/var/log/vfc/rp.mem", "w");
+            if(f)
+            {
+                fwrite(&replay_allow, sizeof(uint32_t), 1, f);
+                fclose(f);
+            }
             printf("\x1B[33mResync Executed.\x1B[0m\n\n");
             exit(0);
         }
@@ -1287,7 +1304,7 @@ int main(int argc , char *argv[])
         {
             loadmem();
             printf("\n\x1B[33mTip; If you are running a full-node then consider hosting a website on port 80 where you can declare a little about your operation and a VFC address people can use to donate to you on. Thus you should be able to visit any of these IP addresses in a web-browser and find out a little about each node or obtain a VFC Address to donate to the node operator on.\x1B[0m\n\n");
-            printf("\x1B[33mIP Address / Number of Transactions Relayed / Time since last trans\x1B[0m\n");
+            printf("\x1B[33mIP Address / Number of Transactions Relayed / Seconds since last trans\x1B[0m\n");
             for(uint i = 0; i < num_peers; ++i)
             {
                 struct in_addr ip_addr;
@@ -1624,13 +1641,19 @@ int main(int argc , char *argv[])
             if(st < time(0))
             {
                 //Log Metrics
-                printf("\x1B[33mSTATS: Req/s: %ld, Peers: %u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), num_peers, err);
+                printf("\x1B[33mSTATS: Req/s: %ld, Peers: %u, Threads %u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), num_peers, threads, err);
 
                 //do some utilities
                 savemem(); //Save memory state
 
-                //Reset thread count / limit
-                threads = 0;
+                //Load new replay allow value
+                FILE* f = fopen("/var/log/vfc/rp.mem", "r");
+                if(f)
+                {
+                    if(fread(&replay_allow, sizeof(uint32_t), 1, f) != 1)
+                        printf("\033[1m\x1B[31mReplay Allow IP  Corrupted. Load Failed.\x1B[0m\033[0m\n");
+                    fclose(f);
+                }
 
                 //Let's execute a Sync every 3*60 mins (3hr)
                 if(rsi >= 60)
@@ -1643,7 +1666,7 @@ int main(int argc , char *argv[])
                 rsi++;
                 tt = time(0);
                 reqs = 0;
-                st = time(0)+180; //Every 3 mins
+                st = time(0)+12; //Every 12 seconds
             }
         }
     }
