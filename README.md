@@ -1,6 +1,6 @@
 # VF Cash
 
-VF Cash is a Cryptocurrency project that started on the 23rd of April 2019. It has no Proof-of-Work (POW) rather it has a transaction rate limit per address / public key of one second. This prevents the sender or the receiver of a transaction from making any further transactions during this period. The chain is unordered (DAG), and the networking uses UDP. The Digital Signature algorithm uses secp384r1.
+VF Cash is a Cryptocurrency project that started on the 23rd of April 2019. It has no Proof-of-Work (POW) rather it has a transaction rate limit per address / public key of one second. This prevents the sender or the receiver of a transaction from making any further transactions during this period. The chain is unordered, and the networking uses UDP. The Digital Signature algorithm uses secp384r1.
 
 This is a non-divisible coin, pre-mined, written in C, compiled with GCC, 384-bit key length, Transactions are 60% smaller than an average Bitcoin-Core transaction, relating to total blockchain size.
 
