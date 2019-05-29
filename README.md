@@ -4,7 +4,7 @@ VF Cash is a Cryptocurrency project that started on the 23rd of April 2019. It h
 
 This is a non-divisible coin, pre-mined, written in C, compiled with GCC, 384-bit key length, Transactions are 60% smaller than an average Bitcoin-Core transaction, relating to total blockchain size.
 
-The only incentive to run a Full Node is if you wish to implement a payment gateway in your website or service, if you are running an exchange, or maybe you are just a die-hard supporter of VF Cash.
+The only incentive to run a Full Node is if you wish to implement a payment gateway in your website or service, if you are running an exchange, or maybe you are just a die-hard supporter of VF Cash. And there are reward payouts from the pre-mine too, in VFC.
 
 Transactions are truly free, there is no charge for making a transaction on the network.
 
