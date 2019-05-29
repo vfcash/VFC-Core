@@ -25,6 +25,9 @@ sudo chmod 0777 /var/log/vfc
 ```
 Then use the 'coin help' command in the console for a full command list.
 
+If you are running a full node then consider also installing NGINX + PHP-FPM and copying the server-www files into the /var/www/html directory; https://github.com/vfcash/RELEASES/raw/master/server-www.zip
+
+
 **Windows Install Instructions (Full Node & Client Wallet):**
 
 For a Windows installation you can follow the steps above but first install the Ubuntu Terminal software on Windows first: https://www.microsoft.com/en-us/p/ubuntu/9nblggh4msv6
