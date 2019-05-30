@@ -128,12 +128,12 @@
 #define ERROR_AMOUNT -5
 #define ERROR_UIDEXIST -6
 
-#define MAX_TRANS_QUEUE 256
-#define MAX_THREADS 6
-#define MAX_PEERS 3072
-#define MAX_TRANS_PER_TSEC 512 //must be divisable by 2 [this is actually transactions per MAX_SECONDS_PER_TRANS seconds.]
-#define MAX_SECONDS_PER_TRANS 1 //1 sec
+#define MAX_TRANS_QUEUE 256     // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
+#define MAX_THREADS 6           // Maximum replay threads this node can spawn (about 3 syncs or 6 replays)
+#define MAX_PEERS 3072          // Maimum trackable peers at once (this is a high enough number)
+#define MAX_SECONDS_PER_TRANS 1 // Seconds to limit addresses for after each transaction
 
+#define MAX_TRANS_PER_TSEC MAX_TRANS_QUEUE*2 //must be divisable by 2 [this is actually transactions per MAX_SECONDS_PER_TRANS seconds.]
 #define MAX_TRANS_PER_TSEC_MEM MAX_TRANS_PER_TSEC*2
 #define RECV_BUFF_SIZE 256
 #define MIN_LEN 256
