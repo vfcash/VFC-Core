@@ -23,9 +23,9 @@ sudo chmod 0777 /usr/bin/coin
 sudo mkdir /var/log/vfc
 sudo chmod 0777 /var/log/vfc
 ```
-Then use the 'coin help' command in the console for a full command list.
+Then use the `coin help` command in the console for a full command list.
 
-If you are running a full node then consider also installing NGINX + PHP-FPM and copying the server-www files into the /var/www/html directory; https://github.com/vfcash/RELEASES/raw/master/server-www.zip
+If you are running a full node then consider also installing NGINX + PHP-FPM and copying the server-www files into the `/var/www/html` directory; https://github.com/vfcash/RELEASES/raw/master/server-www.zip
 
 Doing so will allow other users in the network a method of finding and donating rewards to you. It comes with a basic web-wallet that can be expanded upon and will allow users to make transactions via your node which is good for your reward rating.
 
