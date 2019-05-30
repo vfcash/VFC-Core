@@ -464,7 +464,7 @@ int addPeer(const uint32_t ip)
     {
         if(peers[i] == ip)
         {
-            peer_timeouts[i] = time(0) + 10800; //Renew 3 hr expirary
+            peer_timeouts[i] = time(0) + 259200; //Renew 3 day expirary
             peer_tcount[i]++;
             return 0; //exists
         }
@@ -477,7 +477,7 @@ int addPeer(const uint32_t ip)
     if(num_peers < MAX_PEERS)
     {
         peers[num_peers] = ip;
-        peer_timeouts[num_peers] = time(0) + 10800; //3 hr expire
+        peer_timeouts[num_peers] = time(0) + 259200; //3 day expire
         peer_tcount[num_peers] = 0;
         num_peers++;
         return 1;
@@ -485,7 +485,7 @@ int addPeer(const uint32_t ip)
     else if(freeindex != 0) //If not replace a node quiet for more than three hours
     {
         peers[freeindex] = ip;
-        peer_timeouts[freeindex] = time(0) + 10800; //3 hr expire
+        peer_timeouts[freeindex] = time(0) + 259200; //3 day expire
         peer_tcount[freeindex] = 0;
         return 1;
     }
