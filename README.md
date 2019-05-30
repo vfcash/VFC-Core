@@ -36,7 +36,7 @@ If you wish the full node to launch on startup of the server, `edit /etc/rc.loca
 
 For a Windows installation you can follow the steps above but first install the Ubuntu Terminal software on Windows first: https://www.microsoft.com/en-us/p/ubuntu/9nblggh4msv6
 
-**To become an active part of the network leave the coin program running in a screen and make sure any necessary ports are forwarded, VFC uses UDP Port 58008.** You will need to make atleast one valid transaction on the network before the mainnet indexes you as a peer and will commuicate with your node.
+**To become an active part of the network leave the coin program running in a screen and make sure any necessary ports are forwarded, VFC uses UDP Port 8173.** You will need to make atleast one valid transaction on the network before the mainnet indexes you as a peer and will commuicate with your node.
 
 Each address is limited to one transaction every one second, once a transaction is made both the sender and receievers addresses are limited for a total of one second. 
 
