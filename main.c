@@ -1656,12 +1656,12 @@ int main(int argc , char *argv[])
                 if(f)
                 {
                     if(fread(&replay_allow, sizeof(uint32_t), 1, f) != 1)
-                        printf("\033[1m\x1B[31mReplay Allow IP  Corrupted. Load Failed.\x1B[0m\033[0m\n");
+                        printf("\033[1m\x1B[31mReplay Allow IP Corrupted. Load Failed.\x1B[0m\033[0m\n");
                     fclose(f);
                 }
 
                 //Next Loop
-                st = time(0)+30;
+                st0 = time(0)+30;
             }
 
             //Log Requests per Second
