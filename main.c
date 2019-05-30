@@ -128,10 +128,10 @@
 #define ERROR_AMOUNT -5
 #define ERROR_UIDEXIST -6
 
-#define MAX_TRANS_QUEUE 4096
+#define MAX_TRANS_QUEUE 256
 #define MAX_THREADS 6
-#define MAX_PEERS 8192
-#define MAX_TRANS_PER_TSEC 8192 //must be divisable by 2 [this is actually transactions per MAX_SECONDS_PER_TRANS seconds.]
+#define MAX_PEERS 3072
+#define MAX_TRANS_PER_TSEC 512 //must be divisable by 2 [this is actually transactions per MAX_SECONDS_PER_TRANS seconds.]
 #define MAX_SECONDS_PER_TRANS 1 //1 sec
 
 #define MAX_TRANS_PER_TSEC_MEM MAX_TRANS_PER_TSEC*2
@@ -464,7 +464,7 @@ int addPeer(const uint32_t ip)
     {
         if(peers[i] == ip)
         {
-            peer_timeouts[i] = time(0) + 604800; //Renew 1 week expirary
+            peer_timeouts[i] = time(0) + 10800; //Renew 3 hr expirary
             peer_tcount[i]++;
             return 0; //exists
         }
@@ -473,20 +473,20 @@ int addPeer(const uint32_t ip)
             freeindex = i;
     }
 
-    //Try to add to existing free slot first, if not continue sequential array, if possible.
-    if(freeindex != 0)
-    {
-        peers[freeindex] = ip;
-        peer_timeouts[freeindex] = time(0) + 604800; //1 week expire
-        peer_tcount[freeindex] = 0;
-        return 1;
-    }
-    else if(num_peers < MAX_PEERS-1)
+    //Try to add to a free slot first
+    if(num_peers < MAX_PEERS)
     {
         peers[num_peers] = ip;
-        peer_timeouts[num_peers] = time(0) + 604800; //1 week expire
+        peer_timeouts[num_peers] = time(0) + 10800; //3 hr expire
         peer_tcount[num_peers] = 0;
         num_peers++;
+        return 1;
+    }
+    else if(freeindex != 0) //If not replace a node quiet for more than three hours
+    {
+        peers[freeindex] = ip;
+        peer_timeouts[freeindex] = time(0) + 10800; //3 hr expire
+        peer_tcount[freeindex] = 0;
         return 1;
     }
 
