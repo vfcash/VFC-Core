@@ -137,7 +137,6 @@
 #define MAX_TRANS_PER_TSEC_MEM MAX_TRANS_PER_TSEC*2
 #define RECV_BUFF_SIZE 256
 #define MIN_LEN 256
-#define MAX_LEN 1024
 
 #define CHAIN_FILE "/var/log/vfc/blocks.dat"
 
@@ -654,7 +653,7 @@ void replayBlocks(const uint32_t ip)
             {
                 //Generate Packet (pc)
                 const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //lol this is always sizeof(struct trans)+1 im silly but i've done it now so..
-                char pc[MAX_LEN];
+                char pc[MIN_LEN];
                 pc[0] = 'p'; //This is a re*P*lay
                 char* ofs = pc + 1;
                 memcpy(ofs, &t.uid, sizeof(uint64_t));
@@ -706,7 +705,7 @@ void replayBlocksRev(const uint32_t ip)
             {
                 //Generate Packet (pc)
                 const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //lol this is always sizeof(struct trans)+1 im silly but i've done it now so..
-                char pc[MAX_LEN];
+                char pc[MIN_LEN];
                 pc[0] = 'p'; //This is a re*P*lay
                 char* ofs = pc + 1;
                 memcpy(ofs, &t.uid, sizeof(uint64_t));
@@ -1135,7 +1134,7 @@ void *processThread(void *arg)
                 //Construct a non-repeatable transaction and tell our peers
                 const uint32_t origin = ip[i];
                 const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+uint64_t+1
-                char pc[MAX_LEN];
+                char pc[MIN_LEN];
                 pc[0] = 'd';
                 char* ofs = pc + 1;
                 memcpy(ofs, &origin, sizeof(uint32_t));
@@ -1429,7 +1428,7 @@ int main(int argc , char *argv[])
         //Generate Packet (pc)
         const uint32_t origin = 0;
         const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+uint64_t+1
-        char pc[MAX_LEN];
+        char pc[MIN_LEN];
         pc[0] = 't';
         char* ofs = pc + 1;
         memcpy(ofs, &origin, sizeof(uint32_t));
