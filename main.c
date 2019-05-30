@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    29th of May   (2019)
+    Project updated:    30th of May   (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -146,7 +146,7 @@
 #define mval uint32_t
 
 ulong err = 0;
-const char version[]="0.21";
+const char version[]="0.22";
 const uint16_t gport = 58008; //8173
 const char master_ip[] = "68.183.49.225";
 uint32_t replay_allow = 0;
@@ -427,6 +427,16 @@ void resyncBlocks(const char type)
     //Alright ask this peer to replay to us too
     if(num_peers > 1 && replay_allow != 0)
         csend(replay_allow, &type, 1);
+
+    //Set the file memory
+    struct in_addr ip_addr;
+    ip_addr.s_addr = replay_allow;
+    FILE* f = fopen("/var/log/vfc/rp.mem", "w");
+    if(f)
+    {
+        fwrite(&replay_allow, sizeof(uint32_t), 1, f);
+        fclose(f);
+    }
 }
 
 int sendMaster(const char* dat, const size_t len)
@@ -1224,7 +1234,7 @@ int main(int argc , char *argv[])
             while(1)
             {
                 printf("\033[H\033[J");
-                if(tc >= 33)
+                if(tc >= 99)
                 {
                     tc = 0;
                     resyncBlocks('s'); //Sync from a new random peer if no data after x seconds
@@ -1461,8 +1471,9 @@ int main(int argc , char *argv[])
     
     //Launch Info
     timestamp();
-    printf("\n\x1B[33mVFC - Virtual Finance Coin\n");
-    printf("https://github.com/mrbid\n");
+    printf("\n\x1B[33mVFC - Very Fast Cash\n");
+    printf("https://VF.CASH - https://VFCASH.UK\n");
+    printf("https://github.com/vfcash\n");
     printf("v%s\x1B[0m\n\n", version);
     printf("\x1B[33mYou will have to make a transaction before your IPv4 address registers\nwith the mainnet when running a full time node/daemon.\x1B[0m\n\n");
     printf("\x1B[33mTo get a full command list use:\x1B[0m\n ./coin help\n\n");
@@ -1506,6 +1517,7 @@ int main(int argc , char *argv[])
         //Never allow process to end
         uint reqs = 0;
         time_t st = time(0);
+        time_t st0 = time(0);
         time_t tt = time(0);
         int read_size;
         char rb[RECV_BUFF_SIZE];
@@ -1637,15 +1649,9 @@ int main(int argc , char *argv[])
                 }
             }
 
-            //Log Requests per Second
-            if(st < time(0))
+            //Check replay_allow value every 30 seconds
+            if(st0 < time(0))
             {
-                //Log Metrics
-                printf("\x1B[33mSTATS: Req/s: %ld, Peers: %u, Threads %u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), num_peers, threads, err);
-
-                //do some utilities
-                savemem(); //Save memory state
-
                 //Load new replay allow value
                 FILE* f = fopen("/var/log/vfc/rp.mem", "r");
                 if(f)
@@ -1655,6 +1661,19 @@ int main(int argc , char *argv[])
                     fclose(f);
                 }
 
+                //Next Loop
+                st = time(0)+30;
+            }
+
+            //Log Requests per Second
+            if(st < time(0))
+            {
+                //Log Metrics
+                printf("\x1B[33mSTATS: Req/s: %ld, Peers: %u, Threads %u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), num_peers, threads, err);
+
+                //Save memory state
+                savemem();
+
                 //Let's execute a Sync every 3*60 mins (3hr)
                 if(rsi >= 60)
                 {
@@ -1662,11 +1681,11 @@ int main(int argc , char *argv[])
                     resyncBlocks('s');
                 }
 
-                //Prep next loop time
+                //Prep next loop
                 rsi++;
-                tt = time(0);
                 reqs = 0;
-                st = time(0)+12; //Every 12 seconds
+                tt = time(0);
+                st = time(0)+180;
             }
         }
     }
