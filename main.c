@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    30th of May   (2019)
+    Project updated:    31st of May   (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -146,7 +146,7 @@
 
 ulong err = 0;
 const char version[]="0.22";
-const uint16_t gport = 58008; //8173
+const uint16_t gport = 8173;
 const char master_ip[] = "68.183.49.225";
 uint32_t replay_allow = 0;
 uint threads = 0;
@@ -1632,6 +1632,9 @@ int main(int argc , char *argv[])
             {
                 rb[0] = '\r';
                 csend(client.sin_addr.s_addr, rb, read_size);
+
+                //Increment Requests
+                reqs++;
             }
             else if(rb[0] == '\r')
             {
@@ -1645,6 +1648,9 @@ int main(int argc , char *argv[])
                     rb[8] == mid[7] )
                 {
                     addPeer(client.sin_addr.s_addr);
+
+                    //Increment Requests
+                    reqs++;
                 }
             }
 
