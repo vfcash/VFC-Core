@@ -25,7 +25,7 @@
     - Entire network is limited to 2,730 transactions per second.
 
     To use the VFC wallet you need to be running a full node which requires that you
-    forward UDP port 58008 on your router to the local machine running the VFC full
+    forward UDP port 5173 on your router to the local machine running the VFC full
     node.
 
     There is a small transaction Queue and a processing thread to make sure normal
