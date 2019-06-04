@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    31st of May   (2019)
+    Project updated:    4th of June   (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -21,17 +21,16 @@
     Only Supports IPv4 addresses.
     Local storage in /var/log/vfc
 
-    - In it's current state we only track peer's who send a transaction to the server.
-    - Entire network is limited to 2,730 transactions per second.
+    *** In it's current state we only track peer's who send a transaction to the server. ***
 
     To use the VFC wallet you need to be running a full node which requires that you
-    forward UDP port 8173 on your router to the local machine running the VFC full
+    forward UDP port 5173 on your router to the local machine running the VFC full
     node.
 
     There is a small transaction Queue and a processing thread to make sure normal
     UDP transmissions do not get particularly blocked up.
 
-    {eers need to be aware of each other by referal, passing the origin ip of a
+    Peers need to be aware of each other by referal, passing the origin ip of a
     transaction across the echo chamber makes this possible, but this also exposes
     the IP address of the clients operating specific transactions. This is fine if
     you are behind a VPN but otherwise, this is generally bad for accountability.
@@ -68,27 +67,19 @@
 
     It is possible that a malicious user could monitor traffic on the network, identifying
     the addresses used by your nodes IP address and then by chance if you ever request a
-    block replay from them they could poision your blockchain. Also, a user could make
-    a program to archive the addresses used by each node IP until one of the requests
-    a replay from them (eventually) and directly poision their blockchain. There are
-    no obvious benefits from doing this, if they did do this it would be obvious, a bit
-    annoying, and require an enire replay. For example they could pretend your balance
-    had been depleted or increased to an obscene amount, but that's about it.
-    In which case you'd just assume the obvious, that your blockchain replay was corrupt
-    which it was (albeit maliciously), and you'd resync. (hopefully)
-
-    Block Replays happen in reverse to make sure the latest transactions arrive first.
-    Block Replays are capped to 618kb a second to increase UDP reliability
-
-    Scalability:
-    At the moment it would seem that for every 5mb of blockchain that a transaction
-    takes ~20ms to process. That means with 1gb of blockchain it would take ~4 seconds
-    for one node to process one transaction. 13 minutes with 200gb size blockchain.
-    But it's a DAG thus you don't need the full block chain to process transactions !
-    So .. 20ms or less most of the time if you are that way inclined ! :-)
+    block replay from 'the malicious user' they could poision your blockchain.
+    Also, a user could make a program to archive the addresses used by each node IP until
+    one of the peers requests a replay (eventually) and then one could directly poision the
+    blockchain as a result. There are no obvious benefits from doing this, if they did do
+    this it would be obvious, a bit annoying, and require an enire replay. For example they
+    could pretend your balance had been depleted or increased to an obscene amount, but
+    that's about it. In which case you'd just assume the obvious, that your blockchain
+    replay was corrupt which it was (albeit maliciously) or incomplete, and you'd resync.
+    (hopefully)
 
     TODO:
-    Scanning for peers could do with some work.
+    - Scanning for peers could do with scanning more specific ranges that are more
+      worth-while
 
     Distributed under the MIT software license, see the accompanying
     file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -128,10 +119,11 @@
 #define ERROR_AMOUNT -5
 #define ERROR_UIDEXIST -6
 
-#define MAX_TRANS_QUEUE 256     // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
-#define MAX_THREADS 6           // Maximum replay threads this node can spawn (about 3 syncs or 6 replays)
-#define MAX_PEERS 3072          // Maimum trackable peers at once (this is a high enough number)
-#define MAX_SECONDS_PER_TRANS 1 // Seconds to limit addresses for after each transaction
+#define MAX_TRANS_QUEUE 256             // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
+#define MAX_THREADS 6                   // Maximum replay threads this node can spawn (about 3 syncs or 6 replays)
+#define MAX_PEERS 3072                  // Maimum trackable peers at once (this is a high enough number)
+#define MAX_SECONDS_PER_TRANS 1         // Seconds to limit addresses for after each transaction
+#define MAX_PEER_EXPIRE_SECONDS 259200  // Seconds before a peer can be replaced by a more active peer, judged by transactions made per peer.
 
 #define MAX_TRANS_PER_TSEC MAX_TRANS_QUEUE*2 //must be divisable by 2 [this is actually transactions per MAX_SECONDS_PER_TRANS seconds.]
 #define MAX_TRANS_PER_TSEC_MEM MAX_TRANS_PER_TSEC*2
@@ -145,12 +137,13 @@
 #define mval uint32_t
 
 ulong err = 0;
-const char version[]="0.22";
+const char version[]="0.23";
 const uint16_t gport = 8173;
 const char master_ip[] = "68.183.49.225";
 uint32_t replay_allow = 0;
 uint threads = 0;
 char mid[6];
+char myrewardkey[MIN_LEN];
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
@@ -258,7 +251,7 @@ struct trans
 void makHash(uint8_t *hash, const struct trans* t)
 {
     sha3_context c;
-    sha3_Init384(&c);
+    sha3_Init256(&c);
     sha3_Update(&c, t, sizeof(struct trans));
     sha3_Finalize(&c);
     memcpy(hash, &c.sb, ECC_CURVE);
@@ -356,7 +349,8 @@ int verifyChain(const char* path)
 {
     //Genesis Public Key
     uint8_t gpub[ECC_CURVE+1];
-    fromHex(gpub, "03a1cc42d4c82b2b0af383690a329dd8456adf29b6b9ed5ea4569e36aa1a87089f9d92f360503cbc15a431e2614b84b3af", ECC_CURVE+1);
+    size_t len = ECC_CURVE+1;
+    b58tobin(gpub, &len, "foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ", 44);
 
     //Ok let's check that genesis trans and work through chain
     FILE* f = fopen(path, "r");
@@ -443,7 +437,7 @@ int sendMaster(const char* dat, const size_t len)
     return csend(peers[0], dat, len);
 }
 
-int isPeer(const uint32_t ip)
+uint isPeer(const uint32_t ip)
 {
     for(uint i = 0; i < num_peers; ++i)
         if(peers[i] == ip)
@@ -455,7 +449,7 @@ int isPeer(const uint32_t ip)
 int addPeer(const uint32_t ip)
 {
     //Never add local host
-    if(ip == 0x0100007F) //inet_addr("127.0.0.1")
+    if(ip == inet_addr("127.0.0.1")) //0x0100007F
         return 0;
 
     //Is already in peers?
@@ -464,7 +458,7 @@ int addPeer(const uint32_t ip)
     {
         if(peers[i] == ip)
         {
-            peer_timeouts[i] = time(0) + 259200; //Renew 3 day expirary
+            peer_timeouts[i] = time(0) + MAX_PEER_EXPIRE_SECONDS; //Renew 3 day expirary
             peer_tcount[i]++;
             return 0; //exists
         }
@@ -477,16 +471,16 @@ int addPeer(const uint32_t ip)
     if(num_peers < MAX_PEERS)
     {
         peers[num_peers] = ip;
-        peer_timeouts[num_peers] = time(0) + 259200; //3 day expire
-        peer_tcount[num_peers] = 0;
+        peer_timeouts[num_peers] = time(0) + MAX_PEER_EXPIRE_SECONDS; //3 day expire
+        peer_tcount[num_peers] = 1;
         num_peers++;
         return 1;
     }
     else if(freeindex != 0) //If not replace a node quiet for more than three hours
     {
         peers[freeindex] = ip;
-        peer_timeouts[freeindex] = time(0) + 259200; //3 day expire
-        peer_tcount[freeindex] = 0;
+        peer_timeouts[freeindex] = time(0) + MAX_PEER_EXPIRE_SECONDS; //3 day expire
+        peer_tcount[freeindex] = 1;
         return 1;
     }
 
@@ -643,7 +637,6 @@ void replayBlocks(const uint32_t ip)
     {
         fseek(f, 0, SEEK_END);
         const long int len = ftell(f);
-        fseek(f, 0, SEEK_SET); //pointless
 
         struct trans t;
         for(size_t i = sizeof(struct trans); i < len; i += sizeof(struct trans))
@@ -970,7 +963,8 @@ void makGenesis()
 {
     //Make genesis public key
     uint8_t gpub[ECC_CURVE+1];
-    fromHex(gpub, "03a1cc42d4c82b2b0af383690a329dd8456adf29b6b9ed5ea4569e36aa1a87089f9d92f360503cbc15a431e2614b84b3af", ECC_CURVE+1);
+    size_t len = ECC_CURVE+1;
+    b58tobin(gpub, &len, "foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ", 44);
 
     //Make Genesis Block (does not need to be signed or have src addr, or have a UID)
     struct trans t;
@@ -1168,6 +1162,50 @@ int main(int argc , char *argv[])
     //create vfc dir
     mkdir("/var/log/vfc", 0777);
 
+    //Create rewards address if it doesnt exist
+    if(access("/var/log/vfc/public.key", F_OK) == -1)
+    {
+        addr pub, priv;
+        makAddr(&pub, &priv);
+
+        char bpub[MIN_LEN], bpriv[MIN_LEN];
+        memset(bpub, 0, sizeof(bpub));
+        memset(bpriv, 0, sizeof(bpriv));
+        size_t len = MIN_LEN;
+        b58enc(bpub, &len, pub.key, ECC_CURVE+1);
+        b58enc(bpriv, &len, priv.key, ECC_CURVE);
+
+        FILE* f = fopen("/var/log/vfc/public.key", "w");
+        if(f)
+        {
+            fwrite(bpub, sizeof(char), strlen(bpub), f);
+            fclose(f);
+        }
+        f = fopen("/var/log/vfc/private.key", "w");
+        if(f)
+        {
+            fwrite(bpriv, sizeof(char), strlen(bpriv), f);
+            fclose(f);
+        }
+    }
+
+    //Load your public key for rewards
+    FILE* f = fopen("/var/log/vfc/public.key", "r");
+    if(f)
+    {
+        fseek(f, 0, SEEK_END);
+        const long int len = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        memset(myrewardkey, 0x00, sizeof(myrewardkey));
+        myrewardkey[0] = ' ';
+        
+        if(fread(myrewardkey+1, sizeof(char), len, f) != len)
+            printf("\033[1m\x1B[31mFailed to load Rewards address, this means you are unable to receive rewards.\x1B[0m\033[0m\n");
+
+        fclose(f);
+    }
+
     //Set the MID
     mid[0] = '\t';
     mid[1] = qRand(0, 255);
@@ -1215,6 +1253,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mTo create a new Address, Public / Private Key-Pair:\x1B[0m\n ./coin new\x1B[0m\n\n");
             printf("\x1B[33mTo manually add a peer use:\x1B[0m\n ./coin addpeer <peer ip-address>\n\n");
             printf("\x1B[33mList all locally indexed peers and info:\x1B[0m\n ./coin peers\n\n");
+            printf("\x1B[33mReturns your Public Key stored in /var/log/vfc/public.key for reward collections:\x1B[0m\n ./coin reward\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./coin scan\x1B[0m\n\n");
             
             printf("\x1B[33mTo get started running a dedicated node, execute ./coin on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
@@ -1295,6 +1334,13 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
+        //Return reward addr
+        if(strcmp(argv[1], "reward") == 0)
+        {
+            printf("\x1B[33mYour reward address is:\x1B[0m%s\n\n", myrewardkey);
+            exit(0);
+        }
+
         //Force add a peer
         if(strcmp(argv[1], "addpeer") == 0)
         {
@@ -1318,7 +1364,7 @@ int main(int argc , char *argv[])
             {
                 struct in_addr ip_addr;
                 ip_addr.s_addr = peers[i];
-                printf("%s / %u / %li\n", inet_ntoa(ip_addr), peer_tcount[i], time(0)-(peer_timeouts[i]-604800));
+                printf("%s / %u / %li\n", inet_ntoa(ip_addr), peer_tcount[i], time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS));
             }
             printf("\n");
             exit(0);
@@ -1443,7 +1489,7 @@ int main(int argc , char *argv[])
         ofs += sizeof(mval);
         memcpy(ofs, t.owner.key, ECC_CURVE*2);
 
-        //Send to local host so that our local daemon broadcasts it.
+        //Broadcast
         sendMaster(pc, len);
         peersBroadcast(pc, len);
 
@@ -1520,7 +1566,7 @@ int main(int argc , char *argv[])
         time_t tt = time(0);
         int read_size;
         char rb[RECV_BUFF_SIZE];
-        uint rsi = 0;
+        uint rsi = 0, rpo = 0;
         while(1)
         {
             //Client Command
@@ -1654,6 +1700,14 @@ int main(int argc , char *argv[])
                 }
             }
 
+            //Is the master requesting your rewards address?
+            else if(rb[0] == 'x')
+            {
+                //Only the master can pay out rewards from the pre-mine
+                if(isMasterNode(client.sin_addr.s_addr) == 1)
+                    csend(client.sin_addr.s_addr, myrewardkey, strlen(myrewardkey));
+            }
+
             //Check replay_allow value every 30 seconds
             if(st0 < time(0))
             {
@@ -1688,6 +1742,7 @@ int main(int argc , char *argv[])
 
                 //Prep next loop
                 rsi++;
+                rpo++;
                 reqs = 0;
                 tt = time(0);
                 st = time(0)+180;
