@@ -124,6 +124,7 @@
 #define MAX_PEERS 3072                  // Maimum trackable peers at once (this is a high enough number)
 #define MAX_SECONDS_PER_TRANS 1         // Seconds to limit addresses for after each transaction
 #define MAX_PEER_EXPIRE_SECONDS 259200  // Seconds before a peer can be replaced by a more active peer, judged by transactions made per peer.
+#define MASTER_NODE 0                   // For compile time, is this going to be a client or a reward-paying masternode?
 
 #define MAX_TRANS_PER_TSEC MAX_TRANS_QUEUE*2 //must be divisable by 2 [this is actually transactions per MAX_SECONDS_PER_TRANS seconds.]
 #define MAX_TRANS_PER_TSEC_MEM MAX_TRANS_PER_TSEC*2
@@ -143,6 +144,9 @@ const char master_ip[] = "68.183.49.225";
 uint32_t replay_allow = 0;
 uint threads = 0;
 char mid[6];
+time_t nextreward = 0;
+uint rewardindex = 0;
+uint rewardpaid = 0;
 char myrewardkey[MIN_LEN];
 
 ///////////////////////////////////////////////////////////////////////////
@@ -207,6 +211,13 @@ void timestamp()
 {
     time_t ltime = time(0);
     printf("\n\033[1m\x1B[31m%s\x1B[0m\033[0m", asctime(localtime(&ltime)));
+}
+
+uint isalonu(char c)
+{
+    if(c >= 48 && c <= 57 || c >= 65 && c <= 90 || c >= 97 && c <= 122)
+        return 1;
+    return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -442,6 +453,11 @@ uint isPeer(const uint32_t ip)
     for(uint i = 0; i < num_peers; ++i)
         if(peers[i] == ip)
             return 1;
+    return 0;
+}
+
+void RewardPeer(const uint32_t ip, const char* pubkey)
+{
     return 0;
 }
 
@@ -1098,8 +1114,28 @@ int isNodeRunning()
 
 void *processThread(void *arg)
 {
+    time_t nr = time(0)+60;
     while(1)
     {
+#if MASTER_NODE == 1
+        //Peers get a few chances to collect their reward
+        if(rewardpaid == 0 && time(0) > nr)
+        {;
+            csend(peers[rewardindex], "x", 1);
+            nr = time(0)+60;
+        }
+
+        //Otherwise they forefit
+        if(time(0) > nextreward)
+        {
+            nextreward = time(0) + qRand(540, 660);
+            rewardpaid = 0;
+            rewardindex++;
+            if(rewardindex >= num_peers)
+                rewardindex = 0; 
+        }
+#endif
+
         //See if there is a new transaction to process
         const int i = gQue();
         if(i == -1)
@@ -1205,6 +1241,9 @@ int main(int argc , char *argv[])
 
         fclose(f);
     }
+
+    //Set next reward time
+    nextreward = time(0) + qRand(540, 660); //9-11 minutes, add's some entropy.
 
     //Set the MID
     mid[0] = '\t';
@@ -1359,7 +1398,7 @@ int main(int argc , char *argv[])
         {
             loadmem();
             printf("\n\x1B[33mTip; If you are running a full-node then consider hosting a website on port 80 where you can declare a little about your operation and a VFC address people can use to donate to you on. Thus you should be able to visit any of these IP addresses in a web-browser and find out a little about each node or obtain a VFC Address to donate to the node operator on.\x1B[0m\n\n");
-            printf("\x1B[33mIP Address / Number of Transactions Relayed / Seconds since last trans\x1B[0m\n");
+            printf("\x1B[33mTotal Peers:\x1B[0m %u\x1B[33\n\n\x1B[33mIP Address / Number of Transactions Relayed / Seconds since last trans\x1B[0m\n", num_peers);
             for(uint i = 0; i < num_peers; ++i)
             {
                 struct in_addr ip_addr;
@@ -1577,8 +1616,14 @@ int main(int argc , char *argv[])
             if(server.sin_addr.s_addr == client.sin_addr.s_addr) //I know, this is very rarily ever effective. If ever.
                 continue;
 
+            //It's time to payout some rewards (if eligible).
+#if MASTER_NODE == 1
+            if(rb[0] == ' ')
+                RewardPeer(client.sin_addr.s_addr, rb); //Check if the peer is eligible
+#endif
+
             //Is this a [fresh trans / dead trans] ?
-            if(rb[0] == 't' || rb[0] == 'd')
+            else if(rb[0] == 't' || rb[0] == 'd')
             {
                 //Root origin peer address
                 uint32_t origin = 0;
