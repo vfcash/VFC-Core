@@ -1566,7 +1566,7 @@ int main(int argc , char *argv[])
         time_t tt = time(0);
         int read_size;
         char rb[RECV_BUFF_SIZE];
-        uint rsi = 0, rpo = 0;
+        uint rsi = 0;
         while(1)
         {
             //Client Command
@@ -1742,7 +1742,6 @@ int main(int argc , char *argv[])
 
                 //Prep next loop
                 rsi++;
-                rpo++;
                 reqs = 0;
                 tt = time(0);
                 st = time(0)+180;
