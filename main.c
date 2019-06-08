@@ -124,7 +124,7 @@
 #define MAX_PEERS 3072                  // Maimum trackable peers at once (this is a high enough number)
 #define MAX_SECONDS_PER_TRANS 1         // Seconds to limit addresses for after each transaction
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by a more active peer, judged by transactions made per peer. (3 days=259200)
-#define MASTER_NODE 1                   // For compile time, is this going to be a client or a reward-paying masternode?
+#define MASTER_NODE 0                   // For compile time, is this going to be a client or a reward-paying masternode?
 
 #define MAX_TRANS_PER_TSEC MAX_TRANS_QUEUE*2 //must be divisable by 2 [this is actually transactions per MAX_SECONDS_PER_TRANS seconds.]
 #define MAX_TRANS_PER_TSEC_MEM MAX_TRANS_PER_TSEC*2
@@ -210,7 +210,7 @@ uint qRand(const uint min, const uint max)
 void timestamp()
 {
     time_t ltime = time(0);
-    printf("\n\033[1m\x1B[31m%s\x1B[0m\033[0m", asctime(localtime(&ltime)));
+    printf("\033[1m\x1B[31m%s\x1B[0m\033[0m", asctime(localtime(&ltime)));
 }
 
 uint isalonu(char c)
@@ -458,7 +458,7 @@ uint isPeer(const uint32_t ip)
 
 void RewardPeer(const uint32_t ip, const char* pubkey)
 {
-    //Excluded from source release
+    //Excluded from source
 }
 
 //Peers are only replaced if they have not responded in a week, otherwise we still consider them contactable until replaced.
@@ -1162,7 +1162,7 @@ void *processThread(void *arg)
         if(time(0) > pr)
         {
             peersBroadcast(mid, 8);
-            peer_timeouts[0] = 0; //Reset master timeout
+            peer_timeouts[0] = time(0)+MAX_PEER_EXPIRE_SECONDS; //Reset master timeout
             pr = time(0)+180;
         }
         
@@ -1658,7 +1658,7 @@ int main(int argc , char *argv[])
     
     //Launch Info
     timestamp();
-    printf("\n\x1B[33mVFC - Very Fast Cash\n");
+    printf("\n\x1B[33mVFC - Very Fungible Cash\n");
     printf("https://VF.CASH - https://VFCASH.UK\n");
     printf("https://github.com/vfcash\n");
     printf("v%s\x1B[0m\n\n", version);
