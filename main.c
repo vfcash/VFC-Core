@@ -1184,7 +1184,8 @@ void *processThread(void *arg)
             
             //Try to find a peer who has responded to a ping in atleast the last 9 minutes. Remember we check every peer with a ping every 3 minutes.
             rewardindex++;
-            while((time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS)) > 540)
+            const uint dt = (time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS)); //Prevent negative numbers, causes wrap
+            while(dt > 540)
             {
                 rewardindex++;
                 if(rewardindex >= num_peers)
