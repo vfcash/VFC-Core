@@ -123,8 +123,8 @@
 #define MAX_THREADS 6                   // Maximum replay threads this node can spawn (about 3 syncs or 6 replays)
 #define MAX_PEERS 3072                  // Maimum trackable peers at once (this is a high enough number)
 #define MAX_SECONDS_PER_TRANS 1         // Seconds to limit addresses for after each transaction
-#define MAX_PEER_EXPIRE_SECONDS 259200  // Seconds before a peer can be replaced by a more active peer, judged by transactions made per peer.
-#define MASTER_NODE 0                   // For compile time, is this going to be a client or a reward-paying masternode?
+#define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by a more active peer, judged by transactions made per peer. (3 days=259200)
+#define MASTER_NODE 1                   // For compile time, is this going to be a client or a reward-paying masternode?
 
 #define MAX_TRANS_PER_TSEC MAX_TRANS_QUEUE*2 //must be divisable by 2 [this is actually transactions per MAX_SECONDS_PER_TRANS seconds.]
 #define MAX_TRANS_PER_TSEC_MEM MAX_TRANS_PER_TSEC*2
@@ -138,7 +138,7 @@
 #define mval uint32_t
 
 ulong err = 0;
-const char version[]="0.23";
+const char version[]="0.24";
 const uint16_t gport = 8173;
 const char master_ip[] = "68.183.49.225";
 uint32_t replay_allow = 0;
@@ -458,7 +458,7 @@ uint isPeer(const uint32_t ip)
 
 void RewardPeer(const uint32_t ip, const char* pubkey)
 {
-    return 0;
+    //Excluded from source release
 }
 
 //Peers are only replaced if they have not responded in a week, otherwise we still consider them contactable until replaced.
@@ -474,7 +474,7 @@ int addPeer(const uint32_t ip)
     {
         if(peers[i] == ip)
         {
-            peer_timeouts[i] = time(0) + MAX_PEER_EXPIRE_SECONDS; //Renew 3 day expirary
+            peer_timeouts[i] = time(0) + MAX_PEER_EXPIRE_SECONDS;
             peer_tcount[i]++;
             return 0; //exists
         }
@@ -487,7 +487,7 @@ int addPeer(const uint32_t ip)
     if(num_peers < MAX_PEERS)
     {
         peers[num_peers] = ip;
-        peer_timeouts[num_peers] = time(0) + MAX_PEER_EXPIRE_SECONDS; //3 day expire
+        peer_timeouts[num_peers] = time(0) + MAX_PEER_EXPIRE_SECONDS;
         peer_tcount[num_peers] = 1;
         num_peers++;
         return 1;
@@ -495,7 +495,7 @@ int addPeer(const uint32_t ip)
     else if(freeindex != 0) //If not replace a node quiet for more than three hours
     {
         peers[freeindex] = ip;
-        peer_timeouts[freeindex] = time(0) + MAX_PEER_EXPIRE_SECONDS; //3 day expire
+        peer_timeouts[freeindex] = time(0) + MAX_PEER_EXPIRE_SECONDS;
         peer_tcount[freeindex] = 1;
         return 1;
     }
@@ -748,6 +748,46 @@ void *replayBlocksRevThread(void *arg)
     const uint32_t *ip = arg;
     replayBlocksRev(*ip);
     threads--;
+}
+
+//dump all trans
+void dumptrans()
+{
+    FILE* f = fopen(CHAIN_FILE, "r");
+    if(f)
+    {
+        fseek(f, 0, SEEK_END);
+        const long int len = ftell(f);
+
+        struct trans t;
+        for(size_t i = 0; i < len; i += sizeof(struct trans))
+        {
+            fseek(f, i, SEEK_SET);
+            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+            {
+                char topub[MIN_LEN];
+                memset(topub, 0, sizeof(topub));
+                size_t len = MIN_LEN;
+                b58enc(topub, &len, t.to.key, ECC_CURVE+1);
+
+                char frompub[MIN_LEN];
+                memset(frompub, 0, sizeof(frompub));
+                len = MIN_LEN;
+                b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
+
+                printf("%s > %s : %u\n", frompub, topub, t.amount);
+            }
+            else
+            {
+                printf("There was a problem, blocks.dat looks corrupt.\n");
+                fclose(f);
+                return;
+            }
+            
+        }
+
+        fclose(f);
+    }
 }
 
 //print received transactions
@@ -1115,24 +1155,46 @@ int isNodeRunning()
 void *processThread(void *arg)
 {
     time_t nr = time(0)+60;
+    time_t pr = time(0)+180;
     while(1)
     {
+        //Check which of the peers are still alive, those that are, update their timestamps
+        if(time(0) > pr)
+        {
+            peersBroadcast(mid, 8);
+            peer_timeouts[0] = 0; //Reset master timeout
+            pr = time(0)+180;
+        }
+        
+//This code is only for the masternode to execute, in-order to distribute rewards fairly.
 #if MASTER_NODE == 1
         //Peers get a few chances to collect their reward
         if(rewardpaid == 0 && time(0) > nr)
-        {;
+        {
             csend(peers[rewardindex], "x", 1);
             nr = time(0)+60;
         }
 
-        //Otherwise they forefit
+        //Otherwise they forefit, it's time to reward the next peer.
         if(time(0) > nextreward)
         {
+            //Set the next reward time / reset reward interval
             nextreward = time(0) + qRand(540, 660);
             rewardpaid = 0;
+            
+            //Try to find a peer who has responded to a ping in atleast the last 9 minutes. Remember we check every peer with a ping every 3 minutes.
             rewardindex++;
-            if(rewardindex >= num_peers)
-                rewardindex = 0; 
+            while((time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS)) > 540)
+            {
+                rewardindex++;
+                if(rewardindex >= num_peers)
+                {
+                    //The master should always be online, so if no other node was eligible for a reward, and we looped back to the master,
+                    //wait 10 mins before we try again and try to give the reward to the master, if it really is online.
+                    rewardindex = 0;
+                    break;
+                }
+            }
         }
 #endif
 
@@ -1155,11 +1217,13 @@ void *processThread(void *arg)
             {
                 addPeer(ipo[i]); //Track this client by attached origin
                 addPeer(ip[i]); //Track this client by origin
+                savemem(); //Save mem due to peers list update
             }
             else //Broadcast but prevent clients repeating message
             {
                 //Track this client from origin
                 addPeer(ip[i]);
+                savemem(); //Save mem due to peers list update
 
                 //Construct a non-repeatable transaction and tell our peers
                 const uint32_t origin = ip[i];
@@ -1239,6 +1303,12 @@ int main(int argc , char *argv[])
         if(fread(myrewardkey+1, sizeof(char), len, f) != len)
             printf("\033[1m\x1B[31mFailed to load Rewards address, this means you are unable to receive rewards.\x1B[0m\033[0m\n");
 
+        //clean off any new spaces at the end, etc
+        const int sal = strlen(myrewardkey);
+        for(int i = 1; i < sal; ++i)
+            if(isalonu(myrewardkey[i]) == 0)
+                myrewardkey[i] = 0x00;
+
         fclose(f);
     }
 
@@ -1292,6 +1362,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mTo create a new Address, Public / Private Key-Pair:\x1B[0m\n ./coin new\x1B[0m\n\n");
             printf("\x1B[33mTo manually add a peer use:\x1B[0m\n ./coin addpeer <peer ip-address>\n\n");
             printf("\x1B[33mList all locally indexed peers and info:\x1B[0m\n ./coin peers\n\n");
+            printf("\x1B[33mDump all transactions in the blockchain:\x1B[0m\n ./coin dump\n\n");
             printf("\x1B[33mReturns your Public Key stored in /var/log/vfc/public.key for reward collections:\x1B[0m\n ./coin reward\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./coin scan\x1B[0m\n\n");
             
@@ -1373,10 +1444,21 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
+        //Dump all trans
+        if(strcmp(argv[1], "dump") == 0)
+        {
+            dumptrans();
+            exit(0);
+        }
+
         //Return reward addr
         if(strcmp(argv[1], "reward") == 0)
         {
-            printf("\x1B[33mYour reward address is:\x1B[0m%s\n\n", myrewardkey);
+            addr rk;
+            size_t len = ECC_CURVE+1;
+            b58tobin(rk.key, &len, myrewardkey+1, strlen(myrewardkey)-1); //It's got a space in it (at the beginning) ;)
+            setlocale(LC_NUMERIC, "");
+            printf("\x1B[33mYour reward address is:\x1B[0m%s (\x1B[33m%'u VFC\x1B[0m)\n\n", myrewardkey, getBalance(&rk));
             exit(0);
         }
 
@@ -1398,14 +1480,35 @@ int main(int argc , char *argv[])
         {
             loadmem();
             printf("\n\x1B[33mTip; If you are running a full-node then consider hosting a website on port 80 where you can declare a little about your operation and a VFC address people can use to donate to you on. Thus you should be able to visit any of these IP addresses in a web-browser and find out a little about each node or obtain a VFC Address to donate to the node operator on.\x1B[0m\n\n");
-            printf("\x1B[33mTotal Peers:\x1B[0m %u\x1B[33\n\n\x1B[33mIP Address / Number of Transactions Relayed / Seconds since last trans\x1B[0m\n", num_peers);
+            printf("\x1B[33mTotal Peers:\x1B[0m %u\x1B[33\n\n", num_peers);
+            printf("\x1B[33mIP Address / Number of Transactions Relayed / Seconds since last trans\x1B[0m\n");
+            uint ac = 0;
             for(uint i = 0; i < num_peers; ++i)
             {
                 struct in_addr ip_addr;
                 ip_addr.s_addr = peers[i];
-                printf("%s / %u / %li\n", inet_ntoa(ip_addr), peer_tcount[i], time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS));
+                const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS); //ping delta
+                if(pd <= 540)
+                {
+                    printf("%s / %u / %u\n", inet_ntoa(ip_addr), peer_tcount[i], pd);
+                    ac++;
+                }
             }
-            printf("\n");
+            printf("\x1B[33mAlive Peers:\x1B[0m %u\n", ac);
+            printf("\n--- Possibly Dead Peers ---\n\n");
+            uint dc = 0;
+            for(uint i = 0; i < num_peers; ++i)
+            {
+                struct in_addr ip_addr;
+                ip_addr.s_addr = peers[i];
+                const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS); //ping delta
+                if(pd > 540)
+                {
+                    printf("%s / %u / %u\n", inet_ntoa(ip_addr), peer_tcount[i], pd);
+                    dc++;
+                }
+            }
+            printf("\x1B[33mDead Peers:\x1B[0m %u\n\n", dc);
             exit(0);
         }
     }
@@ -1729,16 +1832,16 @@ int main(int argc , char *argv[])
             }
             else if(rb[0] == '\r')
             {
-                if( rb[1] == mid[0] && //Only add as a peer if they responded with our private mid code
-                    rb[2] == mid[1] &&
-                    rb[3] == mid[2] &&
-                    rb[4] == mid[3] &&
-                    rb[5] == mid[4] &&
-                    rb[6] == mid[5] &&
-                    rb[7] == mid[6] &&
-                    rb[8] == mid[7] )
+                if( rb[1] == mid[1] && //Only add as a peer if they responded with our private mid code
+                    rb[2] == mid[2] &&
+                    rb[3] == mid[3] &&
+                    rb[4] == mid[4] &&
+                    rb[5] == mid[5] &&
+                    rb[6] == mid[6] &&
+                    rb[7] == mid[7] )
                 {
                     addPeer(client.sin_addr.s_addr);
+                    savemem(); //Save mem, peers list has updated
 
                     //Increment Requests
                     reqs++;
@@ -1781,7 +1884,10 @@ int main(int argc , char *argv[])
                 //Let's execute a Sync every 3*60 mins (3hr)
                 if(rsi >= 60)
                 {
+                    //Reset loop
                     rsi = 0;
+                    
+                    //Request a resync
                     resyncBlocks('s');
                 }
 
