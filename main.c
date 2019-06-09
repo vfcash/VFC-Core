@@ -1482,7 +1482,7 @@ int main(int argc , char *argv[])
             loadmem();
             printf("\n\x1B[33mTip; If you are running a full-node then consider hosting a website on port 80 where you can declare a little about your operation and a VFC address people can use to donate to you on. Thus you should be able to visit any of these IP addresses in a web-browser and find out a little about each node or obtain a VFC Address to donate to the node operator on.\x1B[0m\n\n");
             printf("\x1B[33mTotal Peers:\x1B[0m %u\x1B[33\n\n", num_peers);
-            printf("\x1B[33mIP Address / Number of Transactions Relayed / Seconds since last trans\x1B[0m\n");
+            printf("\x1B[33mIP Address / Number of Transactions Relayed / Seconds since last trans / ping\x1B[0m\n");
             uint ac = 0;
             for(uint i = 0; i < num_peers; ++i)
             {
