@@ -123,7 +123,7 @@
 #define MAX_THREADS 6                   // Maximum replay threads this node can spawn (about 3 syncs or 6 replays)
 #define MAX_PEERS 3072                  // Maimum trackable peers at once (this is a high enough number)
 #define MAX_SECONDS_PER_TRANS 1         // Seconds to limit addresses for after each transaction
-#define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by a more active peer, judged by transactions made per peer. (3 days=259200)
+#define MAX_PEER_EXPIRE_SECONDS 259200  // Seconds before a peer can be replaced by a more active peer, judged by transactions made per peer. (3 days=259200)
 #define MASTER_NODE 0                   // For compile time, is this going to be a client or a reward-paying masternode?
 
 #define MAX_TRANS_PER_TSEC MAX_TRANS_QUEUE*2 //must be divisable by 2 [this is actually transactions per MAX_SECONDS_PER_TRANS seconds.]
