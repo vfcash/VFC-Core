@@ -16,7 +16,7 @@ Join us on Telegram [@vfcash](https://t.me/vfcash)
 
 # Installation & Running a Full Node
 
-**Linux x86_64 Install Instructions (Full Node & Client Wallet):**
+**Linux Compile & Install Instructions (Full Node & Client Wallet):**
 ```
 git clone https://github.com/vfcash/VFC-Core && cd VFC-Core
 sudo chmod 0777 compile.sh
