@@ -21,10 +21,6 @@ Join us on Telegram [@vfcash](https://t.me/vfcash)
 git clone https://github.com/vfcash/VFC-Core && cd VFC-Core
 sudo chmod 0777 compile.sh
 ./compile.sh
-cp coin /usr/bin/coin
-sudo chmod 0777 /usr/bin/coin
-sudo mkdir /var/log/vfc
-sudo chmod 0777 /var/log/vfc
 ```
 Then use the `coin help` command in the console for a full command list.
 
