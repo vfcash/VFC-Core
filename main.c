@@ -124,7 +124,7 @@
 #define MAX_PEERS 3072                  // Maimum trackable peers at once (this is a high enough number)
 #define MAX_SECONDS_PER_TRANS 1         // Seconds to limit addresses for after each transaction
 #define MAX_PEER_EXPIRE_SECONDS 259200  // Seconds before a peer can be replaced by a more active peer, judged by transactions made per peer. (3 days=259200)
-#define MASTER_NODE 1                   // For compile time, is this going to be a client or a reward-paying masternode?
+#define MASTER_NODE 0                   // For compile time, is this going to be a client or a reward-paying masternode?
 #define REWARD_INTERVAL qRand(540, 660) // How often to pay rewards qRand(540, 660)
 #define REWARD_RETRY_INTERVAL 60        // How often to ping the peer requesting a reward address during their reward interval period
 #define PING_INTERVAL 180               // How often top ping the peers to see if they are still alive
