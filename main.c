@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    4th of June   (2019)
+    Project updated:    8th of June   (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -24,7 +24,7 @@
     *** In it's current state we only track peer's who send a transaction to the server. ***
 
     To use the VFC wallet you need to be running a full node which requires that you
-    forward UDP port 5173 on your router to the local machine running the VFC full
+    forward UDP port 8173 on your router to the local machine running the VFC full
     node.
 
     There is a small transaction Queue and a processing thread to make sure normal
@@ -124,7 +124,10 @@
 #define MAX_PEERS 3072                  // Maimum trackable peers at once (this is a high enough number)
 #define MAX_SECONDS_PER_TRANS 1         // Seconds to limit addresses for after each transaction
 #define MAX_PEER_EXPIRE_SECONDS 259200  // Seconds before a peer can be replaced by a more active peer, judged by transactions made per peer. (3 days=259200)
-#define MASTER_NODE 0                   // For compile time, is this going to be a client or a reward-paying masternode?
+#define MASTER_NODE 1                   // For compile time, is this going to be a client or a reward-paying masternode?
+#define REWARD_INTERVAL qRand(540, 660) // How often to pay rewards qRand(540, 660)
+#define REWARD_RETRY_INTERVAL 60        // How often to ping the peer requesting a reward address during their reward interval period
+#define PING_INTERVAL 180               // How often top ping the peers to see if they are still alive
 
 #define MAX_TRANS_PER_TSEC MAX_TRANS_QUEUE*2 //must be divisable by 2 [this is actually transactions per MAX_SECONDS_PER_TRANS seconds.]
 #define MAX_TRANS_PER_TSEC_MEM MAX_TRANS_PER_TSEC*2
@@ -138,7 +141,7 @@
 #define mval uint32_t
 
 ulong err = 0;
-const char version[]="0.24";
+const char version[]="0.25";
 const uint16_t gport = 8173;
 const char master_ip[] = "68.183.49.225";
 uint32_t replay_allow = 0;
@@ -146,7 +149,7 @@ uint threads = 0;
 char mid[6];
 time_t nextreward = 0;
 uint rewardindex = 0;
-uint rewardpaid = 0;
+uint rewardpaid = 1;
 char myrewardkey[MIN_LEN];
 
 ///////////////////////////////////////////////////////////////////////////
@@ -458,7 +461,7 @@ uint isPeer(const uint32_t ip)
 
 void RewardPeer(const uint32_t ip, const char* pubkey)
 {
-    //Excluded from source
+    //removed
 }
 
 //Peers are only replaced if they have not responded in a week, otherwise we still consider them contactable until replaced.
@@ -967,34 +970,36 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     else if(hbr < 0)
         return hbr;
 
-    //Ok let's register the transaction
-    FILE* f = fopen(CHAIN_FILE, "a");
-    if(f)
+    //Create new memory trans for chain
+    struct trans t;
+    memset(&t, 0, sizeof(struct trans));
+    t.uid = uid;
+    memcpy(t.from.key, from->key, ECC_CURVE+1);
+    memcpy(t.to.key, to->key, ECC_CURVE+1);
+    t.amount = amount;
+    
+    //Verify
+    uint8_t thash[ECC_CURVE];
+    makHash(thash, &t);
+    if(ecdsa_verify(from->key, thash, owner->key) == 0)
+        return ERROR_SIGFAIL;
+
+    //Add the sig now
+    memcpy(t.owner.key, owner->key, ECC_CURVE*2);
+
+    //Ok let's write the transaction to chain
+    if(memcmp(from->key, to->key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
     {
-        //Create new memory trans for chain
-        struct trans t;
-        memset(&t, 0, sizeof(struct trans));
-        t.uid = uid;
-        memcpy(t.from.key, from->key, ECC_CURVE+1);
-        memcpy(t.to.key, to->key, ECC_CURVE+1);
-        t.amount = amount;
-        
-        //Verify
-        uint8_t thash[ECC_CURVE];
-        makHash(thash, &t);
-        if(ecdsa_verify(from->key, thash, owner->key) == 0)
-            return ERROR_SIGFAIL;
-
-        //Add the sig now
-        memcpy(t.owner.key, owner->key, ECC_CURVE*2);
-        
-        //Write to chain
-        fwrite(&t, sizeof(struct trans), 1, f);
-        fclose(f);
-
-        //Memory limit
-        add_lim(from, to);
+        FILE* f = fopen(CHAIN_FILE, "a");
+        if(f)
+        {
+            fwrite(&t, sizeof(struct trans), 1, f);
+            fclose(f);
+        }
     }
+
+    //Memory limit
+    add_lim(from, to);
 
     //Success
     return 1;
@@ -1154,8 +1159,8 @@ int isNodeRunning()
 
 void *processThread(void *arg)
 {
-    time_t nr = time(0)+60;
-    time_t pr = time(0)+180;
+    time_t nr = time(0) + REWARD_RETRY_INTERVAL;
+    time_t pr = time(0) + PING_INTERVAL;
     while(1)
     {
         //Check which of the peers are still alive, those that are, update their timestamps
@@ -1163,7 +1168,7 @@ void *processThread(void *arg)
         {
             peersBroadcast(mid, 8);
             peer_timeouts[0] = time(0)+MAX_PEER_EXPIRE_SECONDS; //Reset master timeout
-            pr = time(0)+180;
+            pr = time(0) + PING_INTERVAL;
         }
         
 //This code is only for the masternode to execute, in-order to distribute rewards fairly.
@@ -1172,22 +1177,23 @@ void *processThread(void *arg)
         if(rewardpaid == 0 && time(0) > nr)
         {
             csend(peers[rewardindex], "x", 1);
-            nr = time(0)+60;
+            nr = time(0)+1;
         }
 
         //Otherwise they forefit, it's time to reward the next peer.
         if(time(0) > nextreward)
         {
             //Set the next reward time / reset reward interval
-            nextreward = time(0) + qRand(540, 660);
+            nextreward = time(0) + REWARD_INTERVAL;
             rewardpaid = 0;
             
             //Try to find a peer who has responded to a ping in atleast the last 9 minutes. Remember we check every peer with a ping every 3 minutes.
             rewardindex++;
-            const uint dt = (time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS)); //Prevent negative numbers, causes wrap
+            uint dt = (time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS)); //Prevent negative numbers, causes wrap
             while(dt > 540)
             {
                 rewardindex++;
+                dt = (time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS));
                 if(rewardindex >= num_peers)
                 {
                     //The master should always be online, so if no other node was eligible for a reward, and we looped back to the master,
@@ -1314,7 +1320,7 @@ int main(int argc , char *argv[])
     }
 
     //Set next reward time
-    nextreward = time(0) + qRand(540, 660); //9-11 minutes, add's some entropy.
+    nextreward = time(0) + REWARD_INTERVAL; //9-11 minutes, add's some entropy.
 
     //Set the MID
     mid[0] = '\t';
@@ -1723,7 +1729,9 @@ int main(int argc , char *argv[])
             //It's time to payout some rewards (if eligible).
 #if MASTER_NODE == 1
             if(rb[0] == ' ')
+            {
                 RewardPeer(client.sin_addr.s_addr, rb); //Check if the peer is eligible
+            }
 #endif
 
             //Is this a [fresh trans / dead trans] ?
