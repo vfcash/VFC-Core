@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    8th of June   (2019)
+    Project updated:    10th of June   (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
