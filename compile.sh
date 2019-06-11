@@ -7,3 +7,4 @@ cp coin /usr/bin/coin
 chmod 0777 /usr/bin/coin
 mkdir /var/log/vfc
 chmod 0777 /var/log/vfc
+echo Compiled and Installed `/usr/bin/coin` and `/var/log/vfc` ;)
