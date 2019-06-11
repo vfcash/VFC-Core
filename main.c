@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    10th of June   (2019)
+    Project updated:    11th of June  (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -124,7 +124,7 @@
 #define MAX_PEERS 3072                  // Maimum trackable peers at once (this is a high enough number)
 #define MAX_SECONDS_PER_TRANS 1         // Seconds to limit addresses for after each transaction
 #define MAX_PEER_EXPIRE_SECONDS 259200  // Seconds before a peer can be replaced by a more active peer, judged by transactions made per peer. (3 days=259200)
-#define MASTER_NODE 0                   // For compile time, is this going to be a client or a reward-paying masternode?
+#define MASTER_NODE 1                   // For compile time, is this going to be a client or a reward-paying masternode?
 #define REWARD_INTERVAL qRand(540, 660) // How often to pay rewards qRand(540, 660)
 #define REWARD_RETRY_INTERVAL 60        // How often to ping the peer requesting a reward address during their reward interval period
 #define PING_INTERVAL 180               // How often top ping the peers to see if they are still alive
@@ -135,13 +135,14 @@
 #define MIN_LEN 256
 
 #define CHAIN_FILE "/var/log/vfc/blocks.dat"
+#define BADCHAIN_FILE "/var/log/vfc/bad_blocks.dat"
 
 #define uint unsigned int
 #define ulong unsigned long long int
 #define mval uint32_t
 
 ulong err = 0;
-const char version[]="0.25";
+const char version[]="0.26";
 const uint16_t gport = 8173;
 const char master_ip[] = "68.183.49.225";
 uint32_t replay_allow = 0;
@@ -793,6 +794,46 @@ void dumptrans()
     }
 }
 
+//dump all bad trans
+void dumpbadtrans()
+{
+    FILE* f = fopen(BADCHAIN_FILE, "r");
+    if(f)
+    {
+        fseek(f, 0, SEEK_END);
+        const long int len = ftell(f);
+
+        struct trans t;
+        for(size_t i = 0; i < len; i += sizeof(struct trans))
+        {
+            fseek(f, i, SEEK_SET);
+            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+            {
+                char topub[MIN_LEN];
+                memset(topub, 0, sizeof(topub));
+                size_t len = MIN_LEN;
+                b58enc(topub, &len, t.to.key, ECC_CURVE+1);
+
+                char frompub[MIN_LEN];
+                memset(frompub, 0, sizeof(frompub));
+                len = MIN_LEN;
+                b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
+
+                printf("%s > %s : %u\n", frompub, topub, t.amount);
+            }
+            else
+            {
+                printf("There was a problem, bad_blocks.dat looks corrupt.\n");
+                fclose(f);
+                return;
+            }
+            
+        }
+
+        fclose(f);
+    }
+}
+
 //print received transactions
 void printIns(addr* a)
 {
@@ -962,15 +1003,8 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     if(limon == 1)
         if(islim(from, to) == 1)
             return ERROR_LIMITED;
-    
-    //Check this address has the required value for the transaction (and that UID is actually unique)
-    const int hbr = hasbalance(uid, from, amount);
-    if(hbr == 0)
-        return ERROR_NOFUNDS;
-    else if(hbr < 0)
-        return hbr;
 
-    //Create new memory trans for chain
+    //Create trans struct
     struct trans t;
     memset(&t, 0, sizeof(struct trans));
     t.uid = uid;
@@ -978,14 +1012,35 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     memcpy(t.to.key, to->key, ECC_CURVE+1);
     t.amount = amount;
     
-    //Verify
+    //Lets verify if this signature is valid
     uint8_t thash[ECC_CURVE];
     makHash(thash, &t);
     if(ecdsa_verify(from->key, thash, owner->key) == 0)
         return ERROR_SIGFAIL;
 
-    //Add the sig now
+    //Add the sig now we know it's valid
     memcpy(t.owner.key, owner->key, ECC_CURVE*2);
+    
+    //Check this address has the required value for the transaction (and that UID is actually unique)
+    const int hbr = hasbalance(uid, from, amount);
+    if(hbr == 0)
+    {
+        //If this is a replay, then we have a "bad_block" let's log it for analysis
+        if(limon == 0)
+        {
+            FILE* f = fopen(BADCHAIN_FILE, "a");
+            if(f)
+            {
+                fwrite(&t, sizeof(struct trans), 1, f);
+                fclose(f);
+            }
+        }
+        return ERROR_NOFUNDS;
+    }
+    else if(hbr < 0)
+    {
+        return hbr;
+    }
 
     //Ok let's write the transaction to chain
     if(memcmp(from->key, to->key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
@@ -1370,6 +1425,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mTo manually add a peer use:\x1B[0m\n ./coin addpeer <peer ip-address>\n\n");
             printf("\x1B[33mList all locally indexed peers and info:\x1B[0m\n ./coin peers\n\n");
             printf("\x1B[33mDump all transactions in the blockchain:\x1B[0m\n ./coin dump\n\n");
+            printf("\x1B[33mDump all double spend transactions detected from other peers:\x1B[0m\n ./coin dumpbad\n\n");
             printf("\x1B[33mReturns your Public Key stored in /var/log/vfc/public.key for reward collections:\x1B[0m\n ./coin reward\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./coin scan\x1B[0m\n\n");
             
@@ -1455,6 +1511,13 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "dump") == 0)
         {
             dumptrans();
+            exit(0);
+        }
+
+        //Dump all bad trans
+        if(strcmp(argv[1], "dumpbad") == 0)
+        {
+            dumpbadtrans();
             exit(0);
         }
 
