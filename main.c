@@ -114,7 +114,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.27";
+const char version[]="0.28";
 const uint16_t gport = 8173;
 const char master_ip[] = "68.183.49.225";
 
@@ -1305,6 +1305,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mList all locally indexed peers and info:\x1B[0m\n ./coin peers\n\n");
             printf("\x1B[33mDump all transactions in the blockchain:\x1B[0m\n ./coin dump\n\n");
             printf("\x1B[33mDump all double spend transactions detected from other peers:\x1B[0m\n ./coin dumpbad\n\n");
+            printf("\x1B[33mClear all double spend transactions detected from other peers:\x1B[0m\n ./coin clearbad\n\n");
             printf("\x1B[33mReturns your Public Key stored in /var/log/vfc/public.key for reward collections:\x1B[0m\n ./coin reward\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./coin scan\x1B[0m\n\n");
             
@@ -1397,6 +1398,13 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "dumpbad") == 0)
         {
             dumpbadtrans();
+            exit(0);
+        }
+
+        //Clear all bad trans
+        if(strcmp(argv[1], "clearbad") == 0)
+        {
+            remove(BADCHAIN_FILE);
             exit(0);
         }
 
