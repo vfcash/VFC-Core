@@ -8,7 +8,7 @@ The only incentive to run a Full Node is if you wish to implement a payment gate
 
 Transactions are truly free, there is no charge for making a transaction on the network.
 
-**What about Double Spending?** With double-spending, we restrict addresses on the network to only making one transaction per one second as mentioned above, however now even in the very rare possibility that someone tried to execute a double spend from two very distant nodes in the network there is a very rare possibility of a single address with 1 VFC sending two transactions at the same time of 1 VFC, in this instance one of the transactions (usually the first) will instantly propagate the network and dominate the other, now if any network nodes received the second transaction first what will happen is these nodes will cache the transaction until the address tops-up the balance required to process the other 1 VFC, and then, the transaction will propagate through the entire network. So attempted double-spending is not a great idea, the transaction will be cached and processed when you next have the available funds.
+**What about Double Spending?** Please refer to the WhitePaper.
 
 This is a private decentralised network, as-in you will need control of some currency before the rest of the network considers your dedicated node viable for indexing.
 
