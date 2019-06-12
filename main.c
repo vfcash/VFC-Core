@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    11th of June  (2019)
+    Project updated:    12th of June  (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -22,6 +22,7 @@
     Local storage in /var/log/vfc
 
     *** In it's current state we only track peer's who send a transaction to the server. ***
+    *** Send a transaction to yourself, you wont see any address balance until verified ***
 
     To use the VFC wallet you need to be running a full node which requires that you
     forward UDP port 8173 on your router to the local machine running the VFC full
@@ -112,40 +113,44 @@
 ///////////////
 ////////
 
-#define ERROR_MAXCHAINHR -1
-#define ERROR_LIMITED -2
-#define ERROR_NOFUNDS -3
-#define ERROR_SIGFAIL -4
-#define ERROR_AMOUNT -5
-#define ERROR_UIDEXIST -6
+//Client Configuration
+const char version[]="0.27";
+const uint16_t gport = 8173;
+const char master_ip[] = "68.183.49.225";
 
+//Error Codes
+#define ERROR_NOFUNDS -1
+#define ERROR_SIGFAIL -2
+#define ERROR_UIDEXIST -4
+
+//Node Settings
 #define MAX_TRANS_QUEUE 256             // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
 #define MAX_THREADS 6                   // Maximum replay threads this node can spawn (about 3 syncs or 6 replays)
 #define MAX_PEERS 3072                  // Maimum trackable peers at once (this is a high enough number)
-#define MAX_SECONDS_PER_TRANS 1         // Seconds to limit addresses for after each transaction
-#define MAX_PEER_EXPIRE_SECONDS 259200  // Seconds before a peer can be replaced by a more active peer, judged by transactions made per peer. (3 days=259200)
+#define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
+#define PING_INTERVAL 180               // How often top ping the peers to see if they are still alive
+
+//Master Node Settings [server 68.183.49.225 only]
 #define MASTER_NODE 1                   // For compile time, is this going to be a client or a reward-paying masternode?
 #define REWARD_INTERVAL qRand(540, 660) // How often to pay rewards qRand(540, 660)
 #define REWARD_RETRY_INTERVAL 60        // How often to ping the peer requesting a reward address during their reward interval period
-#define PING_INTERVAL 180               // How often top ping the peers to see if they are still alive
 
-#define MAX_TRANS_PER_TSEC MAX_TRANS_QUEUE*2 //must be divisable by 2 [this is actually transactions per MAX_SECONDS_PER_TRANS seconds.]
-#define MAX_TRANS_PER_TSEC_MEM MAX_TRANS_PER_TSEC*2
+//Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
 #define MIN_LEN 256
 
+//Chain Paths
 #define CHAIN_FILE "/var/log/vfc/blocks.dat"
 #define BADCHAIN_FILE "/var/log/vfc/bad_blocks.dat"
 
-#define uint unsigned int
-#define ulong unsigned long long int
+//Vairable Definitions
+#define uint uint32_t
 #define mval uint32_t
+#define ulong unsigned long long int
 
+//Operating Global Variables
 ulong err = 0;
-const char version[]="0.26";
-const uint16_t gport = 8173;
-const char master_ip[] = "68.183.49.225";
-uint32_t replay_allow = 0;
+uint replay_allow = 0;
 uint threads = 0;
 char mid[6];
 time_t nextreward = 0;
@@ -166,38 +171,12 @@ char myrewardkey[MIN_LEN];
 /* ~ Util Functions
 */
 
-void toHex(char* out, const uint8_t* in, const uint len)
-{
-    for(uint i = 0; i < len; i++)
-    {
-        char hb[4];
-        sprintf(hb, "%02x", in[i]);
-        strcat(out, hb);
-    }
-}
-
-void fromHex(unsigned char* out, const char* in, const uint len)
-{
-    for(uint i = 0; i < len; i++)
-        sscanf(in + (i*2), "%2hhx", &out[i]);
-}
-
 char* getHome()
 {
     char *ret;
     if((ret = getenv("HOME")) == NULL)
         ret = getpwuid(getuid())->pw_dir;
     return ret;
-}
-
-void dump(const char* file, const void* dat, const uint len)
-{
-    FILE* f = fopen(file, "w");
-    if(f)
-    {
-        fwrite(dat, len, 1, f);
-        fclose(f);
-    }
 }
 
 uint qRand(const uint min, const uint max)
@@ -222,6 +201,14 @@ uint isalonu(char c)
     if(c >= 48 && c <= 57 || c >= 65 && c <= 90 || c >= 97 && c <= 122)
         return 1;
     return 0;
+}
+
+double floor(double i)
+{
+    if(i < 0)
+        return (int)i - 1;
+    else
+        return (int)i;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -299,7 +286,7 @@ void makHash(uint8_t *hash, const struct trans* t)
 */
 
 //General peer tracking
-uint32_t peers[MAX_PEERS]; //Peer IPv4 addresses
+uint peers[MAX_PEERS]; //Peer IPv4 addresses
 time_t peer_timeouts[MAX_PEERS]; //Peer timeout UNIX epoch stamps
 uint num_peers = 0; //Current number of indexed peers
 
@@ -318,7 +305,7 @@ uint countPeers()
     return c;
 }
 
-int csend(const uint32_t ip, const char* send, const size_t len)
+uint csend(const uint ip, const char* send, const size_t len)
 {
     struct sockaddr_in server;
 
@@ -360,7 +347,7 @@ void scanPeers()
     }
 }
 
-int verifyChain(const char* path)
+uint verifyChain(const char* path)
 {
     //Genesis Public Key
     uint8_t gpub[ECC_CURVE+1];
@@ -397,7 +384,7 @@ int verifyChain(const char* path)
     return 1;
 }
 
-int isMasterNode(const uint32_t ip)
+uint isMasterNode(const uint ip)
 {
     if(ip == peers[0])
         return 1;
@@ -406,8 +393,8 @@ int isMasterNode(const uint32_t ip)
 
 void setMasterNode()
 {
-    memset(peers, 0, sizeof(uint32_t)*MAX_PEERS);
-    memset(peer_timeouts, 0, sizeof(uint32_t)*MAX_PEERS);
+    memset(peers, 0, sizeof(uint)*MAX_PEERS);
+    memset(peer_timeouts, 0, sizeof(uint)*MAX_PEERS);
     struct in_addr a;
     inet_aton(master_ip, &a);
     peers[0] = a.s_addr;
@@ -442,17 +429,17 @@ void resyncBlocks(const char type)
     FILE* f = fopen("/var/log/vfc/rp.mem", "w");
     if(f)
     {
-        fwrite(&replay_allow, sizeof(uint32_t), 1, f);
+        fwrite(&replay_allow, sizeof(uint), 1, f);
         fclose(f);
     }
 }
 
-int sendMaster(const char* dat, const size_t len)
+uint sendMaster(const char* dat, const size_t len)
 {
     return csend(peers[0], dat, len);
 }
 
-uint isPeer(const uint32_t ip)
+uint isPeer(const uint ip)
 {
     for(uint i = 0; i < num_peers; ++i)
         if(peers[i] == ip)
@@ -460,13 +447,52 @@ uint isPeer(const uint32_t ip)
     return 0;
 }
 
-void RewardPeer(const uint32_t ip, const char* pubkey)
+void RewardPeer(const uint ip, const char* pubkey)
 {
-    //removed
+    //Only reward if ready
+    if(rewardpaid == 1)
+        return;
+
+    //Only reward the eligible peer
+    if(peers[rewardindex] != ip)
+        return;
+
+    //Workout payment amount
+    const double p = ( ( time(0) - 1559605848 ) / 600 ) * 0.000032596;
+    const uint v = 2800.0 - floor(p);
+
+    //Clean the input ready for sprintf (exploit vector potential otherwise)
+    char sa[MIN_LEN];
+    memset(sa, 0, sizeof(sa));
+    const int sal = strlen(pubkey);
+    memcpy(sa, pubkey, sal);
+    for(int i = 1; i < sal; ++i)
+        if(isalonu(sa[i]) == 0)
+            sa[i] = 0x00;
+
+    //Construct command
+    char cmd[2048];
+    sprintf(cmd, "coin 296B9euguTXcvRAA5ktmQ5qvcCLe6su45FTb7mcykZC1X%s %u 9w5hXdATAeYkySWZray8Tf8HXfS1CLjsAXx9V1HJonAD > /dev/null", sa, v);
+
+    //Drop info
+    struct in_addr ip_addr;
+    ip_addr.s_addr = ip;
+    timestamp();
+    printf("Reward Yapit:%s, %u, %s\n", sa, rewardindex, inet_ntoa(ip_addr));
+
+    pid_t fork_pid = fork();
+    if(fork_pid == 0)
+    {
+        //Just send the transaction using the console, much easier
+        system(cmd);
+        exit(0);
+    }
+
+    rewardpaid = 1;
 }
 
 //Peers are only replaced if they have not responded in a week, otherwise we still consider them contactable until replaced.
-int addPeer(const uint32_t ip)
+uint addPeer(const uint ip)
 {
     //Never add local host
     if(ip == inet_addr("127.0.0.1")) //0x0100007F
@@ -517,79 +543,6 @@ int addPeer(const uint32_t ip)
 //
 //
 //
-/* ~ Rate Limiting
-*/
-
-struct lim
-{
-    time_t ts;
-    addr ad;
-};
-struct lim lim[MAX_TRANS_PER_TSEC_MEM];
-
-//Are there atleast two limit slots available for this transaction?
-int islimslot()
-{
-    int c = 0;
-    for(uint i = 0; i < MAX_TRANS_PER_TSEC_MEM; i++)
-    {
-        if(time(0) > lim[i].ts || lim[i].ts == 0)
-        {
-            c++;
-            if(c == 2)
-                return 1;
-        }
-    }
-    return 0;
-}
-
-//Ok add this transaction to the two available limit slots
-void add_lim(addr* from, addr* to)
-{
-    int c = 0;
-    for(uint i = 0; i < MAX_TRANS_PER_TSEC_MEM; i++)
-    {
-        if(time(0) > lim[i].ts || lim[i].ts == 0)
-        {
-            if(c == 0)
-            {
-                lim[i].ts = time(0)+MAX_SECONDS_PER_TRANS;
-                memcpy(&lim[i].ad, from->key, ECC_CURVE+1);
-                c = 1;
-                continue;
-            }
-
-            if(c == 1)
-            {
-                lim[i].ts = time(0)+MAX_SECONDS_PER_TRANS;
-                memcpy(&lim[i].ad, to->key, ECC_CURVE+1);
-                return;
-            }
-        }
-    }
-}
-
-//Check if either addresses are limited, if so, no transaction
-int islim(addr* from, addr* to)
-{
-    for(uint i = 0; i < MAX_TRANS_PER_TSEC_MEM; i++)
-        if(lim[i].ts != 0 && time(0) < lim[i].ts)
-            if(memcmp(&lim[i].ad, from->key, ECC_CURVE+1) == 0 || memcmp(&lim[i].ad, to->key, ECC_CURVE+1) == 0)
-                return 1;
-
-    return 0;
-}
-
-///////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////
-/////////////////////////////
-///////////////
-////////
-///
-//
-//
-//
 /* ~ Transaction Queue
 
     aQue() - Add Transaction to Queue
@@ -599,19 +552,40 @@ int islim(addr* from, addr* to)
 
 //The Variables that make up `the Queue`
 struct trans tq[MAX_TRANS_QUEUE];
-uint32_t ip[MAX_TRANS_QUEUE];
-uint32_t ipo[MAX_TRANS_QUEUE];
-unsigned char limit[MAX_TRANS_QUEUE];
+uint ip[MAX_TRANS_QUEUE];
+uint ipo[MAX_TRANS_QUEUE];
+unsigned char replay[MAX_TRANS_QUEUE];
+long int delta[MAX_TRANS_QUEUE];
 
 //Add a transaction to the Queue
-void aQue(struct trans *t, const uint32_t iip, const uint32_t iipo, const unsigned char il)
+uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char il)
 {
-    //if duplicate transaction bail
+    //If amount is 0
+    if(t->amount == 0)
+        return 0; //Don't tell the other peers, pointless transaction
+
+    //Check if duplicate transaction
     int freeindex = -1;
     for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
     {
+        //Is this a possible double spend?
+        if(memcmp(tq[i].from.key, t->from.key, ECC_CURVE+1) == 0)
+        {
+            //Log both blocks in bad_blocks
+            FILE* f = fopen(BADCHAIN_FILE, "a");
+            if(f)
+            {
+                fwrite(&tq[i], sizeof(struct trans), 1, f);
+                fwrite(t, sizeof(struct trans), 1, f);
+                fclose(f);
+            }
+            tq[i].amount = 0; //It looks like it could be a double spend, terminate the original transaction
+            return 1; //Don't process this one either and tell our peers about this dodgy action so that they terminate also.
+        }
+
+        //UID already in queue?
         if(tq[i].uid == t->uid)
-            return;
+            return 0; //It's not a double spend, just a repeat, don't our peers
         
         if(freeindex == -1 && tq[i].amount == 0)
             freeindex = i;
@@ -623,16 +597,27 @@ void aQue(struct trans *t, const uint32_t iip, const uint32_t iipo, const unsign
         memcpy(&tq[freeindex], t, sizeof(struct trans));
         ip[freeindex] = iip;
         ipo[freeindex] = iipo;
-        limit[freeindex] = il;
+        replay[freeindex] = il;
+
+        struct timespec s;
+        clock_gettime(CLOCK_MONOTONIC, &s);
+        delta[freeindex] = s.tv_nsec;
     }
+
+    //Success
+    return 1;
 }
 
 //pop the first living transaction index off the Queue
 int gQue()
 {
     for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
-        if(tq[i].amount != 0)
+    {
+        struct timespec s;
+        clock_gettime(CLOCK_MONOTONIC, &s);
+        if(s.tv_nsec - delta[i] > 1000000000) //Only process transactions more than 1 second old
             return i;
+    }
     return -1;
 }
 
@@ -650,7 +635,7 @@ int gQue()
 */
 
 //Replay blocks to x address
-void replayBlocks(const uint32_t ip)
+void replayBlocks(const uint ip)
 {
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
@@ -696,13 +681,13 @@ void replayBlocks(const uint32_t ip)
 void *replayBlocksThread(void *arg)
 {
     nice(19); //Very low priority thread
-    const uint32_t *ip = arg;
+    const uint *ip = arg;
     replayBlocks(*ip);
     threads--;
 }
 
 //(in reverse, latest first to oldest last)
-void replayBlocksRev(const uint32_t ip)
+void replayBlocksRev(const uint ip)
 {
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
@@ -749,7 +734,7 @@ void *replayBlocksRevThread(void *arg)
 {
     sleep(3); //Offset threads--; collisions
     nice(19); //Very low priority thread
-    const uint32_t *ip = arg;
+    const uint *ip = arg;
     replayBlocksRev(*ip);
     threads--;
 }
@@ -944,7 +929,7 @@ mval getBalance(addr* from)
 }
 
 //Calculate if an address has the value required to make a transaction of x amount.
-int hasbalance(const uint64_t uid, addr* from, mval amount)
+uint hasbalance(const uint64_t uid, addr* from, mval amount)
 {
     mval rv = 0;
     FILE* f = fopen(CHAIN_FILE, "r");
@@ -988,22 +973,8 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
 }
 
 //Execute Transaction
-int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* owner, const uint limon)
+int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* owner)
 {
-    //Is the amount 0?
-    if(amount <= 0)
-        return ERROR_AMOUNT;
-
-    //We reached max hour trans?
-    if(limon == 1)
-        if(islimslot() == 0)
-            return ERROR_MAXCHAINHR;
-
-    //Make sure addresses aint limited
-    if(limon == 1)
-        if(islim(from, to) == 1)
-            return ERROR_LIMITED;
-
     //Create trans struct
     struct trans t;
     memset(&t, 0, sizeof(struct trans));
@@ -1024,23 +995,9 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     //Check this address has the required value for the transaction (and that UID is actually unique)
     const int hbr = hasbalance(uid, from, amount);
     if(hbr == 0)
-    {
-        //If this is a replay, then we have a "bad_block" let's log it for analysis
-        if(limon == 0)
-        {
-            FILE* f = fopen(BADCHAIN_FILE, "a");
-            if(f)
-            {
-                fwrite(&t, sizeof(struct trans), 1, f);
-                fclose(f);
-            }
-        }
         return ERROR_NOFUNDS;
-    }
     else if(hbr < 0)
-    {
         return hbr;
-    }
 
     //Ok let's write the transaction to chain
     if(memcmp(from->key, to->key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
@@ -1052,9 +1009,6 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
             fclose(f);
         }
     }
-
-    //Memory limit
-    add_lim(from, to);
 
     //Success
     return 1;
@@ -1113,7 +1067,7 @@ void savemem()
     FILE* f = fopen("/var/log/vfc/peers.mem", "w");
     if(f)
     {
-        fwrite(peers, sizeof(uint32_t), MAX_PEERS, f);
+        fwrite(peers, sizeof(uint), MAX_PEERS, f);
         fclose(f);
     }
 
@@ -1130,13 +1084,6 @@ void savemem()
         fwrite(peer_timeouts, sizeof(time_t), MAX_PEERS, f);
         fclose(f);
     }
-
-    f = fopen("/var/log/vfc/lim.mem", "w");
-    if(f)
-    {
-        fwrite(lim, sizeof(struct lim), MAX_TRANS_PER_TSEC_MEM, f);
-        fclose(f);
-    }
 }
 
 void loadmem()
@@ -1144,7 +1091,7 @@ void loadmem()
     FILE* f = fopen("/var/log/vfc/peers.mem", "r");
     if(f)
     {
-        if(fread(peers, sizeof(uint32_t), MAX_PEERS, f) != MAX_PEERS)
+        if(fread(peers, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
             printf("\033[1m\x1B[31mPeers Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
         fclose(f);
     }
@@ -1165,14 +1112,6 @@ void loadmem()
             printf("\033[1m\x1B[31mPeers2 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
         fclose(f);
     }
-    
-    f = fopen("/var/log/vfc/lim.mem", "r");
-    if(f)
-    {
-        if(fread(lim, sizeof(struct lim), MAX_TRANS_PER_TSEC_MEM, f) != MAX_TRANS_PER_TSEC_MEM)
-            printf("\033[1m\x1B[31mLimiter Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
-        fclose(f);
-    }
 }
 
 void sigintHandler(int sig_num) 
@@ -1189,7 +1128,7 @@ void sigintHandler(int sig_num)
     }
 }
 
-int isNodeRunning()
+uint isNodeRunning()
 {
     struct sockaddr_in server;
 
@@ -1269,10 +1208,10 @@ void *processThread(void *arg)
         }  
         
         //Process the transaction
-        const int r = process_trans(tq[i].uid, &tq[i].from, &tq[i].to, tq[i].amount, &tq[i].owner, limit[i]);
+        const int r = process_trans(tq[i].uid, &tq[i].from, &tq[i].to, tq[i].amount, &tq[i].owner);
 
         //Good transaction!
-        if(r == 1 && limit[i] == 1)
+        if(r == 1 && replay[i] == 1)
         {
             //Dead Transaction (do not repeat)
             if(ipo[i] != 0)
@@ -1286,25 +1225,6 @@ void *processThread(void *arg)
                 //Track this client from origin
                 addPeer(ip[i]);
                 savemem(); //Save mem due to peers list update
-
-                //Construct a non-repeatable transaction and tell our peers
-                const uint32_t origin = ip[i];
-                const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+uint64_t+1
-                char pc[MIN_LEN];
-                pc[0] = 'd';
-                char* ofs = pc + 1;
-                memcpy(ofs, &origin, sizeof(uint32_t));
-                ofs += sizeof(uint32_t);
-                memcpy(ofs, &tq[i].uid, sizeof(uint64_t));
-                ofs += sizeof(uint64_t);
-                memcpy(ofs, tq[i].from.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, tq[i].to.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, &tq[i].amount, sizeof(mval));
-                ofs += sizeof(mval);
-                memcpy(ofs, tq[i].owner.key, ECC_CURVE*2);
-                peersBroadcast(pc, len);
             }
         }
 
@@ -1462,7 +1382,7 @@ int main(int argc , char *argv[])
                 FILE* f = fopen("/var/log/vfc/rp.mem", "w");
                 if(f)
                 {
-                    fwrite(&replay_allow, sizeof(uint32_t), 1, f);
+                    fwrite(&replay_allow, sizeof(uint), 1, f);
                     fclose(f);
                 }
                 printf("\x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Authorized Peer: %s.\n", (double)st.st_size / 1000, inet_ntoa(ip_addr));
@@ -1483,7 +1403,7 @@ int main(int argc , char *argv[])
             FILE* f = fopen("/var/log/vfc/rp.mem", "w");
             if(f)
             {
-                fwrite(&replay_allow, sizeof(uint32_t), 1, f);
+                fwrite(&replay_allow, sizeof(uint), 1, f);
                 fclose(f);
             }
             printf("\x1B[33mResync Executed.\x1B[0m\n\n");
@@ -1611,10 +1531,10 @@ int main(int argc , char *argv[])
         b58tobin(from.key, &len, argv[1], strlen(argv[1]));
 
         struct timespec s;
-        clock_gettime(CLOCK_REALTIME, &s);
+        clock_gettime(CLOCK_MONOTONIC, &s);
         const mval bal = getBalance(&from);
         struct timespec e;
-        clock_gettime(CLOCK_REALTIME, &e);
+        clock_gettime(CLOCK_MONOTONIC, &e);
         long int td = (e.tv_nsec - s.tv_nsec);
         if(td > 0){td /= 1000000;}
         else if(td < 0){td = 0;}
@@ -1684,13 +1604,13 @@ int main(int argc , char *argv[])
         }
 
         //Generate Packet (pc)
-        const uint32_t origin = 0;
-        const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+uint64_t+1
+        const uint origin = 0;
+        const size_t len = 1+sizeof(uint64_t)+sizeof(uint)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+uint64_t+1
         char pc[MIN_LEN];
         pc[0] = 't';
         char* ofs = pc + 1;
-        memcpy(ofs, &origin, sizeof(uint32_t));
-        ofs += sizeof(uint32_t);
+        memcpy(ofs, &origin, sizeof(uint));
+        ofs += sizeof(uint);
         memcpy(ofs, &t.uid, sizeof(uint64_t));
         ofs += sizeof(uint64_t);
         memcpy(ofs, from, ECC_CURVE+1);
@@ -1801,14 +1721,14 @@ int main(int argc , char *argv[])
             else if(rb[0] == 't' || rb[0] == 'd')
             {
                 //Root origin peer address
-                uint32_t origin = 0;
+                uint origin = 0;
 
                 //Decode packet into a Transaction & Origin
                 struct trans t;
                 memset(&t, 0, sizeof(struct trans));
                 char* ofs = rb+1;
-                memcpy(&origin, ofs, sizeof(uint32_t)); //grab root origin address
-                ofs += sizeof(uint32_t);
+                memcpy(&origin, ofs, sizeof(uint)); //grab root origin address
+                ofs += sizeof(uint);
                 memcpy(&t.uid, ofs, sizeof(uint64_t)); //grab uid
                 ofs += sizeof(uint64_t);
                 memcpy(t.from.key, ofs, ECC_CURVE+1);
@@ -1819,8 +1739,27 @@ int main(int argc , char *argv[])
                 ofs += sizeof(mval);
                 memcpy(t.owner.key, ofs, ECC_CURVE*2);
 
-                //Process Transaction
-                aQue(&t, client.sin_addr.s_addr, origin, 1); //Threaded (using processThread()) not to jam up UDP relay
+                //Process Transaction (Threaded (using processThread()) not to jam up UDP relay)
+                if(aQue(&t, client.sin_addr.s_addr, origin, 1) == 1)
+                {
+                    //Broadcast to peers
+                    const size_t len = 1+sizeof(uint64_t)+sizeof(uint)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+uint64_t+1
+                    char pc[MIN_LEN];
+                    pc[0] = 'd';
+                    char* ofs = pc + 1;
+                    memcpy(ofs, &origin, sizeof(uint));
+                    ofs += sizeof(uint);
+                    memcpy(ofs, &t.uid, sizeof(uint64_t));
+                    ofs += sizeof(uint64_t);
+                    memcpy(ofs, t.from.key, ECC_CURVE+1);
+                    ofs += ECC_CURVE+1;
+                    memcpy(ofs, t.to.key, ECC_CURVE+1);
+                    ofs += ECC_CURVE+1;
+                    memcpy(ofs, &t.amount, sizeof(mval));
+                    ofs += sizeof(mval);
+                    memcpy(ofs, t.owner.key, ECC_CURVE*2);
+                    peersBroadcast(pc, len);
+                }
                 
                 //Increment Requests
                 reqs++;
@@ -1935,7 +1874,7 @@ int main(int argc , char *argv[])
                 FILE* f = fopen("/var/log/vfc/rp.mem", "r");
                 if(f)
                 {
-                    if(fread(&replay_allow, sizeof(uint32_t), 1, f) != 1)
+                    if(fread(&replay_allow, sizeof(uint), 1, f) != 1)
                         printf("\033[1m\x1B[31mReplay Allow IP Corrupted. Load Failed.\x1B[0m\033[0m\n");
                     fclose(f);
                 }
