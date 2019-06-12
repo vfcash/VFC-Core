@@ -1713,6 +1713,7 @@ int main(int argc , char *argv[])
                 if(aQue(&t, client.sin_addr.s_addr, origin, 1) == 1)
                 {
                     //Broadcast to peers
+                    origin = client.sin_addr.s_addr;
                     const size_t len = 1+sizeof(uint64_t)+sizeof(uint)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+uint64_t+1
                     char pc[MIN_LEN];
                     pc[0] = 'd';
