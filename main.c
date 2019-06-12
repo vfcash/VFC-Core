@@ -530,7 +530,7 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
     for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
     {
         //Is this a possible double spend?
-        if(memcmp(tq[i].from.key, t->from.key, ECC_CURVE+1) == 0)
+        if(memcmp(tq[i].from.key, t->from.key, ECC_CURVE+1) == 0 && memcmp(tq[i].to.key, t->to.key, ECC_CURVE+1) != 0)
         {
             //Log both blocks in bad_blocks
             FILE* f = fopen(BADCHAIN_FILE, "a");
