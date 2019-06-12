@@ -516,7 +516,7 @@ struct trans tq[MAX_TRANS_QUEUE];
 uint ip[MAX_TRANS_QUEUE];
 uint ipo[MAX_TRANS_QUEUE];
 unsigned char replay[MAX_TRANS_QUEUE];
-long int delta[MAX_TRANS_QUEUE];
+time_t delta[MAX_TRANS_QUEUE];
 
 //Add a transaction to the Queue
 uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char il)
@@ -529,24 +529,30 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
     int freeindex = -1;
     for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
     {
-        //Is this a possible double spend?
-        if(memcmp(tq[i].from.key, t->from.key, ECC_CURVE+1) == 0 && memcmp(tq[i].to.key, t->to.key, ECC_CURVE+1) != 0)
+        if(tq[i].amount != 0)
         {
-            //Log both blocks in bad_blocks
-            FILE* f = fopen(BADCHAIN_FILE, "a");
-            if(f)
+            //Is this a possible double spend?
+            if(il == 1)
             {
-                fwrite(&tq[i], sizeof(struct trans), 1, f);
-                fwrite(t, sizeof(struct trans), 1, f);
-                fclose(f);
+                if(memcmp(tq[i].from.key, t->from.key, ECC_CURVE+1) == 0 && memcmp(tq[i].to.key, t->to.key, ECC_CURVE+1) != 0)
+                {
+                    //Log both blocks in bad_blocks
+                    FILE* f = fopen(BADCHAIN_FILE, "a");
+                    if(f)
+                    {
+                        fwrite(&tq[i], sizeof(struct trans), 1, f);
+                        fwrite(t, sizeof(struct trans), 1, f);
+                        fclose(f);
+                    }
+                    tq[i].amount = 0; //It looks like it could be a double spend, terminate the original transaction
+                    return 1; //Don't process this one either and tell our peers about this dodgy action so that they terminate also.
+                }
             }
-            tq[i].amount = 0; //It looks like it could be a double spend, terminate the original transaction
-            return 1; //Don't process this one either and tell our peers about this dodgy action so that they terminate also.
-        }
 
-        //UID already in queue?
-        if(tq[i].uid == t->uid)
-            return 0; //It's not a double spend, just a repeat, don't our peers
+            //UID already in queue?
+            if(tq[i].uid == t->uid)
+                return 0; //It's not a double spend, just a repeat, don't tell our peers
+        }
         
         if(freeindex == -1 && tq[i].amount == 0)
             freeindex = i;
@@ -559,10 +565,7 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
         ip[freeindex] = iip;
         ipo[freeindex] = iipo;
         replay[freeindex] = il;
-
-        struct timespec s;
-        clock_gettime(CLOCK_MONOTONIC, &s);
-        delta[freeindex] = s.tv_nsec;
+        delta[freeindex] = time(0);
     }
 
     //Success
@@ -574,9 +577,7 @@ int gQue()
 {
     for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
     {
-        struct timespec s;
-        clock_gettime(CLOCK_MONOTONIC, &s);
-        if(s.tv_nsec - delta[i] > 1000000000) //Only process transactions more than 1 second old
+        if(tq[i].amount != 0 && time(0) - delta[i] > 2) //Only process transactions more than 3 second old
             return i;
     }
     return -1;
@@ -1199,9 +1200,6 @@ int main(int argc , char *argv[])
     //Suppress Sigpipe
     signal(SIGPIPE, SIG_IGN);
 
-    //Hijack CTRL+C
-    signal(SIGINT, sigintHandler);
-
     //create vfc dir
     mkdir("/var/log/vfc", 0777);
 
@@ -1501,7 +1499,7 @@ int main(int argc , char *argv[])
         else if(td < 0){td = 0;}
         
         setlocale(LC_NUMERIC, "");
-        printf("\x1B[33mThe Balance for Address '%s' is %'u VFC. Time Taken %li Milliseconds.\x1B[0m\n\n", argv[1], bal, td);
+        printf("\x1B[33mThe Balance for Address '%s' is %'u VFC. Time Taken %li Milliseconds (%li ns).\x1B[0m\n\n", argv[1], bal, td, (e.tv_nsec - s.tv_nsec));
         exit(0);
     }
 
@@ -1606,6 +1604,9 @@ int main(int argc , char *argv[])
         //Done
         exit(0);
     }
+
+    //Hijack CTRL+C
+    signal(SIGINT, sigintHandler);
     
     //Launch Info
     timestamp();
