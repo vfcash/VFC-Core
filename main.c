@@ -126,7 +126,7 @@ const char master_ip[] = "68.183.49.225";
 //Node Settings
 #define MAX_TRANS_QUEUE 256             // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
 #define MAX_THREADS 6                   // Maximum replay threads this node can spawn (about 3 syncs or 6 replays)
-#define MAX_PEERS 3072                  // Maimum trackable peers at once (this is a high enough number)
+#define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
 #define PING_INTERVAL 180               // How often top ping the peers to see if they are still alive
 
