@@ -8,8 +8,6 @@ The only incentive to run a Full Node is if you wish to implement a payment gate
 
 Transactions are truly free, there is no charge for making a transaction on the network.
 
-**What about Double Spending?** Please refer to the WhitePaper.
-
 This is a private decentralised network, as-in you will need control of some currency before the rest of the network considers your dedicated node viable for indexing.
 
 Join us on Telegram [@vfcash](https://t.me/vfcash)
