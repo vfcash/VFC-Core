@@ -171,14 +171,6 @@ char myrewardkey[MIN_LEN];
 /* ~ Util Functions
 */
 
-char* getHome()
-{
-    char *ret;
-    if((ret = getenv("HOME")) == NULL)
-        ret = getpwuid(getuid())->pw_dir;
-    return ret;
-}
-
 uint qRand(const uint min, const uint max)
 {
     static time_t ls = 0;
