@@ -48,9 +48,6 @@
     This client will try to broadcast all transactions through the master first
     and then the peer list.
 
-    This is an unordered graph, or using Buzzwords, a 'DAG'. Techincally the whole
-    blockchain is not required to operate a full node, just a recent chunk of it.
-
     Transactions echo two relays deep into the peers, making sure most nodes are
     repeat notified about the transactions due to the echoing of a packet around in
     a two relay deep p2p peers broadcast, making a less reliable UDP protocol
