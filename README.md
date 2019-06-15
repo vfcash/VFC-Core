@@ -24,7 +24,7 @@ Then use the `coin help` command in the console for a full command list.
 
 If you are running a full node then consider also installing NGINX + PHP-FPM and extracting the `server-www.zip` files into the `/var/www/html` directory; https://github.com/vfcash/RELEASES/raw/master/server-www.zip
 
-Doing so will allow other users in the network a method of finding and donating rewards to you. It comes with a basic web-wallet that can be expanded upon and will allow users to make transactions via your node which is good for your reward rating.
+Doing so will allow other users in the network a method of finding and donating rewards to you. It comes with a basic web-wallet that can be expanded upon and will allow users to make transactions via your node.
 
 If you wish the full node to launch on startup of the server, `edit /etc/rc.local` and add the command `coin` at the end of the file. Alternatively you can SSH in and launch an instance of coin in a screen or tmux, or if running a crontab add `@restart coin`.
 
