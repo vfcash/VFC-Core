@@ -441,7 +441,21 @@ uint isPeer(const uint ip)
 
 void RewardPeer(const uint ip, const char* pubkey)
 {
-    //removed
+    //Only reward if ready
+    if(rewardpaid == 1)
+        return;
+
+    //Only reward the eligible peer
+    if(peers[rewardindex] != ip)
+        return;
+
+    //Workout payment amount
+    const double p = ( ( time(0) - 1559605848 ) / 600 ) * 0.000032596;
+    const uint v = 2800.0 - floor(p);
+
+    //Pay Reward
+
+    rewardpaid = 1;
 }
 
 //Peers are only replaced if they have not responded in a week, otherwise we still consider them contactable until replaced.
@@ -1086,7 +1100,6 @@ uint isNodeRunning()
 {
     struct sockaddr_in server;
 
-    //Create socket
     int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if(s == -1)
         return 0;
