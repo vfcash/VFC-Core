@@ -131,7 +131,7 @@ const char master_ip[] = "68.183.49.225";
 #define PING_INTERVAL 180               // How often top ping the peers to see if they are still alive
 
 //Master Node Settings [server 68.183.49.225 only]
-#define MASTER_NODE 1                   // For compile time, is this going to be a client or a reward-paying masternode?
+#define MASTER_NODE 0                   // For compile time, is this going to be a client or a reward-paying masternode?
 #define REWARD_INTERVAL qRand(540, 660) // How often to pay rewards qRand(540, 660)
 #define REWARD_RETRY_INTERVAL 60        // How often to ping the peer requesting a reward address during their reward interval period
 
@@ -441,46 +441,7 @@ uint isPeer(const uint ip)
 
 void RewardPeer(const uint ip, const char* pubkey)
 {
-    //Only reward if ready
-    if(rewardpaid == 1)
-        return;
-
-    //Only reward the eligible peer
-    if(peers[rewardindex] != ip)
-        return;
-
-    //Workout payment amount
-    const double p = ( ( time(0) - 1559605848 ) / 600 ) * 0.000032596;
-    const uint v = 2800.0 - floor(p);
-
-    //Clean the input ready for sprintf (exploit vector potential otherwise)
-    char sa[MIN_LEN];
-    memset(sa, 0, sizeof(sa));
-    const int sal = strlen(pubkey);
-    memcpy(sa, pubkey, sal);
-    for(int i = 1; i < sal; ++i)
-        if(isalonu(sa[i]) == 0)
-            sa[i] = 0x00;
-
-    //Construct command
-    char cmd[2048];
-    sprintf(cmd, "coin 296B9euguTXcvRAA5ktmQ5qvcCLe6su45FTb7mcykZC1X%s %u 9w5hXdATAeYkySWZray8Tf8HXfS1CLjsAXx9V1HJonAD > /dev/null", sa, v);
-
-    //Drop info
-    struct in_addr ip_addr;
-    ip_addr.s_addr = ip;
-    timestamp();
-    printf("Reward Yapit:%s, %u, %s\n", sa, rewardindex, inet_ntoa(ip_addr));
-
-    pid_t fork_pid = fork();
-    if(fork_pid == 0)
-    {
-        //Just send the transaction using the console, much easier
-        system(cmd);
-        exit(0);
-    }
-
-    rewardpaid = 1;
+    //removed
 }
 
 //Peers are only replaced if they have not responded in a week, otherwise we still consider them contactable until replaced.
