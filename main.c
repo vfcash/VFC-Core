@@ -1554,7 +1554,7 @@ int main(int argc , char *argv[])
     }
 
     //Does user just wish to execute transaction?
-    if(argc > 1)
+    if(argc == 5)
     {
     //Force console to clear.
     printf("\033[H\033[J");
@@ -1659,6 +1659,7 @@ int main(int argc , char *argv[])
     if(argc > 1)
     {
         //Looks like some unknown command was executed.
+        printf("Command not recognised.\n");
         exit(0);
     }
 
