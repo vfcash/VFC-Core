@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    15th of June  (2019)
+    Project updated:    12th of June  (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -47,6 +47,9 @@
 
     This client will try to broadcast all transactions through the master first
     and then the peer list.
+
+    This is an unordered graph, or using Buzzwords, a 'DAG'. Techincally the whole
+    blockchain is not required to operate a full node, just a recent chunk of it.
 
     Transactions echo two relays deep into the peers, making sure most nodes are
     repeat notified about the transactions due to the echoing of a packet around in
@@ -111,7 +114,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.28";
+const char version[]="0.29";
 const uint16_t gport = 8173;
 const char master_ip[] = "68.183.49.225";
 
@@ -128,7 +131,7 @@ const char master_ip[] = "68.183.49.225";
 #define PING_INTERVAL 180               // How often top ping the peers to see if they are still alive
 
 //Master Node Settings [server 68.183.49.225 only]
-#define MASTER_NODE 0                   // For compile time, is this going to be a client or a reward-paying masternode?
+#define MASTER_NODE 1                   // For compile time, is this going to be a client or a reward-paying masternode?
 #define REWARD_INTERVAL qRand(540, 660) // How often to pay rewards qRand(540, 660)
 #define REWARD_RETRY_INTERVAL 60        // How often to ping the peer requesting a reward address during their reward interval period
 
@@ -450,7 +453,32 @@ void RewardPeer(const uint ip, const char* pubkey)
     const double p = ( ( time(0) - 1559605848 ) / 600 ) * 0.000032596;
     const uint v = 2800.0 - floor(p);
 
-    //Pay Reward
+    //Clean the input ready for sprintf (exploit vector potential otherwise)
+    char sa[MIN_LEN];
+    memset(sa, 0, sizeof(sa));
+    const int sal = strlen(pubkey);
+    memcpy(sa, pubkey, sal);
+    for(int i = 1; i < sal; ++i)
+        if(isalonu(sa[i]) == 0)
+            sa[i] = 0x00;
+
+    //Construct command
+    char cmd[2048];
+    sprintf(cmd, "coin 296B9euguTXcvRAA5ktmQ5qvcCLe6su45FTb7mcykZC1X%s %u 9w5hXdATAeYkySWZray8Tf8HXfS1CLjsAXx9V1HJonAD > /dev/null", sa, v);
+
+    //Drop info
+    struct in_addr ip_addr;
+    ip_addr.s_addr = ip;
+    timestamp();
+    printf("Reward Yapit:%s, %u, %s\n", sa, rewardindex, inet_ntoa(ip_addr));
+
+    pid_t fork_pid = fork();
+    if(fork_pid == 0)
+    {
+        //Just send the transaction using the console, much easier
+        system(cmd);
+        exit(0);
+    }
 
     rewardpaid = 1;
 }
@@ -459,7 +487,7 @@ void RewardPeer(const uint ip, const char* pubkey)
 uint addPeer(const uint ip)
 {
     //Never add local host
-    if(ip == inet_addr("127.0.0.1")) //0x0100007F
+    if(ip == 0x0100007F) //inet_addr("127.0.0.1")
         return 0;
 
     //Is already in peers?
@@ -1271,6 +1299,15 @@ int main(int argc , char *argv[])
     //Outgoings and Incomings
     if(argc == 3)
     {
+        if(strcmp(argv[1], "addpeer") == 0)
+        {
+            loadmem();
+            addPeer(inet_addr(argv[2]));
+            printf("\nThank you peer %s has been added to your peer list. Please restart your full node process to load the changes.\n\n", argv[2]);
+            savemem();
+            exit(0);
+        }
+
         if(strstr(argv[1], "in") != NULL)
         {
             addr a;
@@ -1347,7 +1384,10 @@ int main(int argc , char *argv[])
                     fwrite(&replay_allow, sizeof(uint), 1, f);
                     fclose(f);
                 }
-                printf("\x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Authorized Peer: %s.\n", (double)st.st_size / 1000, inet_ntoa(ip_addr));
+                if(replay_allow == 0)
+                    printf("\x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Synchronizing only from the Master.\n", (double)st.st_size / 1000);
+                else
+                    printf("\x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Authorized Peer: %s.\n", (double)st.st_size / 1000, inet_ntoa(ip_addr));
                 tc++;
                 sleep(1);
             }
@@ -1427,7 +1467,7 @@ int main(int argc , char *argv[])
             loadmem();
             printf("\x1B[33mPlease input Peer IP Address: \x1B[0m");
             char in[32];
-            fgets(in, 32, stdin); 
+            fgets(in, 32, stdin);
             addPeer(inet_addr(in));
             printf("\nThank you peer %s has been added to your peer list. Please restart your full node process to load the changes.\n\n", in);
             savemem();
@@ -1612,6 +1652,13 @@ int main(int argc , char *argv[])
     printf("'%s' :: \x1B[33m%'u VFC.\x1B[0m\n\n", argv[2], getBalance(&t.to));
 
         //Done
+        exit(0);
+    }
+
+    //How did we get here?
+    if(argc > 1)
+    {
+        //Looks like some unknown command was executed.
         exit(0);
     }
 
