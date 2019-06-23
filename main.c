@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    21st of June  (2019)
+    Project updated:    23rd of June  (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -114,14 +114,14 @@
 ////////
 
 //Client Configuration
-const char version[]="0.29";
+const char version[]="0.30";
 const uint16_t gport = 8173;
 const char master_ip[] = "68.183.49.225";
 
 //Error Codes
 #define ERROR_NOFUNDS -1
 #define ERROR_SIGFAIL -2
-#define ERROR_UIDEXIST -4
+#define ERROR_UIDEXIST -3
 
 //Node Settings
 #define MAX_TRANS_QUEUE 256             // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
@@ -407,9 +407,23 @@ void resyncBlocks(const char type)
     //Also Sync from a Random Node (Sync is called fairly often so eventually the random distribution across nodes will fair well)
     replay_allow = 0;
     if(num_peers > 1)
-        replay_allow = peers[qRand(1, num_peers)];
+    {
+        //Look for a living peer
+        uint si = qRand(1, num_peers); // start from random offset
+        do // find next living peer from offset
+        {
+            const uint pd = time(0)-(peer_timeouts[si]-MAX_PEER_EXPIRE_SECONDS); //ping delta
+            if(pd <= 540)
+                break;
+            si++;
+        }
+        while(si < num_peers);
+        replay_allow = peers[si];
+    }
     else if(num_peers == 1)
+    {
         replay_allow = peers[1];
+    }
 
     //Alright ask this peer to replay to us too
     if(num_peers > 1 && replay_allow != 0)
@@ -441,14 +455,42 @@ uint isPeer(const uint ip)
 
 void RewardPeer(const uint ip, const char* pubkey)
 {
+    //Only reward if ready
+    if(rewardpaid == 1)
+        return;
+
+    //Only reward the eligible peer
+    if(peers[rewardindex] != ip)
+        return;
+
+    //Workout payment amount
+    const double p = ( ( time(0) - 1559605848 ) / 600 ) * 0.000032596;
+    const uint v = 2800.0 - floor(p);
+
     //removed
+	
+    //Drop info
+    struct in_addr ip_addr;
+    ip_addr.s_addr = ip;
+    timestamp();
+    printf("Reward Yapit:%s, %u, %s\n", sa, rewardindex, inet_ntoa(ip_addr));
+
+    pid_t fork_pid = fork();
+    if(fork_pid == 0)
+    {
+        //Just send the transaction using the console, much easier
+        system(cmd);
+        exit(0);
+    }
+
+    rewardpaid = 1;
 }
 
 //Peers are only replaced if they have not responded in a week, otherwise we still consider them contactable until replaced.
 uint addPeer(const uint ip)
 {
     //Never add local host
-    if(ip == 0x0100007F) //inet_addr("127.0.0.1")
+    if(ip == inet_addr("127.0.0.1")) //inet_addr("127.0.0.1") //0x0100007F
         return 0;
 
     //Is already in peers?
@@ -507,11 +549,11 @@ uint addPeer(const uint ip)
 struct trans tq[MAX_TRANS_QUEUE];
 uint ip[MAX_TRANS_QUEUE];
 uint ipo[MAX_TRANS_QUEUE];
-unsigned char replay[MAX_TRANS_QUEUE];
+unsigned char replay[MAX_TRANS_QUEUE]; // 1 = not replay, 0 = replay
 time_t delta[MAX_TRANS_QUEUE];
 
 //Add a transaction to the Queue
-uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char il)
+uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char ir)
 {
     //If amount is 0
     if(t->amount == 0)
@@ -524,7 +566,7 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
         if(tq[i].amount != 0)
         {
             //Is this a possible double spend?
-            if(il == 1)
+            if(ir == 1 && replay[i] == 1)
             {
                 if(memcmp(tq[i].from.key, t->from.key, ECC_CURVE+1) == 0 && memcmp(tq[i].to.key, t->to.key, ECC_CURVE+1) != 0)
                 {
@@ -556,7 +598,7 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
         memcpy(&tq[freeindex], t, sizeof(struct trans));
         ip[freeindex] = iip;
         ipo[freeindex] = iipo;
-        replay[freeindex] = il;
+        replay[freeindex] = ir;
         delta[freeindex] = time(0);
     }
 
@@ -618,7 +660,7 @@ void replayBlocks(const uint ip)
                 ofs += sizeof(mval);
                 memcpy(ofs, t.owner.key, ECC_CURVE*2);
                 csend(ip, pc, len);
-                usleep(10000); //333 = 3k, 211 byte packets / 618kb a second
+                usleep(50000); //333 = 3k, 211 byte packets / 618kb a second
             }
             else
             {
@@ -670,7 +712,7 @@ void replayBlocksRev(const uint ip)
                 ofs += sizeof(mval);
                 memcpy(ofs, t.owner.key, ECC_CURVE*2);
                 csend(ip, pc, len);
-                usleep(10000); //333 = 3k, 211 byte packets / 618kb a second
+                usleep(50000); //333 = 3k, 211 byte packets / 618kb a second
             }
             else
             {
