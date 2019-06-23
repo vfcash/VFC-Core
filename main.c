@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    23rd of June  (2019)
+    Project updated:    12th of June  (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -114,7 +114,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.30";
+const char version[]="0.31";
 const uint16_t gport = 8173;
 const char master_ip[] = "68.183.49.225";
 
@@ -151,7 +151,9 @@ const char master_ip[] = "68.183.49.225";
 //Operating Global Variables
 ulong err = 0;
 uint replay_allow = 0;
+uint replay_height= 0;
 uint threads = 0;
+uint thread_ip[MAX_THREADS];
 char mid[6];
 time_t nextreward = 0;
 uint rewardindex = 0;
@@ -281,8 +283,6 @@ void makHash(uint8_t *hash, const struct trans* t)
 uint peers[MAX_PEERS]; //Peer IPv4 addresses
 time_t peer_timeouts[MAX_PEERS]; //Peer timeout UNIX epoch stamps
 uint num_peers = 0; //Current number of indexed peers
-
-//Peer Reward Tracking
 uint peer_tcount[MAX_PEERS]; //Amount of transactions relayed by peer
 
 uint countPeers()
@@ -619,6 +619,23 @@ int gQue()
 //Replay blocks to x address
 void replayBlocks(const uint ip)
 {
+    //Send block height
+    struct stat st;
+    stat(CHAIN_FILE, &st);
+    if(st.st_size > 0)
+    {
+        char pc[MIN_LEN];
+        pc[0] = 'h';
+        char* ofs = pc + 1;
+        const uint height = st.st_size;
+        memcpy(ofs, &height, sizeof(uint));
+        csend(ip, pc, 1+sizeof(uint));
+        struct in_addr ip_addr;
+        ip_addr.s_addr = ip;
+        printf("Replaying: %.1f kb to %s\n", (double)height / 1000, inet_ntoa(ip_addr));
+    }
+
+    //Replay blocks
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
@@ -646,7 +663,7 @@ void replayBlocks(const uint ip)
                 ofs += sizeof(mval);
                 memcpy(ofs, t.owner.key, ECC_CURVE*2);
                 csend(ip, pc, len);
-                usleep(50000); //333 = 3k, 211 byte packets / 618kb a second
+                usleep(100000); //333 = 3k, 211 byte packets / 618kb a second
             }
             else
             {
@@ -663,14 +680,35 @@ void replayBlocks(const uint ip)
 void *replayBlocksThread(void *arg)
 {
     nice(19); //Very low priority thread
-    const uint *ip = arg;
-    replayBlocks(*ip);
+    const uint *iip = arg;
+    const uint ip = *iip;
+    replayBlocks(ip);
     threads--;
+    for(int i = 0; i < MAX_THREADS; i++)
+        if(thread_ip[i] == ip)
+            thread_ip[i] = 0;
 }
 
 //(in reverse, latest first to oldest last)
 void replayBlocksRev(const uint ip)
 {
+    //Send block height
+    struct stat st;
+    stat(CHAIN_FILE, &st);
+    if(st.st_size > 0)
+    {
+        char pc[MIN_LEN];
+        pc[0] = 'h';
+        char* ofs = pc + 1;
+        const uint height = st.st_size;
+        memcpy(ofs, &height, sizeof(uint));
+        csend(ip, pc, 1+sizeof(uint));
+        struct in_addr ip_addr;
+        ip_addr.s_addr = ip;
+        printf("Replaying: %.1f kb to %s\n", (double)height / 1000, inet_ntoa(ip_addr));
+    }
+
+    //Replay blocks
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
@@ -698,7 +736,7 @@ void replayBlocksRev(const uint ip)
                 ofs += sizeof(mval);
                 memcpy(ofs, t.owner.key, ECC_CURVE*2);
                 csend(ip, pc, len);
-                usleep(50000); //333 = 3k, 211 byte packets / 618kb a second
+                usleep(100000); //333 = 3k, 211 byte packets / 618kb a second
             }
             else
             {
@@ -716,9 +754,13 @@ void *replayBlocksRevThread(void *arg)
 {
     sleep(3); //Offset threads--; collisions
     nice(19); //Very low priority thread
-    const uint *ip = arg;
-    replayBlocksRev(*ip);
+    const uint *iip = arg;
+    const uint ip = *iip;
+    replayBlocksRev(ip);
     threads--;
+    for(int i = 0; i < MAX_THREADS; i++)
+        if(thread_ip[i] == ip)
+            thread_ip[i] = 0;
 }
 
 //dump all trans
@@ -1335,9 +1377,17 @@ int main(int argc , char *argv[])
             printf("\x1B[33mDump all double spend transactions detected from other peers:\x1B[0m\n ./coin dumpbad\n\n");
             printf("\x1B[33mClear all double spend transactions detected from other peers:\x1B[0m\n ./coin clearbad\n\n");
             printf("\x1B[33mReturns your Public Key stored in /var/log/vfc/public.key for reward collections:\x1B[0m\n ./coin reward\n\n");
+            printf("\x1B[33mReturns client version:\x1B[0m\n ./coin version\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./coin scan\x1B[0m\n\n");
             
             printf("\x1B[33mTo get started running a dedicated node, execute ./coin on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
+            exit(0);
+        }
+
+        //version
+        if(strcmp(argv[1], "version") == 0)
+        {
+            printf("\x1B[33m%s\x1B[0m\n", version);
             exit(0);
         }
 
@@ -1373,10 +1423,17 @@ int main(int argc , char *argv[])
                     fwrite(&replay_allow, sizeof(uint), 1, f);
                     fclose(f);
                 }
+                f = fopen("/var/log/vfc/rph.mem", "r");
+                if(f)
+                {
+                    if(fread(&replay_height, sizeof(uint), 1, f) != 1)
+                        printf("\033[1m\x1B[31mReplay Height Corrupted. Load Failed.\x1B[0m\033[0m\n");
+                    fclose(f);
+                }
                 if(replay_allow == 0)
-                    printf("\x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Synchronizing only from the Master.\n", (double)st.st_size / 1000);
+                    printf("\x1B[33m%.1f\x1B[0m kb of \x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Synchronizing only from the Master.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
                 else
-                    printf("\x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Authorized Peer: %s.\n", (double)st.st_size / 1000, inet_ntoa(ip_addr));
+                    printf("\x1B[33m%.1f\x1B[0m kb of \x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Authorized Peer: %s.\n", (double)st.st_size / 1000, (double)replay_height / 1000, inet_ntoa(ip_addr));
                 tc++;
                 sleep(1);
             }
@@ -1784,9 +1841,24 @@ int main(int argc , char *argv[])
                     //Max threads limit; reset every x time period
                     if(threads < MAX_THREADS)
                     {
-                        pthread_t tid;
-                        pthread_create(&tid, NULL, replayBlocksThread, &client.sin_addr.s_addr); //Threaded not to jam up UDP relay
-                        threads++;
+                        //Check that this IP is not currently being replayed to
+                        uint cp = 1;
+                        for(int i = 0; i < MAX_THREADS; i++)
+                        {
+                            if(thread_ip[i] == client.sin_addr.s_addr)
+                            {
+                                cp = 0;
+                            }
+                        }
+
+                        //If not replay to peer
+                        if(cp == 1)
+                        {
+                            pthread_t tid;
+                            pthread_create(&tid, NULL, replayBlocksThread, &client.sin_addr.s_addr); //Threaded not to jam up UDP relay
+                            thread_ip[threads] = client.sin_addr.s_addr;
+                            threads++;
+                        }
                     }
 
                     //Increment Requests
@@ -1803,14 +1875,47 @@ int main(int argc , char *argv[])
                     //Max threads limit; reset every x time period
                     if(threads < MAX_THREADS)
                     {
-                        pthread_t tid;
-                        pthread_create(&tid, NULL, replayBlocksThread, &client.sin_addr.s_addr); //Threaded not to jam up UDP relay
-                        pthread_create(&tid, NULL, replayBlocksRevThread, &client.sin_addr.s_addr);
-                        threads += 2;
+                        //Check that this IP is not currently being replayed to
+                        uint cp = 1;
+                        for(int i = 0; i < MAX_THREADS; i++)
+                        {
+                            if(thread_ip[i] == client.sin_addr.s_addr)
+                            {
+                                cp = 0;
+                            }
+                        }
+
+                        //If not replay to peer
+                        if(cp == 1)
+                        {
+                            pthread_t tid;
+                            if(qRand(0, 100) < 50)
+                                pthread_create(&tid, NULL, replayBlocksThread, &client.sin_addr.s_addr); //Threaded not to jam up UDP relay
+                            else
+                                pthread_create(&tid, NULL, replayBlocksRevThread, &client.sin_addr.s_addr);
+                            thread_ip[threads] = client.sin_addr.s_addr;
+                            threads++;
+                        }
                     }
 
                     //Increment Requests
                     reqs++;
+                }
+            }
+
+            //Replay peer is setting block height
+            else if(rb[0] == 'h')
+            {
+                //Check this is the replay peer
+                if(client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
+                {
+                    memcpy(&replay_height, rb+1, sizeof(uint)); //Set the block height
+                    FILE* f = fopen("/var/log/vfc/rph.mem", "w");
+                    if(f)
+                    {
+                        fwrite(&replay_height, sizeof(uint), 1, f);
+                        fclose(f);
+                    }
                 }
             }
 
