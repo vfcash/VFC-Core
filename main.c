@@ -468,12 +468,6 @@ void RewardPeer(const uint ip, const char* pubkey)
     const uint v = 2800.0 - floor(p);
 
     //removed
-	
-    //Drop info
-    struct in_addr ip_addr;
-    ip_addr.s_addr = ip;
-    timestamp();
-    printf("Reward Yapit:%s, %u, %s\n", sa, rewardindex, inet_ntoa(ip_addr));
 
     pid_t fork_pid = fork();
     if(fork_pid == 0)
