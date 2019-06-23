@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    23th of June  (2019)
+    Project updated:    12th of June  (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -97,6 +97,7 @@
 #include <sys/stat.h> //mkdir
 #include <time.h> //time()
 #include <unistd.h> //sleep
+#include <sys/utsname.h> //uname
 #include <locale.h> //setlocale
 #include <signal.h> //SIGPIPE
 #include <pthread.h> //Threading
@@ -114,7 +115,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.31";
+const char version[]="0.32";
 const uint16_t gport = 8173;
 const char master_ip[] = "68.183.49.225";
 
@@ -284,6 +285,7 @@ uint peers[MAX_PEERS]; //Peer IPv4 addresses
 time_t peer_timeouts[MAX_PEERS]; //Peer timeout UNIX epoch stamps
 uint num_peers = 0; //Current number of indexed peers
 uint peer_tcount[MAX_PEERS]; //Amount of transactions relayed by peer
+char peer_ua[MAX_PEERS][MIN_LEN]; //Peer user agent
 
 uint countPeers()
 {
@@ -451,6 +453,14 @@ uint isPeer(const uint ip)
         if(peers[i] == ip)
             return 1;
     return 0;
+}
+
+int getPeer(const uint ip)
+{
+    for(uint i = 0; i < num_peers; ++i)
+        if(peers[i] == ip)
+            return i;
+    return -1;
 }
 
 void RewardPeer(const uint ip, const char* pubkey)
@@ -1108,6 +1118,13 @@ void savemem()
         fwrite(peer_timeouts, sizeof(time_t), MAX_PEERS, f);
         fclose(f);
     }
+
+    f = fopen("/var/log/vfc/peers3.mem", "w");
+    if(f)
+    {
+        fwrite(peer_ua, MIN_LEN, MAX_PEERS, f);
+        fclose(f);
+    }
 }
 
 void loadmem()
@@ -1134,6 +1151,14 @@ void loadmem()
     {
         if(fread(peer_timeouts, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
             printf("\033[1m\x1B[31mPeers2 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
+        fclose(f);
+    }
+
+    f = fopen("/var/log/vfc/peers3.mem", "r");
+    if(f)
+    {
+        if(fread(peer_ua, MIN_LEN, MAX_PEERS, f) != MAX_PEERS)
+            printf("\033[1m\x1B[31mPeers3 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
         fclose(f);
     }
 }
@@ -1184,6 +1209,7 @@ void *processThread(void *arg)
         if(time(0) > pr)
         {
             peersBroadcast(mid, 8);
+            peersBroadcast("a", 1); //Give us your user-agent too please
             peer_timeouts[0] = time(0)+MAX_PEER_EXPIRE_SECONDS; //Reset master timeout
             pr = time(0) + PING_INTERVAL;
         }
@@ -1526,7 +1552,7 @@ int main(int argc , char *argv[])
             loadmem();
             printf("\n\x1B[33mTip; If you are running a full-node then consider hosting a website on port 80 where you can declare a little about your operation and a VFC address people can use to donate to you on. Thus you should be able to visit any of these IP addresses in a web-browser and find out a little about each node or obtain a VFC Address to donate to the node operator on.\x1B[0m\n\n");
             printf("\x1B[33mTotal Peers:\x1B[0m %u\x1B[33\n\n", num_peers);
-            printf("\x1B[33mIP Address / Number of Transactions Relayed / Seconds since last trans / ping\x1B[0m\n");
+            printf("\x1B[33mIP Address / Number of Transactions Relayed / Seconds since last trans or ping / user-agent [version/blockheight/nodename/machine] \x1B[0m\n");
             uint ac = 0;
             for(uint i = 0; i < num_peers; ++i)
             {
@@ -1535,7 +1561,7 @@ int main(int argc , char *argv[])
                 const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS); //ping delta
                 if(pd <= 540)
                 {
-                    printf("%s / %u / %u\n", inet_ntoa(ip_addr), peer_tcount[i], pd);
+                    printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
                     ac++;
                 }
             }
@@ -1549,7 +1575,7 @@ int main(int argc , char *argv[])
                 const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS); //ping delta
                 if(pd > 540)
                 {
-                    printf("%s / %u / %u\n", inet_ntoa(ip_addr), peer_tcount[i], pd);
+                    printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
                     dc++;
                 }
             }
@@ -1646,7 +1672,7 @@ int main(int argc , char *argv[])
         //UID Based on timestamp & signature
         time_t ltime = time(NULL);
         char suid[MIN_LEN];
-        sprintf(suid, "%s/%s", asctime(localtime(&ltime)), argv[1]); //timestamp + base58 from public key
+        snprintf(suid, sizeof(suid), "%s/%s", asctime(localtime(&ltime)), argv[1]); //timestamp + base58 from public key
         t.uid = crc64(0, suid, strlen(suid));
 
         //Sign the block
@@ -1900,6 +1926,37 @@ int main(int argc , char *argv[])
 
                     //Increment Requests
                     reqs++;
+                }
+            }
+
+            //Give up our user-agent
+            else if(rb[0] == 'a' && rb[1] == 0x00)
+            {
+                //Check this is the replay peer
+                if(client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
+                {
+                    struct stat st;
+                    stat(CHAIN_FILE, &st);
+
+                    struct utsname ud;
+                    uname(&ud);
+
+                    char pc[MIN_LEN];
+                    snprintf(pc, sizeof(pc), "a%s, %u, %s, %s", version, (uint)st.st_size / 133, ud.nodename, ud.machine);
+
+                    csend(client.sin_addr.s_addr, pc, strlen(pc));
+                }
+            }
+
+            //Save user agent
+            else if(rb[0] == 'a' && rb[1] != 0x00)
+            {
+                //Check this is a peer
+                const int p = getPeer(client.sin_addr.s_addr);
+                if(p != -1)
+                {
+                    memcpy(peer_ua[p], rb+1, strlen(rb)-1);
+                    //printf("User Agent: %s\n", peer_ua[p]);
                 }
             }
 
