@@ -469,14 +469,6 @@ void RewardPeer(const uint ip, const char* pubkey)
 
     //removed
 
-    pid_t fork_pid = fork();
-    if(fork_pid == 0)
-    {
-        //Just send the transaction using the console, much easier
-        system(cmd);
-        exit(0);
-    }
-
     rewardpaid = 1;
 }
 
