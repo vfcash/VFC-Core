@@ -1,6 +1,6 @@
 # VF Cash
 
-VF Cash is a Cryptocurrency project that started on the 23rd of April 2019. It has no Proof-of-Work (POW) rather it has a transaction rate limit per address / public key of one second. This prevents the sender or the receiver of a transaction from making any further transactions during this period. The chain is unordered, and the networking uses UDP. The Digital Signature algorithm uses secp256r1.
+VF Cash is a Cryptocurrency project that started on the 23rd of April 2019. It has no Proof-of-Work (POW) rather it has a transaction rate limit per address / public key of three seconds. This prevents the sender or the receiver of a transaction from making any further transactions during this period. The chain is unordered, and the networking uses UDP. The Digital Signature algorithm uses secp256r1.
 
 This is a non-divisible coin, pre-mined, written in C, compiled with GCC, 256-bit key length, Transactions are 76.16% smaller than an average Bitcoin-Core transaction, relating to total blockchain size.
 
@@ -35,7 +35,7 @@ For a Windows installation you can follow the steps above but first install the 
 
 **To become an active part of the network leave the coin program running in a screen and make sure any necessary ports are forwarded, VFC uses UDP Port 8173.** You will need to make atleast one valid transaction on the network before the mainnet indexes you as a peer and will commuicate with your node. We recommend that you send 1 VFC to yourself, to and from the same address. If you are sent VFC your balance will still show 0 until you perform this operation from your network node.
 
-Each address is limited to one transaction every one second, once a transaction is made both the sender and receievers addresses are limited for a total of one second. 
+Each address is limited to one transaction every three seconds, once a transaction is made both the sender and receievers addresses are limited for a total of three seconds. 
 
 # Third-Party Dependencies
 
