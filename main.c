@@ -2178,7 +2178,7 @@ int main(int argc , char *argv[])
                 rb[0] = '\r';
                 csend(client.sin_addr.s_addr, rb, read_size);
                 addPeer(client.sin_addr.s_addr); //I didn't want to have to do this, but it's not the end of the world.
-                savemem(); //Save mem, peers list has updated
+                //savemem(); //Save mem, peers list has updated
 
                 //Increment Requests
                 reqs++;
@@ -2212,6 +2212,9 @@ int main(int argc , char *argv[])
             //Check replay_allow value every 30 seconds
             if(st0 < time(0))
             {
+                //Save memory state
+                savemem();
+                
                 //Load new replay allow value
                 FILE* f = fopen("/var/log/vfc/rp.mem", "r");
                 if(f)
@@ -2230,9 +2233,6 @@ int main(int argc , char *argv[])
             {
                 //Log Metrics
                 printf("\x1B[33mSTATS: Req/s: %ld, Peers: %u, Threads %u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), num_peers, threads, err);
-
-                //Save memory state
-                savemem();
 
                 //Let's execute a Sync every 3*60 mins (3hr)
                 if(rsi >= 60)
