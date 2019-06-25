@@ -2140,7 +2140,7 @@ int main(int argc , char *argv[])
                             fclose(f);
                         }
                     }
-                    savemem(); //Save mem, peer_ba list has updated
+                    //savemem(); //Save mem, peer_ba list has updated
                 }
             }
 
@@ -2194,7 +2194,7 @@ int main(int argc , char *argv[])
                     rb[7] == mid[7] )
                 {
                     addPeer(client.sin_addr.s_addr);
-                    savemem(); //Save mem, peers list has updated
+                    //savemem(); //Save mem, peers list has updated
 
                     //Increment Requests
                     reqs++;
@@ -2225,7 +2225,7 @@ int main(int argc , char *argv[])
                 }
 
                 //Next Loop
-                st0 = time(0)+30;
+                st0 = time(0)+3;
             }
 
             //Log Requests per Second
