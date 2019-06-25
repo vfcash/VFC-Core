@@ -1178,6 +1178,13 @@ void savemem()
         fwrite(peer_ua, MIN_LEN, MAX_PEERS, f);
         fclose(f);
     }
+
+    f = fopen("/var/log/vfc/peers4.mem", "w");
+    if(f)
+    {
+        fwrite(peer_ba, sizeof(mval), MAX_PEERS, f);
+        fclose(f);
+    }
 }
 
 void loadmem()
@@ -1212,6 +1219,14 @@ void loadmem()
     {
         if(fread(peer_ua, MIN_LEN, MAX_PEERS, f) != MAX_PEERS)
             printf("\033[1m\x1B[31mPeers3 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
+        fclose(f);
+    }
+
+    f = fopen("/var/log/vfc/peers4.mem", "r");
+    if(f)
+    {
+        if(fread(peer_ba, sizeof(mval), MAX_PEERS, f) != MAX_PEERS)
+            printf("\033[1m\x1B[31mPeers4 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
         fclose(f);
     }
 }
