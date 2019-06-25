@@ -515,7 +515,7 @@ void RewardPeer(const uint ip, const char* pubkey)
     const double p = ( ( time(0) - 1559605848 ) / 600 ) * 0.000032596;
     const uint v = 2800.0 - floor(p);
 
-    //reward
+    //removed
 
     rewardpaid = 1;
 }
@@ -1479,6 +1479,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mClear all double spend transactions detected from other peers:\x1B[0m\n ./coin clearbad\n\n");
             printf("\x1B[33mReturns your Public Key stored in /var/log/vfc/public.key for reward collections:\x1B[0m\n ./coin reward\n\n");
             printf("\x1B[33mReturns client version:\x1B[0m\n ./coin version\n\n");
+            printf("\x1B[33mReturns client blocks.dat size / height:\x1B[0m\n ./coin heigh\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./coin scan\x1B[0m\n\n");
             
             printf("\x1B[33mTo get started running a dedicated node, execute ./coin on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
@@ -1610,6 +1611,8 @@ int main(int argc , char *argv[])
         //Return reward addr
         if(strcmp(argv[1], "reward") == 0)
         {
+            loadmem();
+
             addr rk;
             size_t len = ECC_CURVE+1;
             b58tobin(rk.key, &len, myrewardkey+1, strlen(myrewardkey)-1); //It's got a space in it (at the beginning) ;)
@@ -1626,9 +1629,13 @@ int main(int argc , char *argv[])
             }
             const mval balt = trueBalance();
 
+            mval fbal = bal;
+            if(balt != 0)
+                fbal = balt;
+
             setlocale(LC_NUMERIC, "");
             printf("\x1B[33m(Local Balance / True Network Balance / Highest Network Balance)\x1B[0m\n");
-            printf("\x1B[33mYour reward address is:\x1B[0m%s\n(\x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m)\n\n\x1B[33mFinal Balance:\x1B[0m %'u VFC\n\n", myrewardkey, bal, balt, baln, balt);
+            printf("\x1B[33mYour reward address is:\x1B[0m%s\n(\x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m)\n\n\x1B[33mFinal Balance:\x1B[0m %'u VFC\n\n", myrewardkey, bal, balt, baln, fbal);
             exit(0);
         }
 
@@ -1731,10 +1738,14 @@ int main(int argc , char *argv[])
             fclose(f);
         }
         const mval balt = trueBalance();
+
+        mval fbal = bal;
+        if(balt != 0)
+            fbal = balt;
         
         setlocale(LC_NUMERIC, "");
         printf("\x1B[33m(Local Balance / True Network Balance / Highest Network Balance)\x1B[0m\n");
-        printf("\x1B[33mThe Balance for Address: \x1B[0m%s\n(\x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m)\n\x1B[33mTime Taken\x1B[0m %li \x1B[33mMilliseconds (\x1B[0m%li ns\x1B[33m).\x1B[0m\n\n\x1B[33mFinal Balance:\x1B[0m %'u VFC\n\n", argv[1], bal, balt, baln, td, (e.tv_nsec - s.tv_nsec), balt);
+        printf("\x1B[33mThe Balance for Address: \x1B[0m%s\n(\x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m)\n\x1B[33mTime Taken\x1B[0m %li \x1B[33mMilliseconds (\x1B[0m%li ns\x1B[33m).\x1B[0m\n\n\x1B[33mFinal Balance:\x1B[0m %'u VFC\n\n", argv[1], bal, balt, baln, td, (e.tv_nsec - s.tv_nsec), fbal);
         exit(0);
     }
 
@@ -1777,10 +1788,7 @@ int main(int argc , char *argv[])
         }
 
     //Get balance..
-    setlocale(LC_NUMERIC, "");
-    printf("\n\x1B[33mBefore Balance:\x1B[0m\n");
-    printf("'%s' :: \x1B[33m%'u VFC.\x1B[0m\n\n", argv[1], getBalance(&t.from));
-    printf("'%s' :: \x1B[33m%'u VFC.\x1B[0m\n", argv[2], getBalance(&t.to));
+    const mval bal0 = getBalance(&t.from);
 
         //UID Based on timestamp & signature
         time_t ltime = time(NULL);
@@ -1831,10 +1839,12 @@ int main(int argc , char *argv[])
 
     //Get balance again..
     sleep(6);
+    const mval bal1 = getBalance(&t.from);
     setlocale(LC_NUMERIC, "");
-    printf("\x1B[33mAfter Balance:\x1B[0m\n");
-    printf("'%s' :: \x1B[33m%'u VFC.\x1B[0m\n\n", argv[1], getBalance(&t.from));
-    printf("'%s' :: \x1B[33m%'u VFC.\x1B[0m\n\n", argv[2], getBalance(&t.to));
+    if(bal0-bal1 == 0)
+        printf("\033[1m\x1B[31mTransaction Failed.\x1B[0m\033[0m\n\n");
+    else
+        printf("\x1B[33mVFC Sent: \x1B[0m%u VFC\n\n", bal0-bal1);
 
         //Done
         exit(0);
@@ -2130,6 +2140,7 @@ int main(int argc , char *argv[])
                             fclose(f);
                         }
                     }
+                    savemem(); //Save mem, peer_ba list has updated
                 }
             }
 
@@ -2167,6 +2178,7 @@ int main(int argc , char *argv[])
                 rb[0] = '\r';
                 csend(client.sin_addr.s_addr, rb, read_size);
                 addPeer(client.sin_addr.s_addr); //I didn't want to have to do this, but it's not the end of the world.
+                savemem(); //Save mem, peers list has updated
 
                 //Increment Requests
                 reqs++;
