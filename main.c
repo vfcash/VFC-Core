@@ -153,7 +153,7 @@ uint replay_height = 0;
 uint balance_accumulator = 0;
 uint threads = 0;
 uint thread_ip[MAX_THREADS];
-char mid[6];
+char mid[8];
 time_t nextreward = 0;
 uint rewardindex = 0;
 uint rewardpaid = 1;
@@ -1693,7 +1693,7 @@ int main(int argc , char *argv[])
     //Let's make sure we're booting with the right damn chain
     if(verifyChain(CHAIN_FILE) == 0)
     {
-        printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./sync resync\x1B[0m\033[0m\n\n");
+        printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./coin resync\x1B[0m\033[0m\n\n");
         exit(0);
     }
 
@@ -1933,7 +1933,7 @@ int main(int argc , char *argv[])
 #endif
 
             //Is this a [fresh trans / dead trans] ?
-            else if((rb[0] == 't' || rb[0] == 'd') && read_size == 147)
+            else if((rb[0] == 't' || rb[0] == 'd') && read_size == sizeof(struct trans)+sizeof(uint)+1)
             {
                 //Root origin peer address
                 uint origin = 0;
@@ -1959,7 +1959,7 @@ int main(int argc , char *argv[])
                 {
                     //Broadcast to peers
                     origin = client.sin_addr.s_addr;
-                    const size_t len = 1+sizeof(uint64_t)+sizeof(uint)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+uint64_t+1
+                    const size_t len = 1+sizeof(uint64_t)+sizeof(uint)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+sizeof(uint)+1
                     char pc[MIN_LEN];
                     pc[0] = 'd';
                     char* ofs = pc + 1;
@@ -1982,7 +1982,7 @@ int main(int argc , char *argv[])
             }
 
             //Request to replay all my blocks? (resync)
-            else if(rb[0] == 'r')
+            else if(rb[0] == 'r' && read_size == 1)
             {
                 //Is this peer even registered? if not, suspect foul play, not part of verified network.
                 if(isPeer(client.sin_addr.s_addr) == 1)
@@ -2016,7 +2016,7 @@ int main(int argc , char *argv[])
             }
 
             //Request to replay all my blocks? (sync)
-            else if(rb[0] == 's')
+            else if(rb[0] == 's' && read_size == 1)
             {
                 //Is this peer even registered? if not, suspect foul play, not part of verified network.
                 if(isPeer(client.sin_addr.s_addr) == 1)
@@ -2053,7 +2053,7 @@ int main(int argc , char *argv[])
             }
 
             //Give up our user-agent
-            else if(rb[0] == 'a' && rb[1] == 0x00)
+            else if(rb[0] == 'a' && rb[1] == 0x00 && read_size == 1)
             {
                 //Check this is the replay peer
                 if(client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
@@ -2084,7 +2084,7 @@ int main(int argc , char *argv[])
             }
 
             //Replay peer is setting block height
-            else if(rb[0] == 'h')
+            else if(rb[0] == 'h' && read_size == sizeof(uint)+1)
             {
                 //Check this is the replay peer
                 if(client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
@@ -2100,7 +2100,7 @@ int main(int argc , char *argv[])
             }
 
             //Requesting address balance?
-            else if(rb[0] == '$')
+            else if(rb[0] == '$' && read_size == ECC_CURVE+2)
             {
                 //Check this is the replay peer
                 if(isPeer(client.sin_addr.s_addr) == 1)
@@ -2120,14 +2120,14 @@ int main(int argc , char *argv[])
             }
 
             //Returned address balance
-            else if(rb[0] == 'n')
+            else if(rb[0] == 'n' && read_size == sizeof(mval)+1)
             {
                 //Check this is the replay peer
                 const int p = getPeer(client.sin_addr.s_addr);
                 if(p != -1)
                 {
                     mval bal = 0;
-                    memcpy(&bal, rb+1, strlen(rb)-1);
+                    memcpy(&bal, rb+1, sizeof(mval)-1);
                     peer_ba[p] = bal;
                     if(bal > balance_accumulator) //Update accumulator if higher balance returned
                     {
@@ -2145,7 +2145,7 @@ int main(int argc , char *argv[])
             }
 
             //Is this a replay block?
-            else if(rb[0] == 'p')
+            else if(rb[0] == 'p' && read_size == sizeof(struct trans)+1)
             {
                 //This replay has to be from the specific trusted node, or the master. If it's a trusted node, we know it's also a peer so. All good.
                 if(client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
@@ -2173,7 +2173,7 @@ int main(int argc , char *argv[])
             }
 
             //Is some one looking for peers? We can tell them we exist, but that doesn't make them part of the network until they make a verified transaction
-            else if(rb[0] == '\t')
+            else if(rb[0] == '\t' && read_size == sizeof(mid))
             {
                 rb[0] = '\r';
                 csend(client.sin_addr.s_addr, rb, read_size);
@@ -2183,7 +2183,7 @@ int main(int argc , char *argv[])
                 //Increment Requests
                 reqs++;
             }
-            else if(rb[0] == '\r')
+            else if(rb[0] == '\r' && read_size == sizeof(mid))
             {
                 if( rb[1] == mid[1] && //Only add as a peer if they responded with our private mid code
                     rb[2] == mid[2] &&
@@ -2202,7 +2202,7 @@ int main(int argc , char *argv[])
             }
 
             //Is the master requesting your rewards address?
-            else if(rb[0] == 'x')
+            else if(rb[0] == 'x' && read_size == 1)
             {
                 //Only the master can pay out rewards from the pre-mine
                 if(isMasterNode(client.sin_addr.s_addr) == 1)
