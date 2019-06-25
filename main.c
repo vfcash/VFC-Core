@@ -112,8 +112,8 @@
 ////////
 
 //Client Configuration
-const char version[]="0.33";
-const uint16_t gport = 8173;
+const char version[]="0.34";
+const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
 //Error Codes
