@@ -112,7 +112,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.35";
+const char version[]="0.36";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -2163,7 +2163,7 @@ int main(int argc , char *argv[])
                 if(p != -1)
                 {
                     mval bal = 0;
-                    memcpy(&bal, rb+1, sizeof(mval)-1);
+                    memcpy(&bal, rb+1, sizeof(mval));
                     peer_ba[p] = bal;
                     if(bal > balance_accumulator) //Update accumulator if higher balance returned
                     {
