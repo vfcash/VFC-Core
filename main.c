@@ -112,7 +112,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.34";
+const char version[]="0.35";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -963,6 +963,42 @@ void printOuts(addr* a)
 
         fclose(f);
     }
+}
+
+//get balance
+mval getBalanceLocal(addr* from)
+{
+    //Get local Balance
+    mval rv = 0;
+    FILE* f = fopen(CHAIN_FILE, "r");
+    if(f)
+    {
+        fseek(f, 0, SEEK_END);
+        const long int len = ftell(f);
+
+        struct trans t;
+        for(size_t i = 0; i < len; i += sizeof(struct trans))
+        {
+            fseek(f, i, SEEK_SET);
+            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+            {
+                if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
+                    rv += t.amount;
+                if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                    rv -= t.amount;
+            }
+            else
+            {
+                printf("There was a problem, blocks.dat looks corrupt.\n");
+                fclose(f);
+                return 0;
+            }
+            
+        }
+
+        fclose(f);
+    }
+    return rv;
 }
 
 //get balance
@@ -2108,7 +2144,7 @@ int main(int argc , char *argv[])
                     //Get balance for supplied address
                     addr from;
                     memcpy(from.key, rb+1, ECC_CURVE+1);
-                    const mval bal = getBalance(&from);
+                    const mval bal = getBalanceLocal(&from);
 
                     //Send back balance for the supplied address
                     char pc[16];
