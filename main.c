@@ -973,7 +973,7 @@ mval getBalance(addr* from)
     for(uint i = 0; i < MAX_PEERS; i++)
         peer_ba[i] = 0;
     char pc[ECC_CURVE+2];
-    pc[0] = 'b';
+    pc[0] = '$';
     char* ofs = pc+1;
     memcpy(ofs, from->key, ECC_CURVE+1);
     sendMaster(pc, ECC_CURVE+2);
@@ -1693,7 +1693,7 @@ int main(int argc , char *argv[])
     //Let's make sure we're booting with the right damn chain
     if(verifyChain(CHAIN_FILE) == 0)
     {
-        printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./coin resync\x1B[0m\033[0m\n\n");
+        printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./sync resync\x1B[0m\033[0m\n\n");
         exit(0);
     }
 
@@ -2100,7 +2100,7 @@ int main(int argc , char *argv[])
             }
 
             //Requesting address balance?
-            else if(rb[0] == 'b')
+            else if(rb[0] == '$')
             {
                 //Check this is the replay peer
                 if(isPeer(client.sin_addr.s_addr) == 1)
@@ -2210,7 +2210,7 @@ int main(int argc , char *argv[])
             }
 
             //Check replay_allow value every 30 seconds
-            if(st0 < time(0))
+            if(time(0) > st0)
             {
                 //Save memory state
                 savemem();
