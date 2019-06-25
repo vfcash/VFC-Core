@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    12th of June  (2019)
+    Project updated:    25th of June  (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -115,7 +115,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.32";
+const char version[]="0.33";
 const uint16_t gport = 8173;
 const char master_ip[] = "68.183.49.225";
 
@@ -152,7 +152,8 @@ const char master_ip[] = "68.183.49.225";
 //Operating Global Variables
 ulong err = 0;
 uint replay_allow = 0;
-uint replay_height= 0;
+uint replay_height = 0;
+uint balance_accumulator = 0;
 uint threads = 0;
 uint thread_ip[MAX_THREADS];
 char mid[6];
@@ -286,6 +287,45 @@ time_t peer_timeouts[MAX_PEERS]; //Peer timeout UNIX epoch stamps
 uint num_peers = 0; //Current number of indexed peers
 uint peer_tcount[MAX_PEERS]; //Amount of transactions relayed by peer
 char peer_ua[MAX_PEERS][MIN_LEN]; //Peer user agent
+mval peer_ba[MAX_PEERS]; //Balance Aggregation
+
+mval trueBalance()
+{
+    mval v[MAX_PEERS];
+    uint c[MAX_PEERS];
+    uint vm = 0;
+    for(uint i = 0; i < MAX_PEERS; i++)
+    {
+        uint t = 0;
+        for(uint i2 = 0; i2 < vm; i2++)
+        {
+            if(v[i2] == peer_ba[i])
+            {
+                c[i2]++;
+                t = 1;
+                break;
+            }
+        }
+        if(t == 0)
+        {
+            v[vm] = peer_ba[i];
+            c[vm]++;
+            vm++;
+        }
+    }
+
+    uint hc = 0;
+    mval hv = 0;
+    for(uint i = 0; i < vm; i++)
+    {
+        if(c[i] > hc)
+        {
+            hc = c[i];
+            hv = v[i];
+        }
+    }
+    return hv;
+}
 
 uint countPeers()
 {
@@ -392,6 +432,7 @@ void setMasterNode()
     struct in_addr a;
     inet_aton(master_ip, &a);
     peers[0] = a.s_addr;
+    sprintf(peer_ua[0], "VFC-MASTER");
     num_peers = 1;
 }
 
@@ -477,7 +518,7 @@ void RewardPeer(const uint ip, const char* pubkey)
     const double p = ( ( time(0) - 1559605848 ) / 600 ) * 0.000032596;
     const uint v = 2800.0 - floor(p);
 
-    //removed
+    //reward
 
     rewardpaid = 1;
 }
@@ -673,7 +714,7 @@ void replayBlocks(const uint ip)
                 ofs += sizeof(mval);
                 memcpy(ofs, t.owner.key, ECC_CURVE*2);
                 csend(ip, pc, len);
-                usleep(100000); //333 = 3k, 211 byte packets / 618kb a second
+                usleep(200000); //333 = 3k, 211 byte packets / 618kb a second
             }
             else
             {
@@ -746,7 +787,7 @@ void replayBlocksRev(const uint ip)
                 ofs += sizeof(mval);
                 memcpy(ofs, t.owner.key, ECC_CURVE*2);
                 csend(ip, pc, len);
-                usleep(100000); //333 = 3k, 211 byte packets / 618kb a second
+                usleep(200000); //333 = 3k, 211 byte packets / 618kb a second
             }
             else
             {
@@ -930,6 +971,18 @@ void printOuts(addr* a)
 //get balance
 mval getBalance(addr* from)
 {
+    //Tell peers to fill our accumulator
+    balance_accumulator = 0;
+    for(uint i = 0; i < MAX_PEERS; i++)
+        peer_ba[i] = 0;
+    char pc[ECC_CURVE+2];
+    pc[0] = 'b';
+    char* ofs = pc+1;
+    memcpy(ofs, from->key, ECC_CURVE+1);
+    sendMaster(pc, ECC_CURVE+2);
+    peersBroadcast(pc, ECC_CURVE+2);
+
+    //Get local Balance
     mval rv = 0;
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
@@ -1239,6 +1292,16 @@ void *processThread(void *arg)
                 dt = (time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS));
                 if(rewardindex >= num_peers)
                 {
+                    //Shuffle peer list (keep it fair)
+                    /*for(int i = 0; i < num_peers; i++)
+                    {
+                        struct trans t;
+                        const int r = qRand(0, num_peers-1);
+                        memcpy(&t, &peers[r], sizeof(struct trans));
+                        memcpy(&peers[r], &peers[i], sizeof(struct trans));
+                        memcpy(&peers[i], &t, sizeof(struct trans));
+                    }*/
+
                     //The master should always be online, so if no other node was eligible for a reward, and we looped back to the master,
                     //wait 10 mins before we try again and try to give the reward to the master, if it really is online.
                     rewardindex = 0;
@@ -1417,6 +1480,16 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
+        //version
+        if(strcmp(argv[1], "heigh") == 0)
+        {
+            struct stat st;
+            stat(CHAIN_FILE, &st);
+            if(st.st_size > 0)
+                printf("\x1B[33m%1.f\x1B[0m kb / \x1B[33m%u\x1B[0m Blocks\n", (double)st.st_size / 1000, (uint)st.st_size / 133);
+            exit(0);
+        }
+
         //sync
         if(strcmp(argv[1], "sync") == 0)
         {
@@ -1528,8 +1601,22 @@ int main(int argc , char *argv[])
             addr rk;
             size_t len = ECC_CURVE+1;
             b58tobin(rk.key, &len, myrewardkey+1, strlen(myrewardkey)-1); //It's got a space in it (at the beginning) ;)
+            printf("Please Wait...\n");
+            
+            mval bal = getBalance(&rk);
+            mval baln = 0;
+            sleep(3);
+            FILE* f = fopen("/var/log/vfc/bal.mem", "w");
+            if(f)
+            {
+                fwrite(&baln, sizeof(mval), 1, f);
+                fclose(f);
+            }
+            const mval balt = trueBalance();
+
             setlocale(LC_NUMERIC, "");
-            printf("\x1B[33mYour reward address is:\x1B[0m%s (\x1B[33m%'u VFC\x1B[0m)\n\n", myrewardkey, getBalance(&rk));
+            printf("\x1B[33m(Local Balance / True Network Balance / Highest Network Balance)\x1B[0m\n");
+            printf("\x1B[33mYour reward address is:\x1B[0m%s\n(\x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m)\n\n\x1B[33mFinal Balance:\x1B[0m %'u VFC\n\n", myrewardkey, bal, balt, baln, balt);
             exit(0);
         }
 
@@ -1610,18 +1697,32 @@ int main(int argc , char *argv[])
         addr from;
         size_t len = ECC_CURVE+1;
         b58tobin(from.key, &len, argv[1], strlen(argv[1]));
+        printf("Please Wait...\n");
 
+        //Local
         struct timespec s;
         clock_gettime(CLOCK_MONOTONIC, &s);
-        const mval bal = getBalance(&from);
+        mval bal = getBalance(&from);
         struct timespec e;
         clock_gettime(CLOCK_MONOTONIC, &e);
         long int td = (e.tv_nsec - s.tv_nsec);
         if(td > 0){td /= 1000000;}
         else if(td < 0){td = 0;}
+
+        //Network
+        mval baln = 0;
+        sleep(3);
+        FILE* f = fopen("/var/log/vfc/bal.mem", "w");
+        if(f)
+        {
+            fwrite(&baln, sizeof(mval), 1, f);
+            fclose(f);
+        }
+        const mval balt = trueBalance();
         
         setlocale(LC_NUMERIC, "");
-        printf("\x1B[33mThe Balance for Address '%s' is %'u VFC. Time Taken %li Milliseconds (%li ns).\x1B[0m\n\n", argv[1], bal, td, (e.tv_nsec - s.tv_nsec));
+        printf("\x1B[33m(Local Balance / True Network Balance / Highest Network Balance)\x1B[0m\n");
+        printf("\x1B[33mThe Balance for Address: \x1B[0m%s\n(\x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m)\n\x1B[33mTime Taken\x1B[0m %li \x1B[33mMilliseconds (\x1B[0m%li ns\x1B[33m).\x1B[0m\n\n\x1B[33mFinal Balance:\x1B[0m %'u VFC\n\n", argv[1], bal, balt, baln, td, (e.tv_nsec - s.tv_nsec), balt);
         exit(0);
     }
 
@@ -1976,6 +2077,50 @@ int main(int argc , char *argv[])
                 }
             }
 
+            //Requesting address balance?
+            else if(rb[0] == 'b')
+            {
+                //Check this is the replay peer
+                if(isPeer(client.sin_addr.s_addr) == 1)
+                {
+                    //Get balance for supplied address
+                    addr from;
+                    memcpy(from.key, rb+1, ECC_CURVE+1);
+                    const mval bal = getBalance(&from);
+
+                    //Send back balance for the supplied address
+                    char pc[16];
+                    pc[0] = 'n';
+                    char* ofs = pc+1;
+                    memcpy(ofs, &bal, sizeof(mval));
+                    csend(client.sin_addr.s_addr, pc, 1+sizeof(mval));
+                }
+            }
+
+            //Returned address balance
+            else if(rb[0] == 'n')
+            {
+                //Check this is the replay peer
+                const int p = getPeer(client.sin_addr.s_addr);
+                if(p != -1)
+                {
+                    mval bal = 0;
+                    memcpy(&bal, rb+1, strlen(rb)-1);
+                    peer_ba[p] = bal;
+                    if(bal > balance_accumulator) //Update accumulator if higher balance returned
+                    {
+                        balance_accumulator = bal;
+
+                        FILE* f = fopen("/var/log/vfc/bal.mem", "w");
+                        if(f)
+                        {
+                            fwrite(&balance_accumulator, sizeof(mval), 1, f);
+                            fclose(f);
+                        }
+                    }
+                }
+            }
+
             //Is this a replay block?
             else if(rb[0] == 'p')
             {
@@ -2009,6 +2154,7 @@ int main(int argc , char *argv[])
             {
                 rb[0] = '\r';
                 csend(client.sin_addr.s_addr, rb, read_size);
+                addPeer(client.sin_addr.s_addr); //I didn't want to have to do this, but it's not the end of the world.
 
                 //Increment Requests
                 reqs++;
