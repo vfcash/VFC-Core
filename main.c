@@ -1693,7 +1693,7 @@ int main(int argc , char *argv[])
     //Let's make sure we're booting with the right damn chain
     if(verifyChain(CHAIN_FILE) == 0)
     {
-        printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./sync resync\x1B[0m\033[0m\n\n");
+        printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./coin resync\x1B[0m\033[0m\n\n");
         exit(0);
     }
 
