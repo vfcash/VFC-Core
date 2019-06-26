@@ -114,7 +114,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.41";
+const char version[]="0.42";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -2203,12 +2203,39 @@ int main(int argc , char *argv[])
                 const int p = getPeer(client.sin_addr.s_addr);
                 if(p != -1)
                 {
+                    //Load the current state (check if the client process reset the log)
+                    mval baln=0, balt=0;
+                    FILE* f = fopen("/var/log/vfc/bal.mem", "r");
+                    if(f)
+                    {
+                        if(fread(&baln, sizeof(mval), 1, f) != 1)
+                            printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
+                        fclose(f);
+                    }
+                    f = fopen("/var/log/vfc/balt.mem", "r");
+                    if(f)
+                    {
+                        if(fread(&balt, sizeof(mval), 1, f) != 1)
+                            printf("\033[1m\x1B[31mbalt.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
+                        fclose(f);
+                    }
+
+                    //Is it time to reset?
+                    if(baln == 0)
+                        balance_accumulator = 0;
+                    if(balt == 0)
+                        for(uint i = 0; i < MAX_PEERS; i++)
+                            peer_ba[i] = 0;
+
+                    //Log the new balances
                     mval bal = 0;
                     memcpy(&bal, rb+1, sizeof(mval));
                     peer_ba[p] = bal;
                     if(bal > balance_accumulator) //Update accumulator if higher balance returned
                         balance_accumulator = bal;
-                    FILE* f = fopen("/var/log/vfc/bal.mem", "w");
+
+                    //And write
+                    f = fopen("/var/log/vfc/bal.mem", "w");
                     if(f)
                     {
                         fwrite(&balance_accumulator, sizeof(mval), 1, f);
@@ -2221,6 +2248,7 @@ int main(int argc , char *argv[])
                         fwrite(&tb, sizeof(mval), 1, f);
                         fclose(f);
                     }
+
                 }
             }
 
