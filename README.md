@@ -1,10 +1,10 @@
 # VF Cash
 
-VF Cash is a Cryptocurrency project that started on the 23rd of April 2019. It has no Proof-of-Work (POW) rather it has a transaction rate limit per address / public key of three seconds. This prevents the sender or the receiver of a transaction from making any further transactions during this period. The chain is unordered, and the networking uses UDP. The Digital Signature algorithm uses secp256r1.
+VF Cash is a the most efficient blockchain project in existance, created by James William Fletcher, at the current point in time it uses only 1.8 MB of memory and a maximum of 8 threads and 2 threads idle. A blockchain file that grows at a rate 76.16% less than Bitcoin. [Whitepaper.pdf](https://github.com/vfcash/RELEASES/blob/master/vfcash.pdf)
+
+The project started on the 23rd of April 2019. It has no Proof-of-Work (POW) rather it has a transaction rate limit per address / public key of three seconds. This prevents the sender or the receiver of a transaction from making any further transactions during this period. The chain is unordered, and the networking uses UDP. The Digital Signature algorithm uses secp256r1.
 
 This is a non-divisible coin, pre-mined, written in C, compiled with GCC, 256-bit key length, Transactions are 76.16% smaller than an average Bitcoin-Core transaction, relating to total blockchain size.
-
-The only incentive to run a Full Node is if you wish to implement a payment gateway in your website or service, if you are running an exchange, or maybe you are just a die-hard supporter of VF Cash. There can be re-occuring reward payouts to node operators, delegated from the pre-mine.
 
 Transactions are truly free, there is no charge for making a transaction on the network.
 
@@ -21,10 +21,6 @@ sudo chmod 0777 compile.sh
 ./compile.sh
 ```
 Then use the `coin help` command in the console for a full command list.
-
-If you are running a full node then consider also installing NGINX + PHP-FPM and extracting the `server-www.zip` files into the `/var/www/html` directory; https://github.com/vfcash/RELEASES/raw/master/server-www.zip
-
-Doing so will allow other users in the network a method of finding and donating rewards to you. It comes with a basic web-wallet that can be expanded upon and will allow users to make transactions via your node.
 
 If you wish the full node to launch on startup of the server, `edit /etc/rc.local` and add the command `coin` at the end of the file. Alternatively you can SSH in and launch an instance of coin in a screen or tmux, or if running a crontab add `@restart coin`.
 
