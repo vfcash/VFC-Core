@@ -114,7 +114,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.40";
+const char version[]="0.41";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -1030,10 +1030,24 @@ mval getBalanceLocal(addr* from)
 //get balance
 mval getBalance(addr* from)
 {
-    //Tell peers to fill our accumulator
+    //Reset our files & memory for last count
     balance_accumulator = 0;
     for(uint i = 0; i < MAX_PEERS; i++)
         peer_ba[i] = 0;
+    FILE* f = fopen("/var/log/vfc/bal.mem", "w");
+    if(f)
+    {
+        fwrite(&balance_accumulator, sizeof(mval), 1, f);
+        fclose(f);
+    }
+    f = fopen("/var/log/vfc/balt.mem", "w");
+    if(f)
+    {
+        fwrite(&balance_accumulator, sizeof(mval), 1, f);
+        fclose(f);
+    }
+
+    //Tell peers to fill our accumulator
     char pc[ECC_CURVE+2];
     pc[0] = '$';
     char* ofs = pc+1;
@@ -1043,7 +1057,7 @@ mval getBalance(addr* from)
 
     //Get local Balance
     mval rv = 0;
-    FILE* f = fopen(CHAIN_FILE, "r");
+    f = fopen(CHAIN_FILE, "r");
     if(f)
     {
         fseek(f, 0, SEEK_END);
