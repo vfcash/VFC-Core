@@ -2207,15 +2207,12 @@ int main(int argc , char *argv[])
                     memcpy(&bal, rb+1, sizeof(mval));
                     peer_ba[p] = bal;
                     if(bal > balance_accumulator) //Update accumulator if higher balance returned
-                    {
                         balance_accumulator = bal;
-
-                        FILE* f = fopen("/var/log/vfc/bal.mem", "w");
-                        if(f)
-                        {
-                            fwrite(&balance_accumulator, sizeof(mval), 1, f);
-                            fclose(f);
-                        }
+                    FILE* f = fopen("/var/log/vfc/bal.mem", "w");
+                    if(f)
+                    {
+                        fwrite(&balance_accumulator, sizeof(mval), 1, f);
+                        fclose(f);
                     }
                     f = fopen("/var/log/vfc/balt.mem", "w");
                     if(f)
