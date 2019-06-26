@@ -1560,7 +1560,7 @@ int main(int argc , char *argv[])
             struct stat st;
             stat(CHAIN_FILE, &st);
             if(st.st_size > 0)
-                printf("\x1B[33m%1.f\x1B[0m kb / \x1B[33m%u\x1B[0m Blocks\n", (double)st.st_size / 1000, (uint)st.st_size / 133);
+                printf("\x1B[33m%1.f\x1B[0m kb / \x1B[33m%u\x1B[0m Transactions\n", (double)st.st_size / 1000, (uint)st.st_size / 133);
             exit(0);
         }
 
