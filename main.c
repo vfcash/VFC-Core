@@ -114,7 +114,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.37";
+const char version[]="0.38";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -1846,7 +1846,7 @@ int main(int argc , char *argv[])
         }
 
     //Get balance..
-    const mval bal0 = getBalance(&t.from);
+    const mval bal0 = getBalanceLocal(&t.from);
 
         //UID Based on timestamp & signature
         time_t ltime = time(NULL);
@@ -1865,7 +1865,7 @@ int main(int argc , char *argv[])
 
         //Generate Packet (pc)
         const uint origin = 0;
-        const size_t len = 1+sizeof(uint64_t)+sizeof(uint)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+uint64_t+1
+        const size_t len = 1+sizeof(uint64_t)+sizeof(uint)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
         char pc[MIN_LEN];
         pc[0] = 't';
         char* ofs = pc + 1;
@@ -1897,7 +1897,7 @@ int main(int argc , char *argv[])
 
     //Get balance again..
     sleep(6);
-    const mval bal1 = getBalance(&t.from);
+    const mval bal1 = getBalanceLocal(&t.from);
     setlocale(LC_NUMERIC, "");
     if(bal0-bal1 == 0)
         printf("\033[1m\x1B[31mTransaction Failed.\x1B[0m\033[0m\n\n");
@@ -1972,6 +1972,8 @@ int main(int argc , char *argv[])
         int read_size;
         char rb[RECV_BUFF_SIZE];
         uint rsi = 0;
+        const uint trans_size = 1+sizeof(uint64_t)+sizeof(uint)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+        const uint replay_size = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
         while(1)
         {
             //Client Command
@@ -1991,7 +1993,7 @@ int main(int argc , char *argv[])
 #endif
 
             //Is this a [fresh trans / dead trans] ?
-            else if((rb[0] == 't' || rb[0] == 'd') && read_size == sizeof(struct trans)+sizeof(uint)+1)
+            else if((rb[0] == 't' || rb[0] == 'd') && read_size == trans_size)
             {
                 //Root origin peer address
                 uint origin = 0;
@@ -2017,7 +2019,7 @@ int main(int argc , char *argv[])
                 {
                     //Broadcast to peers
                     origin = client.sin_addr.s_addr;
-                    const size_t len = 1+sizeof(uint64_t)+sizeof(uint)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+sizeof(uint)+1
+                    const size_t len = 1+sizeof(uint64_t)+sizeof(uint)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //it's basically sizeof(struct trans)+sizeof(uint)+1
                     char pc[MIN_LEN];
                     pc[0] = 'd';
                     char* ofs = pc + 1;
@@ -2203,7 +2205,7 @@ int main(int argc , char *argv[])
             }
 
             //Is this a replay block?
-            else if(rb[0] == 'p' && read_size == sizeof(struct trans)+1)
+            else if(rb[0] == 'p' && read_size == replay_size)
             {
                 //This replay has to be from the specific trusted node, or the master. If it's a trusted node, we know it's also a peer so. All good.
                 if(client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
