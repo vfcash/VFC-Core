@@ -114,7 +114,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.39";
+const char version[]="0.40";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -1685,7 +1685,7 @@ int main(int argc , char *argv[])
             }
 
             mval fbal = bal;
-            if(balt != 0)
+            if(balt > fbal)
                 fbal = balt;
 
             setlocale(LC_NUMERIC, "");
@@ -1802,7 +1802,7 @@ int main(int argc , char *argv[])
         }
 
         mval fbal = bal;
-        if(balt != 0)
+        if(balt > fbal)
             fbal = balt;
         
         setlocale(LC_NUMERIC, "");
