@@ -2217,7 +2217,7 @@ int main(int argc , char *argv[])
                     f = fopen("/var/log/vfc/balt.mem", "w");
                     if(f)
                     {
-                        const uint tb = trueBalance();
+                        const mval tb = trueBalance();
                         fwrite(&tb, sizeof(mval), 1, f);
                         fclose(f);
                     }
