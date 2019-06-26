@@ -285,12 +285,12 @@ mval peer_ba[MAX_PEERS]; //Balance Aggregation
 
 mval trueBalance()
 {
-    mval v[MAX_PEERS];
-    uint c[MAX_PEERS];
+    mval v[num_peers];
+    uint c[num_peers];
     uint vm = 0;
-    for(uint i = 0; i < MAX_PEERS; i++)
+    for(uint i = 0; i < num_peers; i++)
         c[i] = 0;
-    for(uint i = 0; i < MAX_PEERS; i++)
+    for(uint i = 0; i < num_peers; i++)
     {
         if(peer_ba[i] == 0)
             continue;
