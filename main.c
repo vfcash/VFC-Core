@@ -114,7 +114,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.38";
+const char version[]="0.39";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -147,7 +147,7 @@ const char master_ip[] = "68.183.49.225";
 ulong err = 0;
 uint replay_allow = 0;
 uint replay_height = 0;
-uint balance_accumulator = 0;
+mval balance_accumulator = 0;
 uint threads = 0;
 uint thread_ip[MAX_THREADS];
 char mid[8];
@@ -280,7 +280,7 @@ uint peers[MAX_PEERS]; //Peer IPv4 addresses
 time_t peer_timeouts[MAX_PEERS]; //Peer timeout UNIX epoch stamps
 uint num_peers = 0; //Current number of indexed peers
 uint peer_tcount[MAX_PEERS]; //Amount of transactions relayed by peer
-char peer_ua[MAX_PEERS][MIN_LEN]; //Peer user agent
+char peer_ua[MAX_PEERS][64]; //Peer user agent
 mval peer_ba[MAX_PEERS]; //Balance Aggregation
 
 mval trueBalance()
@@ -289,7 +289,11 @@ mval trueBalance()
     uint c[MAX_PEERS];
     uint vm = 0;
     for(uint i = 0; i < MAX_PEERS; i++)
+        c[i] = 0;
+    for(uint i = 0; i < MAX_PEERS; i++)
     {
+        if(peer_ba[i] == 0)
+            continue;
         uint t = 0;
         for(uint i2 = 0; i2 < vm; i2++)
         {
@@ -1230,7 +1234,7 @@ void savemem()
     f = fopen("/var/log/vfc/peers3.mem", "w");
     if(f)
     {
-        fwrite(peer_ua, MIN_LEN, MAX_PEERS, f);
+        fwrite(peer_ua, 64, MAX_PEERS, f);
         fclose(f);
     }
 
@@ -1272,7 +1276,7 @@ void loadmem()
     f = fopen("/var/log/vfc/peers3.mem", "r");
     if(f)
     {
-        if(fread(peer_ua, MIN_LEN, MAX_PEERS, f) != MAX_PEERS)
+        if(fread(peer_ua, 64, MAX_PEERS, f) != MAX_PEERS)
             printf("\033[1m\x1B[31mPeers3 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
         fclose(f);
     }
@@ -1678,14 +1682,22 @@ int main(int argc , char *argv[])
             
             mval bal = getBalance(&rk);
             mval baln = 0;
+            mval balt = 0;
             sleep(3);
-            FILE* f = fopen("/var/log/vfc/bal.mem", "w");
+            FILE* f = fopen("/var/log/vfc/bal.mem", "r");
             if(f)
             {
-                fwrite(&baln, sizeof(mval), 1, f);
+                if(fread(&baln, sizeof(mval), 1, f) != 1)
+                    printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
                 fclose(f);
             }
-            const mval balt = trueBalance();
+            f = fopen("/var/log/vfc/balt.mem", "r");
+            if(f)
+            {
+                if(fread(&balt, sizeof(mval), 1, f) != 1)
+                    printf("\033[1m\x1B[31mbalt.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
+                fclose(f);
+            }
 
             mval fbal = bal;
             if(balt != 0)
@@ -1787,15 +1799,22 @@ int main(int argc , char *argv[])
         else if(td < 0){td = 0;}
 
         //Network
-        mval baln = 0;
+        mval baln = 0, balt = 0;
         sleep(3);
-        FILE* f = fopen("/var/log/vfc/bal.mem", "w");
+        FILE* f = fopen("/var/log/vfc/bal.mem", "r");
         if(f)
         {
-            fwrite(&baln, sizeof(mval), 1, f);
+            if(fread(&baln, sizeof(mval), 1, f) != 1)
+                printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
             fclose(f);
         }
-        const mval balt = trueBalance();
+        f = fopen("/var/log/vfc/balt.mem", "r");
+        if(f)
+        {
+            if(fread(&balt, sizeof(mval), 1, f) != 1)
+                printf("\033[1m\x1B[31mbalt.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
+            fclose(f);
+        }
 
         mval fbal = bal;
         if(balt != 0)
@@ -2019,7 +2038,6 @@ int main(int argc , char *argv[])
                 {
                     //Broadcast to peers
                     origin = client.sin_addr.s_addr;
-                    const size_t len = 1+sizeof(uint64_t)+sizeof(uint)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //it's basically sizeof(struct trans)+sizeof(uint)+1
                     char pc[MIN_LEN];
                     pc[0] = 'd';
                     char* ofs = pc + 1;
@@ -2034,7 +2052,7 @@ int main(int argc , char *argv[])
                     memcpy(ofs, &t.amount, sizeof(mval));
                     ofs += sizeof(mval);
                     memcpy(ofs, t.owner.key, ECC_CURVE*2);
-                    peersBroadcast(pc, len);
+                    peersBroadcast(pc, trans_size);
                 }
                 
                 //Increment Requests
@@ -2138,8 +2156,8 @@ int main(int argc , char *argv[])
                 const int p = getPeer(client.sin_addr.s_addr);
                 if(p != -1)
                 {
-                    memcpy(peer_ua[p], rb+1, strlen(rb)-1);
-                    //printf("User Agent: %s\n", peer_ua[p]);
+                    memcpy(peer_ua[p], rb+1, 63);
+                    peer_ua[p][63] = 0x00;
                 }
             }
 
@@ -2200,7 +2218,13 @@ int main(int argc , char *argv[])
                             fclose(f);
                         }
                     }
-                    //savemem(); //Save mem, peer_ba list has updated
+                    f = fopen("/var/log/vfc/balt.mem", "w");
+                    if(f)
+                    {
+                        const uint tb = trueBalance();
+                        fwrite(&tb, sizeof(mval), 1, f);
+                        fclose(f);
+                    }
                 }
             }
 
@@ -2238,7 +2262,6 @@ int main(int argc , char *argv[])
                 rb[0] = '\r';
                 csend(client.sin_addr.s_addr, rb, read_size);
                 addPeer(client.sin_addr.s_addr); //I didn't want to have to do this, but it's not the end of the world.
-                //savemem(); //Save mem, peers list has updated
 
                 //Increment Requests
                 reqs++;
@@ -2254,7 +2277,6 @@ int main(int argc , char *argv[])
                     rb[7] == mid[7] )
                 {
                     addPeer(client.sin_addr.s_addr);
-                    //savemem(); //Save mem, peers list has updated
 
                     //Increment Requests
                     reqs++;
@@ -2269,14 +2291,14 @@ int main(int argc , char *argv[])
                     csend(client.sin_addr.s_addr, myrewardkey, strlen(myrewardkey));
             }
 
-            //Check replay_allow value every 30 seconds
+            //Check replay_allow value every second
             if(time(0) > st0)
             {
                 //Save memory state
                 savemem();
                 
                 //Load new replay allow value
-                FILE* f = fopen("/var/log/vfc/rp.mem", "r");
+                f = fopen("/var/log/vfc/rp.mem", "r");
                 if(f)
                 {
                     if(fread(&replay_allow, sizeof(uint), 1, f) != 1)
