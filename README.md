@@ -1,6 +1,6 @@
 # VF Cash
 
-VF Cash is a the most efficient blockchain project in existance, created by James William Fletcher, at the current point in time it uses only 1.8 MB of memory and a maximum of 8 threads and 2 threads idle. A blockchain file that grows at a rate 76% less than Bitcoin. [Whitepaper.pdf](https://github.com/vfcash/RELEASES/blob/master/vfcash.pdf)
+VF Cash is a the most efficient blockchain project in existance, created by James William Fletcher, at the current point in time it uses only 1.8 MB of memory and a maximum of 8 threads or 2 threads idle. A blockchain file that grows at a rate 76% less than Bitcoin. [Whitepaper.pdf](https://github.com/vfcash/RELEASES/blob/master/vfcash.pdf)
 
 The project started on the 23rd of April 2019. It has no Proof-of-Work (POW) rather it has a transaction rate limit per address / public key of three seconds. This prevents the sender or the receiver of a transaction from making any further transactions during this period. The chain is unordered, and the networking uses UDP. The Digital Signature algorithm uses secp256r1.
 
