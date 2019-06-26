@@ -2132,8 +2132,7 @@ int main(int argc , char *argv[])
             //Give up our user-agent
             else if(rb[0] == 'a' && rb[1] == 0x00 && read_size == 1)
             {
-                //Check this is the replay peer
-                if(client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
+                if(isPeer(client.sin_addr.s_addr))
                 {
                     struct stat st;
                     stat(CHAIN_FILE, &st);
