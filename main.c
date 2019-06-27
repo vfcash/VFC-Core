@@ -7,7 +7,7 @@
     https://vfcash.uk
 
     Project start date: 23rd of April (2019)
-    Project updated:    26th of June  (2019)
+    Project updated:    27th of June  (2019)
 
     CRYPTO:
     - https://github.com/brainhub/SHA3IUF   [SHA3]
@@ -114,7 +114,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.42";
+const char version[]="0.43";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -440,6 +440,36 @@ void peersBroadcast(const char* dat, const size_t len)
         csend(peers[i], dat, len);
 }
 
+void triBroadcast(const char* dat, const size_t len)
+{
+    if(num_peers > 3)
+    {
+        uint si = qRand(1, num_peers-1);
+        do
+        {
+            const uint pd = time(0)-(peer_timeouts[si]-MAX_PEER_EXPIRE_SECONDS);
+            if(pd <= 540)
+                break;
+            si++;
+        }
+        while(si < num_peers);
+
+        if(si == num_peers)
+            csend(peers[qRand(1, num_peers-1)], dat, len);
+        else
+            csend(peers[si], dat, len);
+    }
+    else
+    {
+        if(num_peers > 0)
+            csend(peers[1], dat, len);
+        if(num_peers > 1)
+            csend(peers[2], dat, len);
+        if(num_peers > 2)
+            csend(peers[3], dat, len);
+    }
+}
+
 void resyncBlocks(const char type)
 {
     //Resync from Master
@@ -450,7 +480,7 @@ void resyncBlocks(const char type)
     if(num_peers > 1)
     {
         //Look for a living peer
-        uint si = qRand(1, num_peers); // start from random offset
+        uint si = qRand(1, num_peers-1); // start from random offset
         do // find next living peer from offset
         {
             const uint pd = time(0)-(peer_timeouts[si]-MAX_PEER_EXPIRE_SECONDS); //ping delta
@@ -459,7 +489,11 @@ void resyncBlocks(const char type)
             si++;
         }
         while(si < num_peers);
-        replay_allow = peers[si];
+
+        if(si == num_peers)
+            replay_allow = peers[qRand(1, num_peers-1)];
+        else
+            replay_allow = peers[si];
     }
     else if(num_peers == 1)
     {
@@ -513,8 +547,8 @@ void RewardPeer(const uint ip, const char* pubkey)
         return;
 
     //Workout payment amount
-    const double p = ( ( time(0) - 1559605848 ) / 600 ) * 0.000032596;
-    const uint v = 2800.0 - floor(p);
+    const double p = ( ( time(0) - 1559605848 ) / 16 ) * 0.000032596;
+    const uint v = 28.0 - floor(p);
 
     //Clean the input ready for sprintf (exploit vector potential otherwise)
     char sa[MIN_LEN];
@@ -1410,6 +1444,25 @@ void *processThread(void *arg)
                 //Track this client from origin
                 addPeer(ip[i]);
                 savemem(); //Save mem due to peers list update
+
+                //Construct a non-repeatable transaction and tell our peers
+                const uint32_t origin = ip[i];
+                const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+uint64_t+1
+                char pc[MIN_LEN];
+                pc[0] = 'd';
+                char* ofs = pc + 1;
+                memcpy(ofs, &origin, sizeof(uint32_t));
+                ofs += sizeof(uint32_t);
+                memcpy(ofs, &tq[i].uid, sizeof(uint64_t));
+                ofs += sizeof(uint64_t);
+                memcpy(ofs, tq[i].from.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, tq[i].to.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, &tq[i].amount, sizeof(mval));
+                ofs += sizeof(mval);
+                memcpy(ofs, tq[i].owner.key, ECC_CURVE*2);
+                triBroadcast(pc, len);
             }
         }
 
@@ -2051,7 +2104,7 @@ int main(int argc , char *argv[])
                     memcpy(ofs, &t.amount, sizeof(mval));
                     ofs += sizeof(mval);
                     memcpy(ofs, t.owner.key, ECC_CURVE*2);
-                    peersBroadcast(pc, trans_size);
+                    triBroadcast(pc, trans_size);
                 }
                 
                 //Increment Requests
@@ -2132,6 +2185,7 @@ int main(int argc , char *argv[])
             //Give up our user-agent
             else if(rb[0] == 'a' && rb[1] == 0x00 && read_size == 1)
             {
+                //Check this is the replay peer
                 if(isPeer(client.sin_addr.s_addr))
                 {
                     struct stat st;
@@ -2148,7 +2202,7 @@ int main(int argc , char *argv[])
             }
 
             //Save user agent
-            else if(rb[0] == 'a' && rb[1] != 0x00)
+            else if(rb[0] == 'a')
             {
                 //Check this is a peer
                 const int p = getPeer(client.sin_addr.s_addr);
