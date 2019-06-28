@@ -114,7 +114,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.43";
+const char version[]="0.44";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -333,6 +333,18 @@ uint countPeers()
         if(peers[i] == 0)
             return c;
         c++;
+    }
+    return c;
+}
+
+uint countLivingPeers()
+{
+    uint c = 0;
+    for(uint i = 0; i < num_peers; i++)
+    {
+        const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS);
+        if(pd <= 540)
+            c++;
     }
     return c;
 }
@@ -709,6 +721,18 @@ int gQue()
             return i;
     }
     return -1;
+}
+
+//size of queue
+uint gQueSize()
+{
+    uint size = 0;
+    for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
+    {
+        if(tq[i].amount != 0 && time(0) - delta[i] > 2)
+            size++;
+    }
+    return size;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1432,38 +1456,29 @@ void *processThread(void *arg)
         //Good transaction!
         if(r == 1 && replay[i] == 1)
         {
-            //Dead Transaction (do not repeat)
+            //Track this client from origin
+            addPeer(ip[i]);
             if(ipo[i] != 0)
-            {
                 addPeer(ipo[i]); //Track this client by attached origin
-                addPeer(ip[i]); //Track this client by origin
-                savemem(); //Save mem due to peers list update
-            }
-            else //Broadcast but prevent clients repeating message
-            {
-                //Track this client from origin
-                addPeer(ip[i]);
-                savemem(); //Save mem due to peers list update
 
-                //Construct a non-repeatable transaction and tell our peers
-                const uint32_t origin = ip[i];
-                const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+uint64_t+1
-                char pc[MIN_LEN];
-                pc[0] = 'd';
-                char* ofs = pc + 1;
-                memcpy(ofs, &origin, sizeof(uint32_t));
-                ofs += sizeof(uint32_t);
-                memcpy(ofs, &tq[i].uid, sizeof(uint64_t));
-                ofs += sizeof(uint64_t);
-                memcpy(ofs, tq[i].from.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, tq[i].to.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, &tq[i].amount, sizeof(mval));
-                ofs += sizeof(mval);
-                memcpy(ofs, tq[i].owner.key, ECC_CURVE*2);
-                triBroadcast(pc, len);
-            }
+            //Construct a non-repeatable transaction and tell our peers
+            const uint32_t origin = ip[i];
+            const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+uint64_t+1
+            char pc[MIN_LEN];
+            pc[0] = 't';
+            char* ofs = pc + 1;
+            memcpy(ofs, &origin, sizeof(uint32_t));
+            ofs += sizeof(uint32_t);
+            memcpy(ofs, &tq[i].uid, sizeof(uint64_t));
+            ofs += sizeof(uint64_t);
+            memcpy(ofs, tq[i].from.key, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, tq[i].to.key, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, &tq[i].amount, sizeof(mval));
+            ofs += sizeof(mval);
+            memcpy(ofs, tq[i].owner.key, ECC_CURVE*2);
+            triBroadcast(pc, len);
         }
 
         //Alright this transaction is PROCESSED
@@ -1756,7 +1771,7 @@ int main(int argc , char *argv[])
                 fbal = balt;
 
             setlocale(LC_NUMERIC, "");
-            printf("\x1B[33m(Local Balance / True Network Balance / Highest Network Balance)\x1B[0m\n");
+            printf("\x1B[33m(Local Balance / Mode Network Balance / Highest Network Balance)\x1B[0m\n");
             printf("\x1B[33mYour reward address is:\x1B[0m%s\n(\x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m)\n\n\x1B[33mFinal Balance:\x1B[0m %'u VFC\n\n", myrewardkey, bal, balt, baln, fbal);
             exit(0);
         }
@@ -1873,7 +1888,7 @@ int main(int argc , char *argv[])
             fbal = balt;
         
         setlocale(LC_NUMERIC, "");
-        printf("\x1B[33m(Local Balance / True Network Balance / Highest Network Balance)\x1B[0m\n");
+        printf("\x1B[33m(Local Balance / Mode Network Balance / Highest Network Balance)\x1B[0m\n");
         printf("\x1B[33mThe Balance for Address: \x1B[0m%s\n(\x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m)\n\x1B[33mTime Taken\x1B[0m %li \x1B[33mMilliseconds (\x1B[0m%li ns\x1B[33m).\x1B[0m\n\n\x1B[33mFinal Balance:\x1B[0m %'u VFC\n\n", argv[1], bal, balt, baln, td, (e.tv_nsec - s.tv_nsec), fbal);
         exit(0);
     }
@@ -1970,10 +1985,10 @@ int main(int argc , char *argv[])
     sleep(6);
     const mval bal1 = getBalanceLocal(&t.from);
     setlocale(LC_NUMERIC, "");
-    if(bal0-bal1 == 0)
-        printf("\033[1m\x1B[31mTransaction Failed.\x1B[0m\033[0m\n\n");
+    if(bal0-bal1 <= 0)
+        printf("\033[1m\x1B[31mTransaction Failed. (If you have not got the full blockchain, it may have succeeded)\x1B[0m\033[0m\n\n");
     else
-        printf("\x1B[33mVFC Sent: \x1B[0m%u VFC\n\n", bal0-bal1);
+        printf("\x1B[33mVFC Sent: \x1B[0m%'u VFC\n\n", bal0-bal1);
 
         //Done
         exit(0);
@@ -2368,7 +2383,7 @@ int main(int argc , char *argv[])
                     csend(client.sin_addr.s_addr, myrewardkey, strlen(myrewardkey));
             }
 
-            //Check replay_allow value every second
+            //Check replay_allow value every three seconds
             if(time(0) > st0)
             {
                 //Save memory state
@@ -2391,7 +2406,7 @@ int main(int argc , char *argv[])
             if(st < time(0))
             {
                 //Log Metrics
-                printf("\x1B[33mSTATS: Req/s: %ld, Peers: %u, Threads %u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), num_peers, threads, err);
+                printf("\x1B[33mSTAT: Req/s: %ld, Peers: %u/%u, UDP Que: %u, Threads %u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), countLivingPeers(), num_peers, gQueSize(), threads, err);
 
                 //Let's execute a Sync every 3*60 mins (3hr)
                 if(rsi >= 60)
