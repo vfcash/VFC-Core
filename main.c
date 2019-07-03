@@ -1560,6 +1560,31 @@ int main(int argc , char *argv[])
     //Outgoings and Incomings
     if(argc == 3)
     {
+	if(strcmp(argv[1], "getpub") == 0)
+        {
+            //Force console to clear.
+            printf("\033[H\033[J");
+
+            //Get Private Key
+            uint8_t p_privateKey[ECC_BYTES+1];
+            size_t len = ECC_CURVE;
+            b58tobin(p_privateKey, &len, argv[2], strlen(argv[2]));
+
+            //Gen Public Key
+            uint8_t p_publicKey[ECC_BYTES+1];
+            ecc_get_pubkey(p_publicKey, p_privateKey);
+
+            //Dump Public Key as Base58
+            char bpub[MIN_LEN];
+            memset(bpub, 0, sizeof(bpub));
+            len = MIN_LEN;
+            b58enc(bpub, &len, p_publicKey, ECC_CURVE+1);
+
+            printf("\n\x1B[33mPublic Key Generated\x1B[0m\n\nPublic: %s\n\n\x1B[0m", bpub);
+            
+            exit(0);
+        }
+	
         if(strcmp(argv[1], "addpeer") == 0)
         {
             loadmem();
@@ -1601,6 +1626,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mTo manually trigger blockchain resync use:\x1B[0m\n ./coin resync\x1B[0m\n\n");
             printf("\x1B[33mTo manually trigger blockchain sync use:\x1B[0m\n ./coin sync\x1B[0m\n\n");
             printf("\x1B[33mTo create a new Address, Public / Private Key-Pair:\x1B[0m\n ./coin new\x1B[0m\n\n");
+            printf("\x1B[33mGet Public Key from Private Key:\x1B[0m\n ./coin getpub <private key>\x1B[0m\n\n");
             printf("\x1B[33mTo manually add a peer use:\x1B[0m\n ./coin addpeer <peer ip-address>\n\n");
             printf("\x1B[33mList all locally indexed peers and info:\x1B[0m\n ./coin peers\n\n");
             printf("\x1B[33mDump all transactions in the blockchain:\x1B[0m\n ./coin dump\n\n");
