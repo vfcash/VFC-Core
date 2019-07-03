@@ -38,11 +38,9 @@ We recommend configuring iptables to throttle incoming UDP packets on port 8787 
 
 This should be adequate for the maximum throughput of the entire network allowing 'leeway'.
 
-**Block Replay:** 10 tps [max]
-
-**Valid Transactions:** 85 tps [max]
-
-**Utility Requests / Invalid Transaction:** 24 tps (the remainder bandwidth)
+- **Block Replay:** 10 tps [max]
+- **Valid Transactions:** 85 tps [max]
+- **Utility Requests / Invalid Transaction:** 24 tps (the remainder bandwidth)
 
 ```
 iptables -I INPUT -p udp -i eth0 --dport 8787 -m state --state NEW -m recent --update --seconds 2 --hitcount 255 -j DROP
