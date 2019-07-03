@@ -34,7 +34,7 @@ Each address is limited to one transaction every three seconds, once a transacti
 
 # Denial-of-service Protection
 
-We reccomend configuring iptables to trottle incoming UDP packets on port 8787 to 7,133 every minute [~119 packets a second]. 
+We recommend configuring iptables to throttle incoming UDP packets on port 8787 to 7,133 every minute [~119 packets a second]. 
 
 This should be adequate for the maximum throughput of the entire network.
 
