@@ -40,7 +40,9 @@ This should be adequate for the maximum throughput of the entire network allowin
 
 - **Block Replay:** 10 tps [max]
 - **Valid Transactions:** 85 tps [max]
-- **Utility Requests / Invalid Transaction:** 24 tps (the remainder bandwidth)
+- **Remainder / Utility Requests:** 24 tps
+
+Utility requests such as balance checks, pings, reward payments and user-agent requests have no defined limit like the Block Replay is always limited to 10 tps and valid processible transactions of each client 85 tps. Thus, when both of these services are at their max throughput remainder services will only get 24 tps with this iptables configuration.
 
 ```
 iptables -I INPUT -p udp -i eth0 --dport 8787 -m state --state NEW -m recent --update --seconds 2 --hitcount 255 -j DROP
