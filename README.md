@@ -24,6 +24,13 @@ Then use the `coin help` command in the console for a full command list.
 
 If you wish the full node to launch on startup of the server, `edit /etc/rc.local` and add the command `coin` at the end of the file. Alternatively you can SSH in and launch an instance of coin in a screen or tmux, or if running a crontab add `@restart coin`.
 
+# Denial-of-service Protection
+
+We reccomend configuring iptables to trottle incoming UDP packets on port 8787 to 7,133 every minute [~119 packets a second]. This should be adequate for the maximum throughput of the entire network.
+
+```
+iptables -I INPUT -p udp -i eth0 --dport 8787 -m state --state NEW -m recent --update --seconds 60 --hitcount 7133 -j DROP
+```
 
 **Windows Install Instructions (Full Node & Client Wallet):**
 
