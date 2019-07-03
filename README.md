@@ -39,7 +39,7 @@ We recommend configuring iptables to throttle incoming UDP packets on port 8787 
 This should be adequate for the maximum throughput of the entire network.
 
 ```
-iptables -I INPUT -p udp -i eth0 --dport 8787 -m state --state NEW -m recent --update --seconds 60 --hitcount 7133 -j DROP
+iptables -I INPUT -p udp -i eth0 --dport 8787 -m state --state NEW -m recent --update --seconds 2 --hitcount 255 -j DROP
 ```
 
 # Third-Party Dependencies
