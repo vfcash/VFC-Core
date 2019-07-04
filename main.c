@@ -2432,7 +2432,7 @@ int main(int argc , char *argv[])
             if(st < time(0))
             {
                 //Log Metrics
-                printf("\x1B[33mSTAT: Req/s: %ld, Peers: %u/%u, UDP Que: %u, Threads %u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), countLivingPeers(), num_peers, gQueSize(), threads, err);
+                printf("\x1B[33mSTAT: Req/s: %ld, Peers: %u/%u, UDP Que: %u/%u, Threads %u/%u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, MAX_THREADS, err);
 
                 //Let's execute a Sync every 3*60 mins (3hr)
                 if(rsi >= 60)
