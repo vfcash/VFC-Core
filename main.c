@@ -1592,7 +1592,7 @@ int main(int argc , char *argv[])
     chdir(getHome());
 
     //create vfc dir
-    mkdir("vfc", 0600);
+    mkdir("vfc", 0700);
 
     //Create rewards address if it doesnt exist
     if(access("vfc/public.key", F_OK) == -1)
