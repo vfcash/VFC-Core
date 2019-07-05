@@ -2,7 +2,7 @@
     VF Cash has been created by James William Fletcher
     http://github.com/mrbid
 
-    A DAG Cryptocurrency for Linux written in C.
+    A Cryptocurrency for Linux written in C.
     https://vf.cash
     https://vfcash.uk
 
@@ -140,8 +140,8 @@ const char master_ip[] = "68.183.49.225";
 #define MIN_LEN 256
 
 //Chain Paths
-#define CHAIN_FILE "vfc/blocks.dat"
-#define BADCHAIN_FILE "vfc/bad_blocks.dat"
+#define CHAIN_FILE ".vfc/blocks.dat"
+#define BADCHAIN_FILE ".vfc/bad_blocks.dat"
 
 //Vairable Definitions
 #define uint uint32_t
@@ -574,7 +574,7 @@ void resyncBlocks(const char type)
     //Set the file memory
     struct in_addr ip_addr;
     ip_addr.s_addr = replay_allow;
-    FILE* f = fopen("vfc/rp.mem", "w");
+    FILE* f = fopen(".vfc/rp.mem", "w");
     if(f)
     {
         fwrite(&replay_allow, sizeof(uint), 1, f);
@@ -1182,13 +1182,13 @@ mval getBalance(addr* from)
     balance_accumulator = 0;
     for(uint i = 0; i < MAX_PEERS; i++)
         peer_ba[i] = 0;
-    FILE* f = fopen("vfc/bal.mem", "w");
+    FILE* f = fopen(".vfc/bal.mem", "w");
     if(f)
     {
         fwrite(&balance_accumulator, sizeof(mval), 1, f);
         fclose(f);
     }
-    f = fopen("vfc/balt.mem", "w");
+    f = fopen(".vfc/balt.mem", "w");
     if(f)
     {
         fwrite(&balance_accumulator, sizeof(mval), 1, f);
@@ -1372,28 +1372,28 @@ void makGenesis()
 
 void savemem()
 {
-    FILE* f = fopen("vfc/peers.mem", "w");
+    FILE* f = fopen(".vfc/peers.mem", "w");
     if(f)
     {
         fwrite(peers, sizeof(uint), MAX_PEERS, f);
         fclose(f);
     }
 
-    f = fopen("vfc/peers1.mem", "w");
+    f = fopen(".vfc/peers1.mem", "w");
     if(f)
     {
         fwrite(peer_tcount, sizeof(uint), MAX_PEERS, f);
         fclose(f);
     }
 
-    f = fopen("vfc/peers2.mem", "w");
+    f = fopen(".vfc/peers2.mem", "w");
     if(f)
     {
         fwrite(peer_timeouts, sizeof(time_t), MAX_PEERS, f);
         fclose(f);
     }
 
-    f = fopen("vfc/peers3.mem", "w");
+    f = fopen(".vfc/peers3.mem", "w");
     if(f)
     {
         fwrite(peer_ua, 64, MAX_PEERS, f);
@@ -1403,7 +1403,7 @@ void savemem()
 
 void loadmem()
 {
-    FILE* f = fopen("vfc/peers.mem", "r");
+    FILE* f = fopen(".vfc/peers.mem", "r");
     if(f)
     {
         if(fread(peers, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
@@ -1412,7 +1412,7 @@ void loadmem()
     }
     num_peers = countPeers();
 
-    f = fopen("vfc/peers1.mem", "r");
+    f = fopen(".vfc/peers1.mem", "r");
     if(f)
     {
         if(fread(peer_tcount, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
@@ -1420,7 +1420,7 @@ void loadmem()
         fclose(f);
     }
 
-    f = fopen("vfc/peers2.mem", "r");
+    f = fopen(".vfc/peers2.mem", "r");
     if(f)
     {
         if(fread(peer_timeouts, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
@@ -1428,7 +1428,7 @@ void loadmem()
         fclose(f);
     }
 
-    f = fopen("vfc/peers3.mem", "r");
+    f = fopen(".vfc/peers3.mem", "r");
     if(f)
     {
         if(fread(peer_ua, 64, MAX_PEERS, f) != MAX_PEERS)
@@ -1592,10 +1592,10 @@ int main(int argc , char *argv[])
     chdir(getHome());
 
     //create vfc dir
-    mkdir("vfc", 0700);
+    mkdir(".vfc", 0700);
 
     //Create rewards address if it doesnt exist
-    if(access("vfc/public.key", F_OK) == -1)
+    if(access(".vfc/public.key", F_OK) == -1)
     {
         addr pub, priv;
         makAddr(&pub, &priv);
@@ -1607,13 +1607,13 @@ int main(int argc , char *argv[])
         b58enc(bpub, &len, pub.key, ECC_CURVE+1);
         b58enc(bpriv, &len, priv.key, ECC_CURVE);
 
-        FILE* f = fopen("vfc/public.key", "w");
+        FILE* f = fopen(".vfc/public.key", "w");
         if(f)
         {
             fwrite(bpub, sizeof(char), strlen(bpub), f);
             fclose(f);
         }
-        f = fopen("vfc/private.key", "w");
+        f = fopen(".vfc/private.key", "w");
         if(f)
         {
             fwrite(bpriv, sizeof(char), strlen(bpriv), f);
@@ -1622,7 +1622,7 @@ int main(int argc , char *argv[])
     }
 
     //Load your public key for rewards
-    FILE* f = fopen("vfc/public.key", "r");
+    FILE* f = fopen(".vfc/public.key", "r");
     if(f)
     {
         fseek(f, 0, SEEK_END);
@@ -1732,7 +1732,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mDump all transactions in the blockchain:\x1B[0m\n ./coin dump\n\n");
             printf("\x1B[33mDump all double spend transactions detected from other peers:\x1B[0m\n ./coin dumpbad\n\n");
             printf("\x1B[33mClear all double spend transactions detected from other peers:\x1B[0m\n ./coin clearbad\n\n");
-            printf("\x1B[33mReturns your Public Key stored in ~/vfc/public.key for reward collections:\x1B[0m\n ./coin reward\n\n");
+            printf("\x1B[33mReturns your Public Key stored in ~/.vfc/public.key for reward collections:\x1B[0m\n ./coin reward\n\n");
             printf("\x1B[33mReturns client version:\x1B[0m\n ./coin version\n\n");
             printf("\x1B[33mReturns client blocks.dat size / height:\x1B[0m\n ./coin heigh\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./coin scan\x1B[0m\n\n");
@@ -1784,13 +1784,13 @@ int main(int argc , char *argv[])
                 }
                 struct in_addr ip_addr;
                 ip_addr.s_addr = replay_allow;
-                FILE* f = fopen("vfc/rp.mem", "w");
+                FILE* f = fopen(".vfc/rp.mem", "w");
                 if(f)
                 {
                     fwrite(&replay_allow, sizeof(uint), 1, f);
                     fclose(f);
                 }
-                f = fopen("vfc/rph.mem", "r");
+                f = fopen(".vfc/rph.mem", "r");
                 if(f)
                 {
                     if(fread(&replay_height, sizeof(uint), 1, f) != 1)
@@ -1815,7 +1815,7 @@ int main(int argc , char *argv[])
             setMasterNode();
             loadmem();
             resyncBlocks('r');
-            FILE* f = fopen("vfc/rp.mem", "w");
+            FILE* f = fopen(".vfc/rp.mem", "w");
             if(f)
             {
                 fwrite(&replay_allow, sizeof(uint), 1, f);
@@ -1877,14 +1877,14 @@ int main(int argc , char *argv[])
             mval baln = 0;
             mval balt = 0;
             sleep(3);
-            FILE* f = fopen("vfc/bal.mem", "r");
+            FILE* f = fopen(".vfc/bal.mem", "r");
             if(f)
             {
                 if(fread(&baln, sizeof(mval), 1, f) != 1)
                     printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
                 fclose(f);
             }
-            f = fopen("vfc/balt.mem", "r");
+            f = fopen(".vfc/balt.mem", "r");
             if(f)
             {
                 if(fread(&balt, sizeof(mval), 1, f) != 1)
@@ -1994,14 +1994,14 @@ int main(int argc , char *argv[])
         //Network
         mval baln = 0, balt = 0;
         sleep(3);
-        FILE* f = fopen("vfc/bal.mem", "r");
+        FILE* f = fopen(".vfc/bal.mem", "r");
         if(f)
         {
             if(fread(&baln, sizeof(mval), 1, f) != 1)
                 printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
             fclose(f);
         }
-        f = fopen("vfc/balt.mem", "r");
+        f = fopen(".vfc/balt.mem", "r");
         if(f)
         {
             if(fread(&balt, sizeof(mval), 1, f) != 1)
@@ -2361,7 +2361,7 @@ int main(int argc , char *argv[])
                 if(client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
                 {
                     memcpy(&replay_height, rb+1, sizeof(uint)); //Set the block height
-                    FILE* f = fopen("vfc/rph.mem", "w");
+                    FILE* f = fopen(".vfc/rph.mem", "w");
                     if(f)
                     {
                         fwrite(&replay_height, sizeof(uint), 1, f);
@@ -2399,14 +2399,14 @@ int main(int argc , char *argv[])
                 {
                     //Load the current state (check if the client process reset the log)
                     mval baln=0, balt=0;
-                    FILE* f = fopen("vfc/bal.mem", "r");
+                    FILE* f = fopen(".vfc/bal.mem", "r");
                     if(f)
                     {
                         if(fread(&baln, sizeof(mval), 1, f) != 1)
                             printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
                         fclose(f);
                     }
-                    f = fopen("vfc/balt.mem", "r");
+                    f = fopen(".vfc/balt.mem", "r");
                     if(f)
                     {
                         if(fread(&balt, sizeof(mval), 1, f) != 1)
@@ -2429,13 +2429,13 @@ int main(int argc , char *argv[])
                         balance_accumulator = bal;
 
                     //And write
-                    f = fopen("vfc/bal.mem", "w");
+                    f = fopen(".vfc/bal.mem", "w");
                     if(f)
                     {
                         fwrite(&balance_accumulator, sizeof(mval), 1, f);
                         fclose(f);
                     }
-                    f = fopen("vfc/balt.mem", "w");
+                    f = fopen(".vfc/balt.mem", "w");
                     if(f)
                     {
                         const mval tb = trueBalance();
@@ -2516,7 +2516,7 @@ int main(int argc , char *argv[])
                 savemem();
                 
                 //Load new replay allow value
-                f = fopen("vfc/rp.mem", "r");
+                f = fopen(".vfc/rp.mem", "r");
                 if(f)
                 {
                     if(fread(&replay_allow, sizeof(uint), 1, f) != 1)
