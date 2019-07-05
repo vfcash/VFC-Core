@@ -628,20 +628,6 @@ void RewardPeer(const uint ip, const char* pubkey)
     //Base amount
     uint amount = 14;
 
-    //Double payment to USA servers
-    if(geo[0] == 'U' && geo[1] == 'S')
-    {
-        amount *= 2;
-    }
-
-    //Six times payment to EU, JP or VG servers.
-    if( (geo[0] == 'J' && geo[1] == 'P') ||
-        (con[0] == 'E' && con[1] == 'U') ||
-        (geo[0] == 'V' && geo[1] == 'G') )
-    {
-        amount *= 6;
-    }
-
     //Wrong / not latest version? Low reward
     if(strstr(peer_ua[rewardindex], version) == NULL)
         amount = 7;
