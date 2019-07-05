@@ -19,7 +19,7 @@
 
     NOTES:
     Only Supports IPv4 addresses.
-    Local storage in /var/log/vfc
+    Local storage in ~/vfc
 
     *** In it's current state we only track peer's who send a transaction to the server. ***
     *** Send a transaction to yourself, you wont see any address balance until verified ***
@@ -106,6 +106,11 @@
 
 #include "reward.h"
 
+#if MASTER_NODE == 1
+    #include <maxminddb.h> //Maxmind
+    MMDB_s mmdb;
+#endif
+
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
 //////////////////////////////////////////////
@@ -135,8 +140,8 @@ const char master_ip[] = "68.183.49.225";
 #define MIN_LEN 256
 
 //Chain Paths
-#define CHAIN_FILE "/var/log/vfc/blocks.dat"
-#define BADCHAIN_FILE "/var/log/vfc/bad_blocks.dat"
+#define CHAIN_FILE "vfc/blocks.dat"
+#define BADCHAIN_FILE "vfc/bad_blocks.dat"
 
 //Vairable Definitions
 #define uint uint32_t
@@ -168,6 +173,56 @@ char myrewardkey[MIN_LEN];
 //
 /* ~ Util Functions
 */
+
+#if MASTER_NODE == 1
+int getLocation(const char *ip_address, char* continent, char* country, char* cityn)
+{
+    int gai_error, mmdb_error;
+    MMDB_lookup_result_s result = MMDB_lookup_string(&mmdb, ip_address, &gai_error, &mmdb_error);
+
+    if(gai_error != 0)
+        return -2;
+
+    if(mmdb_error != MMDB_SUCCESS)
+        return -3;
+
+    int r = 0;
+    MMDB_entry_data_s entry_data;
+    MMDB_get_value(&result.entry, &entry_data, "country", "iso_code", NULL);
+    if(entry_data.has_data && entry_data.data_size < MIN_LEN-1)
+    {
+        memcpy(country, entry_data.utf8_string, entry_data.data_size);
+        r++;
+    }
+
+    MMDB_get_value(&result.entry, &entry_data, "city", "names", "en");
+    if(entry_data.has_data && entry_data.data_size < MIN_LEN-1)
+    {
+        memcpy(cityn, entry_data.utf8_string, entry_data.data_size);
+        r++;
+    }
+
+    MMDB_get_value(&result.entry, &entry_data, "continent", "code", NULL);
+    if(entry_data.has_data && entry_data.data_size < MIN_LEN-1)
+    {
+        memcpy(continent, entry_data.utf8_string, entry_data.data_size);
+        r++;
+    }
+    
+    if(r == 0)
+        return -1;
+    else
+        return 0;
+}
+#endif
+
+char* getHome()
+{
+    char *ret;
+    if((ret = getenv("HOME")) == NULL)
+        ret = getpwuid(getuid())->pw_dir;
+    return ret;
+}
 
 uint qRand(const uint min, const uint max)
 {
@@ -420,7 +475,7 @@ uint verifyChain(const char* path)
     }
     else
     {
-        printf("Look's like the blocks.dat cannot be found please make sure you chmod 0777 /var/log/vfc\n");
+        printf("Look's like the blocks.dat cannot be found please make sure you chmod 700 ~/vfc\n");
         return 0;
     }
     
@@ -519,7 +574,7 @@ void resyncBlocks(const char type)
     //Set the file memory
     struct in_addr ip_addr;
     ip_addr.s_addr = replay_allow;
-    FILE* f = fopen("/var/log/vfc/rp.mem", "w");
+    FILE* f = fopen("vfc/rp.mem", "w");
     if(f)
     {
         fwrite(&replay_allow, sizeof(uint), 1, f);
@@ -548,6 +603,7 @@ int getPeer(const uint ip)
     return -1;
 }
 
+#if MASTER_NODE == 1
 void RewardPeer(const uint ip, const char* pubkey)
 {
     //Only reward if ready
@@ -558,9 +614,42 @@ void RewardPeer(const uint ip, const char* pubkey)
     if(peers[rewardindex] != ip)
         return;
 
+    //Get Location
+    struct in_addr ip_addr;
+    ip_addr.s_addr = ip;
+    char con[MIN_LEN];
+    char geo[MIN_LEN];
+    char cityn[MIN_LEN];
+    memset(con, 0, sizeof(con));
+    memset(geo, 0, sizeof(geo));
+    memset(cityn, 0, sizeof(cityn));
+    getLocation(inet_ntoa(ip_addr), con, geo, cityn);
+
+    //Base amount
+    uint amount = 14;
+
+    //Double payment to USA servers
+    if(geo[0] == 'U' && geo[1] == 'S')
+    {
+        amount *= 2;
+    }
+
+    //Six times payment to EU, JP or VG servers.
+    if( (geo[0] == 'J' && geo[1] == 'P') ||
+        (con[0] == 'E' && con[1] == 'U') ||
+        (geo[0] == 'V' && geo[1] == 'G') )
+    {
+        amount *= 6;
+    }
+
+    //Wrong / not latest version? Low reward
+    if(strstr(peer_ua[rewardindex], version) == NULL)
+        amount = 7;
+
     //Workout payment amount
-    const double p = ( ( time(0) - 1559605848 ) / 16 ) * 0.000032596;
-    const uint v = 28.0 - floor(p);
+    //const double p = ( ( time(0) - 1559605848 ) / 20 ) * 0.000032596;
+    //const uint v = floor(amount - p);
+    const uint v = amount;
 
     //Clean the input ready for sprintf (exploit vector potential otherwise)
     char sa[MIN_LEN];
@@ -576,10 +665,8 @@ void RewardPeer(const uint ip, const char* pubkey)
     sprintf(cmd, reward_command, sa, v);
 
     //Drop info
-    struct in_addr ip_addr;
-    ip_addr.s_addr = ip;
     timestamp();
-    printf("Reward Yapit:%s, %u, %s\n", sa, rewardindex, inet_ntoa(ip_addr));
+    printf("Reward Yapit (%u):%s, %u, %s, %s, %s, %s\n", rewardindex, sa, v, inet_ntoa(ip_addr), con, geo, cityn);
 
     pid_t fork_pid = fork();
     if(fork_pid == 0)
@@ -591,6 +678,7 @@ void RewardPeer(const uint ip, const char* pubkey)
 
     rewardpaid = 1;
 }
+#endif
 
 //Peers are only replaced if they have not responded in a week, otherwise we still consider them contactable until replaced.
 uint addPeer(const uint ip)
@@ -811,6 +899,7 @@ void replayBlocks(const uint ip)
 }
 void *replayBlocksThread(void *arg)
 {
+    chdir(getHome());
     nice(19); //Very low priority thread
     const uint *iip = arg;
     const uint ip = *iip;
@@ -885,6 +974,7 @@ void replayBlocksRev(const uint ip)
 void *replayBlocksRevThread(void *arg)
 {
     sleep(3); //Offset threads--; collisions
+    chdir(getHome());
     nice(19); //Very low priority thread
     const uint *iip = arg;
     const uint ip = *iip;
@@ -1092,13 +1182,13 @@ mval getBalance(addr* from)
     balance_accumulator = 0;
     for(uint i = 0; i < MAX_PEERS; i++)
         peer_ba[i] = 0;
-    FILE* f = fopen("/var/log/vfc/bal.mem", "w");
+    FILE* f = fopen("vfc/bal.mem", "w");
     if(f)
     {
         fwrite(&balance_accumulator, sizeof(mval), 1, f);
         fclose(f);
     }
-    f = fopen("/var/log/vfc/balt.mem", "w");
+    f = fopen("vfc/balt.mem", "w");
     if(f)
     {
         fwrite(&balance_accumulator, sizeof(mval), 1, f);
@@ -1282,28 +1372,28 @@ void makGenesis()
 
 void savemem()
 {
-    FILE* f = fopen("/var/log/vfc/peers.mem", "w");
+    FILE* f = fopen("vfc/peers.mem", "w");
     if(f)
     {
         fwrite(peers, sizeof(uint), MAX_PEERS, f);
         fclose(f);
     }
 
-    f = fopen("/var/log/vfc/peers1.mem", "w");
+    f = fopen("vfc/peers1.mem", "w");
     if(f)
     {
         fwrite(peer_tcount, sizeof(uint), MAX_PEERS, f);
         fclose(f);
     }
 
-    f = fopen("/var/log/vfc/peers2.mem", "w");
+    f = fopen("vfc/peers2.mem", "w");
     if(f)
     {
         fwrite(peer_timeouts, sizeof(time_t), MAX_PEERS, f);
         fclose(f);
     }
 
-    f = fopen("/var/log/vfc/peers3.mem", "w");
+    f = fopen("vfc/peers3.mem", "w");
     if(f)
     {
         fwrite(peer_ua, 64, MAX_PEERS, f);
@@ -1313,7 +1403,7 @@ void savemem()
 
 void loadmem()
 {
-    FILE* f = fopen("/var/log/vfc/peers.mem", "r");
+    FILE* f = fopen("vfc/peers.mem", "r");
     if(f)
     {
         if(fread(peers, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
@@ -1322,7 +1412,7 @@ void loadmem()
     }
     num_peers = countPeers();
 
-    f = fopen("/var/log/vfc/peers1.mem", "r");
+    f = fopen("vfc/peers1.mem", "r");
     if(f)
     {
         if(fread(peer_tcount, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
@@ -1330,7 +1420,7 @@ void loadmem()
         fclose(f);
     }
 
-    f = fopen("/var/log/vfc/peers2.mem", "r");
+    f = fopen("vfc/peers2.mem", "r");
     if(f)
     {
         if(fread(peer_timeouts, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
@@ -1338,7 +1428,7 @@ void loadmem()
         fclose(f);
     }
 
-    f = fopen("/var/log/vfc/peers3.mem", "r");
+    f = fopen("vfc/peers3.mem", "r");
     if(f)
     {
         if(fread(peer_ua, 64, MAX_PEERS, f) != MAX_PEERS)
@@ -1385,6 +1475,7 @@ uint isNodeRunning()
 
 void *processThread(void *arg)
 {
+    chdir(getHome());
     time_t nr = time(0) + REWARD_RETRY_INTERVAL;
     time_t pr = time(0) + PING_INTERVAL;
     while(1)
@@ -1491,11 +1582,20 @@ int main(int argc , char *argv[])
     //Suppress Sigpipe
     signal(SIGPIPE, SIG_IGN);
 
+#if MASTER_NODE == 1
+    //load MaxMind City
+    if(MMDB_open("/root/maxmind/city.mmdb", MMDB_MODE_MMAP, &mmdb) != MMDB_SUCCESS)
+        printf("\x1B[31mFailed to load MaxMind Cities MMDB File: city.mmdb\x1B[0m\n");
+#endif
+
+    //set local working directory
+    chdir(getHome());
+
     //create vfc dir
-    mkdir("/var/log/vfc", 0777);
+    mkdir("vfc", 0600);
 
     //Create rewards address if it doesnt exist
-    if(access("/var/log/vfc/public.key", F_OK) == -1)
+    if(access("vfc/public.key", F_OK) == -1)
     {
         addr pub, priv;
         makAddr(&pub, &priv);
@@ -1507,13 +1607,13 @@ int main(int argc , char *argv[])
         b58enc(bpub, &len, pub.key, ECC_CURVE+1);
         b58enc(bpriv, &len, priv.key, ECC_CURVE);
 
-        FILE* f = fopen("/var/log/vfc/public.key", "w");
+        FILE* f = fopen("vfc/public.key", "w");
         if(f)
         {
             fwrite(bpub, sizeof(char), strlen(bpub), f);
             fclose(f);
         }
-        f = fopen("/var/log/vfc/private.key", "w");
+        f = fopen("vfc/private.key", "w");
         if(f)
         {
             fwrite(bpriv, sizeof(char), strlen(bpriv), f);
@@ -1522,7 +1622,7 @@ int main(int argc , char *argv[])
     }
 
     //Load your public key for rewards
-    FILE* f = fopen("/var/log/vfc/public.key", "r");
+    FILE* f = fopen("vfc/public.key", "r");
     if(f)
     {
         fseek(f, 0, SEEK_END);
@@ -1560,7 +1660,7 @@ int main(int argc , char *argv[])
     //Outgoings and Incomings
     if(argc == 3)
     {
-	if(strcmp(argv[1], "getpub") == 0)
+        if(strcmp(argv[1], "getpub") == 0)
         {
             //Force console to clear.
             printf("\033[H\033[J");
@@ -1584,7 +1684,7 @@ int main(int argc , char *argv[])
             
             exit(0);
         }
-	
+
         if(strcmp(argv[1], "addpeer") == 0)
         {
             loadmem();
@@ -1632,7 +1732,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mDump all transactions in the blockchain:\x1B[0m\n ./coin dump\n\n");
             printf("\x1B[33mDump all double spend transactions detected from other peers:\x1B[0m\n ./coin dumpbad\n\n");
             printf("\x1B[33mClear all double spend transactions detected from other peers:\x1B[0m\n ./coin clearbad\n\n");
-            printf("\x1B[33mReturns your Public Key stored in /var/log/vfc/public.key for reward collections:\x1B[0m\n ./coin reward\n\n");
+            printf("\x1B[33mReturns your Public Key stored in ~/vfc/public.key for reward collections:\x1B[0m\n ./coin reward\n\n");
             printf("\x1B[33mReturns client version:\x1B[0m\n ./coin version\n\n");
             printf("\x1B[33mReturns client blocks.dat size / height:\x1B[0m\n ./coin heigh\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./coin scan\x1B[0m\n\n");
@@ -1684,13 +1784,13 @@ int main(int argc , char *argv[])
                 }
                 struct in_addr ip_addr;
                 ip_addr.s_addr = replay_allow;
-                FILE* f = fopen("/var/log/vfc/rp.mem", "w");
+                FILE* f = fopen("vfc/rp.mem", "w");
                 if(f)
                 {
                     fwrite(&replay_allow, sizeof(uint), 1, f);
                     fclose(f);
                 }
-                f = fopen("/var/log/vfc/rph.mem", "r");
+                f = fopen("vfc/rph.mem", "r");
                 if(f)
                 {
                     if(fread(&replay_height, sizeof(uint), 1, f) != 1)
@@ -1715,7 +1815,7 @@ int main(int argc , char *argv[])
             setMasterNode();
             loadmem();
             resyncBlocks('r');
-            FILE* f = fopen("/var/log/vfc/rp.mem", "w");
+            FILE* f = fopen("vfc/rp.mem", "w");
             if(f)
             {
                 fwrite(&replay_allow, sizeof(uint), 1, f);
@@ -1777,14 +1877,14 @@ int main(int argc , char *argv[])
             mval baln = 0;
             mval balt = 0;
             sleep(3);
-            FILE* f = fopen("/var/log/vfc/bal.mem", "r");
+            FILE* f = fopen("vfc/bal.mem", "r");
             if(f)
             {
                 if(fread(&baln, sizeof(mval), 1, f) != 1)
                     printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
                 fclose(f);
             }
-            f = fopen("/var/log/vfc/balt.mem", "r");
+            f = fopen("vfc/balt.mem", "r");
             if(f)
             {
                 if(fread(&balt, sizeof(mval), 1, f) != 1)
@@ -1894,14 +1994,14 @@ int main(int argc , char *argv[])
         //Network
         mval baln = 0, balt = 0;
         sleep(3);
-        FILE* f = fopen("/var/log/vfc/bal.mem", "r");
+        FILE* f = fopen("vfc/bal.mem", "r");
         if(f)
         {
             if(fread(&baln, sizeof(mval), 1, f) != 1)
                 printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
             fclose(f);
         }
-        f = fopen("/var/log/vfc/balt.mem", "r");
+        f = fopen("vfc/balt.mem", "r");
         if(f)
         {
             if(fread(&balt, sizeof(mval), 1, f) != 1)
@@ -1977,7 +2077,7 @@ int main(int argc , char *argv[])
 
         //Generate Packet (pc)
         const uint origin = 0;
-        const size_t len = 1+sizeof(uint64_t)+sizeof(uint)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+        const size_t len = 1+sizeof(uint)+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
         char pc[MIN_LEN];
         pc[0] = 't';
         char* ofs = pc + 1;
@@ -2084,7 +2184,7 @@ int main(int argc , char *argv[])
         int read_size;
         char rb[RECV_BUFF_SIZE];
         uint rsi = 0;
-        const uint trans_size = 1+sizeof(uint64_t)+sizeof(uint)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+        const uint trans_size = 1+sizeof(uint)+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
         const uint replay_size = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
         while(1)
         {
@@ -2261,7 +2361,7 @@ int main(int argc , char *argv[])
                 if(client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
                 {
                     memcpy(&replay_height, rb+1, sizeof(uint)); //Set the block height
-                    FILE* f = fopen("/var/log/vfc/rph.mem", "w");
+                    FILE* f = fopen("vfc/rph.mem", "w");
                     if(f)
                     {
                         fwrite(&replay_height, sizeof(uint), 1, f);
@@ -2299,14 +2399,14 @@ int main(int argc , char *argv[])
                 {
                     //Load the current state (check if the client process reset the log)
                     mval baln=0, balt=0;
-                    FILE* f = fopen("/var/log/vfc/bal.mem", "r");
+                    FILE* f = fopen("vfc/bal.mem", "r");
                     if(f)
                     {
                         if(fread(&baln, sizeof(mval), 1, f) != 1)
                             printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
                         fclose(f);
                     }
-                    f = fopen("/var/log/vfc/balt.mem", "r");
+                    f = fopen("vfc/balt.mem", "r");
                     if(f)
                     {
                         if(fread(&balt, sizeof(mval), 1, f) != 1)
@@ -2329,13 +2429,13 @@ int main(int argc , char *argv[])
                         balance_accumulator = bal;
 
                     //And write
-                    f = fopen("/var/log/vfc/bal.mem", "w");
+                    f = fopen("vfc/bal.mem", "w");
                     if(f)
                     {
                         fwrite(&balance_accumulator, sizeof(mval), 1, f);
                         fclose(f);
                     }
-                    f = fopen("/var/log/vfc/balt.mem", "w");
+                    f = fopen("vfc/balt.mem", "w");
                     if(f)
                     {
                         const mval tb = trueBalance();
@@ -2416,7 +2516,7 @@ int main(int argc , char *argv[])
                 savemem();
                 
                 //Load new replay allow value
-                f = fopen("/var/log/vfc/rp.mem", "r");
+                f = fopen("vfc/rp.mem", "r");
                 if(f)
                 {
                     if(fread(&replay_allow, sizeof(uint), 1, f) != 1)
