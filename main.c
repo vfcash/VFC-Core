@@ -1528,9 +1528,9 @@ int main(int argc , char *argv[])
     chdir(getHome());
 
     //Debug
-    char cwd[MIN_LEN];
-    getcwd(cwd, sizeof(cwd));
-    printf("WR: %s\n", cwd);
+    //char cwd[MIN_LEN];
+    //getcwd(cwd, sizeof(cwd));
+    //printf("WR: %s\n", cwd);
 
     //create vfc dir
 #if RUN_AS_ROOT == 1
