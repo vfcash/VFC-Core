@@ -108,7 +108,6 @@
 
 #if MASTER_NODE == 1
     #include <maxminddb.h> //Maxmind
-    MMDB_s mmdb;
 #endif
 
 ///////////////////////////////////////////////////////////////////////////
@@ -122,6 +121,9 @@
 const char version[]="0.44";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
+
+//Run as root or not, reccomended to run as root if your using this as a local service, for personal use, run as user (0)
+#define RUN_AS_ROOT 1
 
 //Error Codes
 #define ERROR_NOFUNDS -1
@@ -174,54 +176,18 @@ char myrewardkey[MIN_LEN];
 /* ~ Util Functions
 */
 
-#if MASTER_NODE == 1
-int getLocation(const char *ip_address, char* continent, char* country, char* cityn)
-{
-    int gai_error, mmdb_error;
-    MMDB_lookup_result_s result = MMDB_lookup_string(&mmdb, ip_address, &gai_error, &mmdb_error);
-
-    if(gai_error != 0)
-        return -2;
-
-    if(mmdb_error != MMDB_SUCCESS)
-        return -3;
-
-    int r = 0;
-    MMDB_entry_data_s entry_data;
-    MMDB_get_value(&result.entry, &entry_data, "country", "iso_code", NULL);
-    if(entry_data.has_data && entry_data.data_size < MIN_LEN-1)
-    {
-        memcpy(country, entry_data.utf8_string, entry_data.data_size);
-        r++;
-    }
-
-    MMDB_get_value(&result.entry, &entry_data, "city", "names", "en");
-    if(entry_data.has_data && entry_data.data_size < MIN_LEN-1)
-    {
-        memcpy(cityn, entry_data.utf8_string, entry_data.data_size);
-        r++;
-    }
-
-    MMDB_get_value(&result.entry, &entry_data, "continent", "code", NULL);
-    if(entry_data.has_data && entry_data.data_size < MIN_LEN-1)
-    {
-        memcpy(continent, entry_data.utf8_string, entry_data.data_size);
-        r++;
-    }
-    
-    if(r == 0)
-        return -1;
-    else
-        return 0;
-}
-#endif
-
 char* getHome()
 {
-    char *ret;
-    if((ret = getenv("HOME")) == NULL)
-        ret = getpwuid(getuid())->pw_dir;
+#if RUN_AS_ROOT == 1
+    static char ret[] = "/srv";
     return ret;
+#else
+    char *ret;
+    if((ret = getenv("VFCDIR")) == NULL)
+        if((ret = getenv("HOME")) == NULL)
+            ret = getpwuid(getuid())->pw_dir;
+    return ret;
+#endif
 }
 
 uint qRand(const uint min, const uint max)
@@ -617,16 +583,9 @@ void RewardPeer(const uint ip, const char* pubkey)
     //Get Location
     struct in_addr ip_addr;
     ip_addr.s_addr = ip;
-    char con[MIN_LEN];
-    char geo[MIN_LEN];
-    char cityn[MIN_LEN];
-    memset(con, 0, sizeof(con));
-    memset(geo, 0, sizeof(geo));
-    memset(cityn, 0, sizeof(cityn));
-    getLocation(inet_ntoa(ip_addr), con, geo, cityn);
 
     //Base amount
-    uint amount = 14;
+    uint amount = 32;
 
     //Wrong / not latest version? Low reward
     if(strstr(peer_ua[rewardindex], version) == NULL)
@@ -652,7 +611,7 @@ void RewardPeer(const uint ip, const char* pubkey)
 
     //Drop info
     timestamp();
-    printf("Reward Yapit (%u):%s, %u, %s, %s, %s, %s\n", rewardindex, sa, v, inet_ntoa(ip_addr), con, geo, cityn);
+    printf("Reward Yapit (%u):%s, %u, %s\n", rewardindex, sa, v, inet_ntoa(ip_addr));
 
     pid_t fork_pid = fork();
     if(fork_pid == 0)
@@ -1568,17 +1527,20 @@ int main(int argc , char *argv[])
     //Suppress Sigpipe
     signal(SIGPIPE, SIG_IGN);
 
-#if MASTER_NODE == 1
-    //load MaxMind City
-    if(MMDB_open("/root/maxmind/city.mmdb", MMDB_MODE_MMAP, &mmdb) != MMDB_SUCCESS)
-        printf("\x1B[31mFailed to load MaxMind Cities MMDB File: city.mmdb\x1B[0m\n");
-#endif
-
     //set local working directory
     chdir(getHome());
 
+    //Debug
+    char cwd[MIN_LEN];
+    getcwd(cwd, sizeof(cwd));
+    printf("WR: %s\n", cwd);
+
     //create vfc dir
+#if RUN_AS_ROOT == 1
+    mkdir(".vfc", 0777);
+#else
     mkdir(".vfc", 0700);
+#endif
 
     //Create rewards address if it doesnt exist
     if(access(".vfc/public.key", F_OK) == -1)
