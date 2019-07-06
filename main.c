@@ -1421,7 +1421,6 @@ uint isNodeRunning()
 void *processThread(void *arg)
 {
     chdir(getHome());
-    time_t nr = time(0) + REWARD_RETRY_INTERVAL;
     time_t pr = time(0) + PING_INTERVAL;
     while(1)
     {
