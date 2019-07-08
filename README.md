@@ -56,3 +56,8 @@ iptables -I INPUT -p udp -i eth0 --dport 8787 -m state --state NEW -m recent --u
 **Additional Dependencies:**
 - CRC64.c - Salvatore Sanfilippo
 - Base58.c - Luke Dashjr
+
+# Additional Software
+
+- [Supervisord](http://supervisord.org/) - Supervisor is a client/server system that allows its users to monitor and control a number of processes on UNIX-like operating systems. A good tool that can relaunch important processes if they happen to crash.
+
