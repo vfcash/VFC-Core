@@ -21,11 +21,7 @@
     *** In it's current state we only track peer's who send a transaction to the server. ***
     *** Send a transaction to yourself, you wont see any address balance until verified ***
 
-    To use the VFC wallet you need to be running a full node which requires that you
-    forward UDP port 8173 on your router to the local machine running the VFC full
-    node.
-
-    There is a small transaction Queue and a processing thread to make sure normal
+    There is a small UDP transaction queue and a processing thread to make sure normal
     UDP transmissions do not get particularly blocked up.
 
     Peers need to be aware of each other by referal, passing the origin ip of a
@@ -35,7 +31,7 @@
     This could give the an attacker insights that could lead to a successfully
     poisioned block replay. Although the risks are SLIM I would suggest mixing
     this IP list up aka the ip and ipo uint32 arrays when there is more than one
-    index using some kind of a random mixing algo.
+    index.
 
     Peers can only be part of the network by proving they control VFC currency in a
     given VFC address. This is done by making a transaction from the same IP as the
@@ -83,11 +79,13 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <sys/sysinfo.h> //Cpu cores
 #include <sys/stat.h> //mkdir
 #include <time.h> //time()
 #include <unistd.h> //sleep
@@ -168,6 +166,86 @@ char myrewardkey[MIN_LEN];
 //
 /* ~ Util Functions
 */
+
+//Vector3
+struct vec3
+{
+    uint16_t x,y,z;
+};
+typedef struct vec3 vec3;
+
+//Get normal angle
+double gNa(const vec3 a, const vec3 b)
+{
+    const double dot = ((double)(a.x) * (double)(b.x)) + ((double)(a.y) * (double)(b.y)) + (double)((a.z) * (double)(b.z)); //dot product of both vectors
+    const double m1 = sqrt((double)((a.x) * (double)(a.x)) + (double)((a.y) * (double)(a.y)) + (double)((a.z) * (double)(a.z))); //magnitude
+    const double m2 = sqrt((double)((b.x) * (double)(b.x)) + (double)((b.y) * (double)(b.y)) + (double)((b.z) * (double)(b.z))); //magnitude
+    return dot/(m1*m2);
+}
+
+//This is the algorthm to check if a genesis address is a valid "SubGenesis" address
+uint isSubGenesisAddress(uint8_t *a)
+{
+    vec3 v[5]; //Vectors
+
+    char *ofs = a;
+    memcpy(&v[0].x, ofs, sizeof(uint16_t));
+    memcpy(&v[0].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[0].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[1].x, ofs, sizeof(uint16_t));
+    memcpy(&v[1].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[1].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[2].x, ofs, sizeof(uint16_t));
+    memcpy(&v[2].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[2].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[3].x, ofs, sizeof(uint16_t));
+    memcpy(&v[3].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[3].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[4].x, ofs, sizeof(uint16_t));
+    memcpy(&v[4].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[4].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    const double a1 = gNa(v[0], v[3]);
+    const double a2 = gNa(v[3], v[2]);
+    const double a3 = gNa(v[2], v[1]);
+    const double a4 = gNa(v[1], v[4]);
+
+    //All normal angles a1-a4 must be under this value
+    const double min = 0.29;
+
+    //Print the occasional "close hit"
+    const double soft = 0.1;
+    if(a1 < min+soft && a2 < min+soft && a3 < min+soft && a4 < min+soft)
+        printf("\x1B[33mx\x1B[0m: %.2f - %.2f - %.2f - %.2f\n", a1, a2, a3, a4);
+    
+    //Was it a straight hit?
+    if(a1 < min && a2 < min && a3 < min && a4 < min)
+    {
+        printf("\x1B[33mx\x1B[0m: %f - %f - %f - %f\n\n", a1, a2, a3, a4);
+
+        //Dump Base58
+        char bpub[MIN_LEN], bpriv[MIN_LEN];
+        memset(bpub, 0, sizeof(bpub));
+        memset(bpriv, 0, sizeof(bpriv));
+        size_t len = MIN_LEN;
+        b58enc(bpub, &len, a, ECC_CURVE+1);
+        b58enc(bpriv, &len, a, ECC_CURVE);
+        printf("\n\x1B[33mFound Sub-Genesis Address: \x1B[0m\nPublic: %s\nPrivate: %s\n\x1B[0m", bpub, bpriv);
+
+        return 1;
+    }
+
+    return 0;
+
+}
 
 char* getHome()
 {
@@ -573,10 +651,6 @@ void RewardPeer(const uint ip, const char* pubkey)
     if(peers[rewardindex] != ip)
         return;
 
-    //Get Location
-    struct in_addr ip_addr;
-    ip_addr.s_addr = ip;
-
     //Base amount
     uint amount = 32;
 
@@ -603,6 +677,8 @@ void RewardPeer(const uint ip, const char* pubkey)
     sprintf(cmd, reward_command, sa, v);
 
     //Drop info
+    struct in_addr ip_addr;
+    ip_addr.s_addr = ip;
     timestamp();
     printf("Reward Yapit (%u):%s, %u, %s\n", rewardindex, sa, v, inet_ntoa(ip_addr));
 
@@ -798,7 +874,7 @@ void replayBlocks(const uint ip)
     if(f)
     {
         fseek(f, 0, SEEK_END);
-        const long int len = ftell(f);
+        const size_t len = ftell(f);
 
         struct trans t;
         for(size_t i = sizeof(struct trans); i < len; i += sizeof(struct trans))
@@ -872,7 +948,7 @@ void replayBlocksRev(const uint ip)
     if(f)
     {
         fseek(f, 0, SEEK_END);
-        const long int len = ftell(f);
+        const size_t len = ftell(f);
 
         struct trans t;
         for(size_t i = len - sizeof(struct trans); i > 0; i -= sizeof(struct trans))
@@ -930,7 +1006,7 @@ void dumptrans()
     if(f)
     {
         fseek(f, 0, SEEK_END);
-        const long int len = ftell(f);
+        const size_t len = ftell(f);
 
         struct trans t;
         for(size_t i = 0; i < len; i += sizeof(struct trans))
@@ -970,7 +1046,7 @@ void dumpbadtrans()
     if(f)
     {
         fseek(f, 0, SEEK_END);
-        const long int len = ftell(f);
+        const size_t len = ftell(f);
 
         struct trans t;
         for(size_t i = 0; i < len; i += sizeof(struct trans))
@@ -1010,7 +1086,7 @@ void printIns(addr* a)
     if(f)
     {
         fseek(f, 0, SEEK_END);
-        const long int len = ftell(f);
+        const size_t len = ftell(f);
 
         struct trans t;
         for(size_t i = 0; i < len; i += sizeof(struct trans))
@@ -1047,7 +1123,7 @@ void printOuts(addr* a)
     if(f)
     {
         fseek(f, 0, SEEK_END);
-        const long int len = ftell(f);
+        const size_t len = ftell(f);
 
         struct trans t;
         for(size_t i = 0; i < len; i += sizeof(struct trans))
@@ -1081,12 +1157,14 @@ void printOuts(addr* a)
 mval getBalanceLocal(addr* from)
 {
     //Get local Balance
-    mval rv = 0;
+    uint64_t rv = 0;
+    //if(isSubGenesisAddress(from) == 1)
+    //    rv = 1000;
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
         fseek(f, 0, SEEK_END);
-        const long int len = ftell(f);
+        const size_t len = ftell(f);
 
         struct trans t;
         for(size_t i = 0; i < len; i += sizeof(struct trans))
@@ -1142,47 +1220,21 @@ mval getBalance(addr* from)
     peersBroadcast(pc, ECC_CURVE+2);
 
     //Get local Balance
-    mval rv = 0;
-    f = fopen(CHAIN_FILE, "r");
-    if(f)
-    {
-        fseek(f, 0, SEEK_END);
-        const long int len = ftell(f);
-
-        struct trans t;
-        for(size_t i = 0; i < len; i += sizeof(struct trans))
-        {
-            fseek(f, i, SEEK_SET);
-            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
-            {
-                if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
-                    rv += t.amount;
-                if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
-                    rv -= t.amount;
-            }
-            else
-            {
-                printf("There was a problem, blocks.dat looks corrupt.\n");
-                fclose(f);
-                return 0;
-            }
-            
-        }
-
-        fclose(f);
-    }
+    const mval rv = getBalanceLocal(from);
     return rv;
 }
 
 //Calculate if an address has the value required to make a transaction of x amount.
 uint hasbalance(const uint64_t uid, addr* from, mval amount)
 {
-    mval rv = 0;
+    uint64_t rv = 0;
+    //if(isSubGenesisAddress(from) == 1)
+    //    rv = 1000;
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
         fseek(f, 0, SEEK_END);
-        const long int len = ftell(f);
+        const size_t len = ftell(f);
 
         struct trans t;
         for(size_t i = 0; i < len; i += sizeof(struct trans))
@@ -1258,6 +1310,11 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
 
     //Success
     return 1;
+}
+
+void makAddrS(addr* pub, addr* priv)
+{
+    ecc_make_key(pub->key, priv->key);
 }
 
 void makAddr(addr* pub, addr* priv)
@@ -1445,29 +1502,29 @@ void *processThread(void *arg)
             
             //Try to find a peer who has responded to a ping in atleast the last 9 minutes. Remember we check every peer with a ping every 3 minutes.
             rewardindex++;
-            uint dt = (time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS)); //Prevent negative numbers, causes wrap
-            while(dt > 540)
+            if(rewardindex >= num_peers) //Is the next peer valid?
             {
-                rewardindex++;
-                dt = (time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS));
-                if(rewardindex >= num_peers)
+                rewardindex = 0; //Master is always worthy
+            }
+            else
+            {
+                //Is it ping worthy of a payment?
+                uint dt = (time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS)); //Prevent negative numbers, causes wrap
+                while(dt > 540)
                 {
-                    //Shuffle peer list (keep it fair)
-                    /*for(int i = 0; i < num_peers; i++)
+                    rewardindex++;
+                    if(rewardindex >= num_peers)
                     {
-                        struct trans t;
-                        const int r = qRand(0, num_peers-1);
-                        memcpy(&t, &peers[r], sizeof(struct trans));
-                        memcpy(&peers[r], &peers[i], sizeof(struct trans));
-                        memcpy(&peers[i], &t, sizeof(struct trans));
-                    }*/
-
-                    //The master should always be online, so if no other node was eligible for a reward, and we looped back to the master,
-                    //wait 10 mins before we try again and try to give the reward to the master, if it really is online.
-                    rewardindex = 0;
-                    break;
+                        rewardindex = 0; //Master is always worthy
+                        break;
+                    }
+                    else
+                    {
+                        dt = (time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS)); //for the while loop
+                    }
                 }
             }
+            
         }
 #endif
 
@@ -1512,6 +1569,33 @@ void *processThread(void *arg)
 
         //Alright this transaction is PROCESSED
         tq[i].amount = 0; //Signifies transaction as invalid / completed / processed (basically done)
+    }
+}
+
+void *miningThread(void *arg)
+{
+    nice(3); //Very high priority thread
+    addr pub, priv;
+    makAddrS(&pub, &priv);
+    uint r = isSubGenesisAddress(pub.key);
+    uint64_t l = 0;
+    time_t lt = time(0);
+    while(1)
+    {
+        
+        makAddrS(&pub, &priv);
+        r = isSubGenesisAddress(pub.key);
+
+        if(r == 1)
+        {
+            time_t d = time(0)-lt;
+            setlocale(LC_NUMERIC, "");
+            printf("Total Loops: %'lu - Time Taken: %lu seconds\n\n\n", l, d);
+            lt = time(0);
+        }
+
+        l++;
+
     }
 }
 
@@ -1567,7 +1651,7 @@ int main(int argc , char *argv[])
     if(f)
     {
         fseek(f, 0, SEEK_END);
-        const long int len = ftell(f);
+        const size_t len = ftell(f);
         fseek(f, 0, SEEK_SET);
 
         memset(myrewardkey, 0x00, sizeof(myrewardkey));
@@ -1586,7 +1670,7 @@ int main(int argc , char *argv[])
     }
 
     //Set next reward time
-    nextreward = time(0) + REWARD_INTERVAL; //9-11 minutes, add's some entropy.
+    nextreward = time(0) + REWARD_INTERVAL;
 
     //Set the MID
     mid[0] = '\t';
@@ -1666,6 +1750,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mTo make a transaction use:\x1B[0m\n ./coin <sender public key> <reciever public key> <amount> <sender private key>\x1B[0m\n\n");
             printf("\x1B[33mTo manually trigger blockchain resync use:\x1B[0m\n ./coin resync\x1B[0m\n\n");
             printf("\x1B[33mTo manually trigger blockchain sync use:\x1B[0m\n ./coin sync\x1B[0m\n\n");
+            printf("\x1B[33mCPU mining of VFC:\x1B[0m\n ./coin mine\n\n");
             printf("\x1B[33mTo create a new Address, Public / Private Key-Pair:\x1B[0m\n ./coin new\x1B[0m\n\n");
             printf("\x1B[33mGet Public Key from Private Key:\x1B[0m\n ./coin getpub <private key>\x1B[0m\n\n");
             printf("\x1B[33mTo manually add a peer use:\x1B[0m\n ./coin addpeer <peer ip-address>\n\n");
@@ -1771,6 +1856,28 @@ int main(int argc , char *argv[])
         {
             addr pub, priv;
             makAddr(&pub, &priv);
+            exit(0);
+        }
+
+        //Mine VFC
+        if(strcmp(argv[1], "mine") == 0)
+        {
+            printf("\033[H\033[J");
+
+            //Launch mining threads
+            const int nthreads = get_nprocs();
+            printf("\x1B[33m%i CPU\x1B[0m Cores detected..\n\n", nthreads);
+            for(int i = 0; i < nthreads; i++)
+            {
+                pthread_t tid;
+                if(pthread_create(&tid, NULL, miningThread, NULL) != 0)
+                    continue;
+            }
+
+            //Loop with 3 sec console output delay
+            while(1){sleep(3);}
+            
+            //only exits on sigterm
             exit(0);
         }
 
@@ -1928,7 +2035,7 @@ int main(int argc , char *argv[])
         mval bal = getBalance(&from);
         struct timespec e;
         clock_gettime(CLOCK_MONOTONIC, &e);
-        long int td = (e.tv_nsec - s.tv_nsec);
+        uint64_t td = (e.tv_nsec - s.tv_nsec);
         if(td > 0){td /= 1000000;}
         else if(td < 0){td = 0;}
 
