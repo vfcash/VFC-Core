@@ -147,6 +147,7 @@ uint replay_allow = 0;
 uint replay_height = 0;
 mval balance_accumulator = 0;
 uint threads = 0;
+uint nthreads = 0;
 uint thread_ip[MAX_THREADS];
 char mid[8];
 time_t nextreward = 0;
@@ -229,16 +230,27 @@ uint isSubGenesisAddress(uint8_t *a)
     //Was it a straight hit?
     if(a1 < min && a2 < min && a3 < min && a4 < min)
     {
+        //Illustrate the hit
         printf("\x1B[33mx\x1B[0m: %f - %f - %f - %f\n\n", a1, a2, a3, a4);
 
-        //Dump Base58
+        //Convert to Base58
         char bpub[MIN_LEN], bpriv[MIN_LEN];
         memset(bpub, 0, sizeof(bpub));
         memset(bpriv, 0, sizeof(bpriv));
         size_t len = MIN_LEN;
         b58enc(bpub, &len, a, ECC_CURVE+1);
         b58enc(bpriv, &len, a, ECC_CURVE);
+
+        //To console
         printf("\n\x1B[33mFound Sub-Genesis Address: \x1B[0m\nPublic: %s\nPrivate: %s\n\x1B[0m", bpub, bpriv);
+
+        //Dump to file
+        FILE* f = fopen(".vfc/mined_private_keys.txt", "a");
+        if(f != NULL)
+        {
+            fprintf(f, "%s\n", bpriv);
+            fclose(f);
+        }
 
         return 1;
     }
@@ -1574,6 +1586,7 @@ void *processThread(void *arg)
 
 void *miningThread(void *arg)
 {
+    chdir(getHome());
     nice(3); //Very high priority thread
     addr pub, priv;
     makAddrS(&pub, &priv);
@@ -1590,7 +1603,8 @@ void *miningThread(void *arg)
         {
             time_t d = time(0)-lt;
             setlocale(LC_NUMERIC, "");
-            printf("Total Loops: %'lu - Time Taken: %lu seconds\n\n\n", l, d);
+            printf("HASH/s: %'lu - Time Taken: %lu seconds\n\n\n", (l*nthreads)/d, d);
+            l=0;
             lt = time(0);
         }
 
@@ -1865,7 +1879,7 @@ int main(int argc , char *argv[])
             printf("\033[H\033[J");
 
             //Launch mining threads
-            const int nthreads = get_nprocs();
+            nthreads = get_nprocs();
             printf("\x1B[33m%i CPU\x1B[0m Cores detected..\n\n", nthreads);
             for(int i = 0; i < nthreads; i++)
             {
