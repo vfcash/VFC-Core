@@ -207,25 +207,6 @@ uint isSubGenesisAddress(uint8_t *a, const uint s)
         {
             //Illustrate the hit
             printf("\x1B[33mx\x1B[0m: %f - %f - %f - %f\n\n", a1, a2, a3, a4);
-
-            //Convert to Base58
-            char bpub[MIN_LEN], bpriv[MIN_LEN];
-            memset(bpub, 0, sizeof(bpub));
-            memset(bpriv, 0, sizeof(bpriv));
-            size_t len = MIN_LEN;
-            b58enc(bpub, &len, a, ECC_CURVE+1);
-            b58enc(bpriv, &len, a, ECC_CURVE);
-
-            //To console
-            printf("\n\x1B[33mFound Sub-Genesis Address: \x1B[0m\nPublic: %s\nPrivate: %s\n\x1B[0m", bpub, bpriv);
-
-            //Dump to file
-            FILE* f = fopen(".vfc/minted.priv", "a");
-            if(f != NULL)
-            {
-                fprintf(f, "%s\n", bpriv);
-                fclose(f);
-            }
         }
 
         return 1;
@@ -1601,6 +1582,26 @@ void *miningThread(void *arg)
             time_t d = time(0)-lt;
             if(d < 0)
                 d = 0;
+
+            //Convert to Base58
+            char bpub[MIN_LEN], bpriv[MIN_LEN];
+            memset(bpub, 0, sizeof(bpub));
+            memset(bpriv, 0, sizeof(bpriv));
+            size_t len = MIN_LEN;
+            b58enc(bpub, &len, pub.key, ECC_CURVE+1);
+            b58enc(bpriv, &len, priv.key, ECC_CURVE);
+
+            //To console
+            printf("\n\x1B[33mFound Sub-Genesis Address: \x1B[0m\nPublic: %s\nPrivate: %s\n\x1B[0m", bpub, bpriv);
+
+            //Dump to file
+            FILE* f = fopen(".vfc/minted.priv", "a");
+            if(f != NULL)
+            {
+                fprintf(f, "%s\n", bpriv);
+                fclose(f);
+            }
+
             setlocale(LC_NUMERIC, "");
             printf("HASH/s: %'lu - Time Taken: %lu seconds\n\n\n", (l*nthreads)/d, d);
             l=0;
