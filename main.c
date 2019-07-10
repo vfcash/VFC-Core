@@ -87,7 +87,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.44";
+const char version[]="0.45";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -154,11 +154,11 @@ struct vec3
 typedef struct vec3 vec3;
 
 //Get normal angle
-double gNa(const vec3 a, const vec3 b)
+double gNa(const vec3* a, const vec3* b)
 {
-    const double dot = ((double)(a.x) * (double)(b.x)) + ((double)(a.y) * (double)(b.y)) + (double)((a.z) * (double)(b.z)); //dot product of both vectors
-    const double m1 = sqrt((double)((a.x) * (double)(a.x)) + (double)((a.y) * (double)(a.y)) + (double)((a.z) * (double)(a.z))); //magnitude
-    const double m2 = sqrt((double)((b.x) * (double)(b.x)) + (double)((b.y) * (double)(b.y)) + (double)((b.z) * (double)(b.z))); //magnitude
+    const double dot = ((double)(a->x) * (double)(b->x)) + ((double)(a->y) * (double)(b->y)) + (double)((a->z) * (double)(b->z)); //dot product of both vectors
+    const double m1 = sqrt((double)((a->x) * (double)(a->x)) + (double)((a->y) * (double)(a->y)) + (double)((a->z) * (double)(a->z))); //magnitude
+    const double m2 = sqrt((double)((b->x) * (double)(b->x)) + (double)((b->y) * (double)(b->y)) + (double)((b->z) * (double)(b->z))); //magnitude
     return dot/(m1*m2);
 }
 
@@ -192,10 +192,10 @@ uint isSubGenesisAddress(uint8_t *a, const uint s)
     memcpy(&v[4].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
     memcpy(&v[4].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
 
-    const double a1 = gNa(v[0], v[3]);
-    const double a2 = gNa(v[3], v[2]);
-    const double a3 = gNa(v[2], v[1]);
-    const double a4 = gNa(v[1], v[4]);
+    const double a1 = gNa(&v[0], &v[3]);
+    const double a2 = gNa(&v[3], &v[2]);
+    const double a3 = gNa(&v[2], &v[1]);
+    const double a4 = gNa(&v[1], &v[4]);
 
     //All normal angles a1-a4 must be under this value
     const double min = 0.18; //0.20
@@ -1167,8 +1167,8 @@ mval getBalanceLocal(addr* from)
 {
     //Get local Balance
     uint64_t rv = 0;
-    //if(isSubGenesisAddress(from, 1) == 1)
-    //    rv = 1000;
+    if(isSubGenesisAddress(from->key, 1) == 1)
+        rv = 1000;
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
@@ -1237,8 +1237,8 @@ mval getBalance(addr* from)
 uint hasbalance(const uint64_t uid, addr* from, mval amount)
 {
     uint64_t rv = 0;
-    //if(isSubGenesisAddress(from, 1) == 1)
-    //    rv = 1000;
+    if(isSubGenesisAddress(from->key, 1) == 1)
+        rv = 1000;
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
@@ -1599,6 +1599,8 @@ void *miningThread(void *arg)
         if(r == 1)
         {
             time_t d = time(0)-lt;
+            if(d < 0)
+                d = 0;
             setlocale(LC_NUMERIC, "");
             printf("HASH/s: %'lu - Time Taken: %lu seconds\n\n\n", (l*nthreads)/d, d);
             l=0;
@@ -1696,6 +1698,29 @@ int main(int argc , char *argv[])
     //Outgoings and Incomings
     if(argc == 3)
     {
+        //Mine VFC
+        if(strcmp(argv[1], "mine") == 0)
+        {
+            printf("\033[H\033[J");
+
+            nthreads = atoi(argv[2]);
+            printf("\x1B[33m%i Threads\x1B[0m launched..\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n", nthreads);
+
+            //Launch mining threads
+            for(int i = 0; i < nthreads; i++)
+            {
+                pthread_t tid;
+                if(pthread_create(&tid, NULL, miningThread, NULL) != 0)
+                    continue;
+            }
+
+            //Loop with 3 sec console output delay
+            while(1){sleep(3);}
+            
+            //only exits on sigterm
+            exit(0);
+        }
+
         if(strcmp(argv[1], "getpub") == 0)
         {
             //Force console to clear.
@@ -1761,7 +1786,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mTo make a transaction use:\x1B[0m\n ./coin <sender public key> <reciever public key> <amount> <sender private key>\x1B[0m\n\n");
             printf("\x1B[33mTo manually trigger blockchain resync use:\x1B[0m\n ./coin resync\x1B[0m\n\n");
             printf("\x1B[33mTo manually trigger blockchain sync use:\x1B[0m\n ./coin sync\x1B[0m\n\n");
-            printf("\x1B[33mCPU mining of VFC:\x1B[0m\n ./coin mine\n\n");
+            printf("\x1B[33mCPU mining of VFC:\x1B[0m\n ./coin mine <num-threads>\n\n");
             printf("\x1B[33mTo create a new Address, Public / Private Key-Pair:\x1B[0m\n ./coin new\x1B[0m\n\n");
             printf("\x1B[33mGet Public Key from Private Key:\x1B[0m\n ./coin getpub <private key>\x1B[0m\n\n");
             printf("\x1B[33mTo manually add a peer use:\x1B[0m\n ./coin addpeer <peer ip-address>\n\n");
@@ -1792,6 +1817,29 @@ int main(int argc , char *argv[])
             stat(CHAIN_FILE, &st);
             if(st.st_size > 0)
                 printf("\x1B[33m%1.f\x1B[0m kb / \x1B[33m%u\x1B[0m Transactions\n", (double)st.st_size / 1000, (uint)st.st_size / 133);
+            exit(0);
+        }
+
+        //Mine VFC
+        if(strcmp(argv[1], "mine") == 0)
+        {
+            printf("\033[H\033[J");
+
+            nthreads = get_nprocs();
+            printf("\x1B[33m%i CPU\x1B[0m Cores detected..\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n", nthreads);
+
+            //Launch mining threads
+            for(int i = 0; i < nthreads; i++)
+            {
+                pthread_t tid;
+                if(pthread_create(&tid, NULL, miningThread, NULL) != 0)
+                    continue;
+            }
+
+            //Loop with 3 sec console output delay
+            while(1){sleep(3);}
+            
+            //only exits on sigterm
             exit(0);
         }
 
@@ -1867,28 +1915,6 @@ int main(int argc , char *argv[])
         {
             addr pub, priv;
             makAddr(&pub, &priv);
-            exit(0);
-        }
-
-        //Mine VFC
-        if(strcmp(argv[1], "mine") == 0)
-        {
-            printf("\033[H\033[J");
-
-            //Launch mining threads
-            nthreads = get_nprocs();
-            printf("\x1B[33m%i CPU\x1B[0m Cores detected..\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n", nthreads);
-            for(int i = 0; i < nthreads; i++)
-            {
-                pthread_t tid;
-                if(pthread_create(&tid, NULL, miningThread, NULL) != 0)
-                    continue;
-            }
-
-            //Loop with 3 sec console output delay
-            while(1){sleep(3);}
-            
-            //only exits on sigterm
             exit(0);
         }
 
