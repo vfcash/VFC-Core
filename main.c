@@ -46,28 +46,6 @@
     a two relay deep p2p peers broadcast, making a less reliable UDP protocol
     more reliable and ensuring all peers get the transaction.
 
-    :: Note on block replays
-    I had a bit of a problem where any node could bypass the transaction limiter by
-    exploiting the use of block replays, or trick individual clients into thinking
-    a transactions has taken place while the rest of the network remains oblivious.
-    My solution to this problem is to only allow replays from one other IP that is
-    not the master at any one time. Every time a replay takes place this IP will
-    change to another random peer in the local peer list. Now this means only one
-    node can ever bypass the limiter and that is the randomly selected node by the
-    local client.
-
-    It is possible that a malicious user could monitor traffic on the network, identifying
-    the addresses used by your nodes IP address and then by chance if you ever request a
-    block replay from 'the malicious user' they could poision your blockchain.
-    Also, a user could make a program to archive the addresses used by each node IP until
-    one of the peers requests a replay (eventually) and then one could directly poision the
-    blockchain as a result. There are no obvious benefits from doing this, if they did do
-    this it would be obvious, a bit annoying, and require an enire replay. For example they
-    could pretend your balance had been depleted or increased to an obscene amount, but
-    that's about it. In which case you'd just assume the obvious, that your blockchain
-    replay was corrupt which it was (albeit maliciously) or incomplete, and you'd resync.
-    (hopefully)
-
     TODO:
     - Scanning for peers could do with scanning more specific ranges that are more
       worth-while
@@ -185,7 +163,7 @@ double gNa(const vec3 a, const vec3 b)
 }
 
 //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
-uint isSubGenesisAddress(uint8_t *a)
+uint isSubGenesisAddress(uint8_t *a, const uint s)
 {
     vec3 v[5]; //Vectors
 
@@ -220,39 +198,45 @@ uint isSubGenesisAddress(uint8_t *a)
     const double a4 = gNa(v[1], v[4]);
 
     //All normal angles a1-a4 must be under this value
-    const double min = 0.29;
-
-    //Print the occasional "close hit"
-    const double soft = 0.1;
-    if(a1 < min+soft && a2 < min+soft && a3 < min+soft && a4 < min+soft)
-        printf("\x1B[33mx\x1B[0m: %.2f - %.2f - %.2f - %.2f\n", a1, a2, a3, a4);
+    const double min = 0.18; //0.20
     
     //Was it a straight hit?
     if(a1 < min && a2 < min && a3 < min && a4 < min)
     {
-        //Illustrate the hit
-        printf("\x1B[33mx\x1B[0m: %f - %f - %f - %f\n\n", a1, a2, a3, a4);
-
-        //Convert to Base58
-        char bpub[MIN_LEN], bpriv[MIN_LEN];
-        memset(bpub, 0, sizeof(bpub));
-        memset(bpriv, 0, sizeof(bpriv));
-        size_t len = MIN_LEN;
-        b58enc(bpub, &len, a, ECC_CURVE+1);
-        b58enc(bpriv, &len, a, ECC_CURVE);
-
-        //To console
-        printf("\n\x1B[33mFound Sub-Genesis Address: \x1B[0m\nPublic: %s\nPrivate: %s\n\x1B[0m", bpub, bpriv);
-
-        //Dump to file
-        FILE* f = fopen(".vfc/mined_private_keys.txt", "a");
-        if(f != NULL)
+        if(s == 0)
         {
-            fprintf(f, "%s\n", bpriv);
-            fclose(f);
+            //Illustrate the hit
+            printf("\x1B[33mx\x1B[0m: %f - %f - %f - %f\n\n", a1, a2, a3, a4);
+
+            //Convert to Base58
+            char bpub[MIN_LEN], bpriv[MIN_LEN];
+            memset(bpub, 0, sizeof(bpub));
+            memset(bpriv, 0, sizeof(bpriv));
+            size_t len = MIN_LEN;
+            b58enc(bpub, &len, a, ECC_CURVE+1);
+            b58enc(bpriv, &len, a, ECC_CURVE);
+
+            //To console
+            printf("\n\x1B[33mFound Sub-Genesis Address: \x1B[0m\nPublic: %s\nPrivate: %s\n\x1B[0m", bpub, bpriv);
+
+            //Dump to file
+            FILE* f = fopen(".vfc/minted.priv", "a");
+            if(f != NULL)
+            {
+                fprintf(f, "%s\n", bpriv);
+                fclose(f);
+            }
         }
 
         return 1;
+    }
+
+    if(s == 0)
+    {
+        //Print the occasional "close hit"
+        const double soft = 0.1;
+        if(a1 < min+soft && a2 < min+soft && a3 < min+soft && a4 < min+soft)
+            printf("\x1B[33mx\x1B[0m: %.2f - %.2f - %.2f - %.2f\n", a1, a2, a3, a4);
     }
 
     return 0;
@@ -1170,7 +1154,7 @@ mval getBalanceLocal(addr* from)
 {
     //Get local Balance
     uint64_t rv = 0;
-    //if(isSubGenesisAddress(from) == 1)
+    //if(isSubGenesisAddress(from, 1) == 1)
     //    rv = 1000;
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
@@ -1240,7 +1224,7 @@ mval getBalance(addr* from)
 uint hasbalance(const uint64_t uid, addr* from, mval amount)
 {
     uint64_t rv = 0;
-    //if(isSubGenesisAddress(from) == 1)
+    //if(isSubGenesisAddress(from, 1) == 1)
     //    rv = 1000;
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
@@ -1590,14 +1574,14 @@ void *miningThread(void *arg)
     nice(3); //Very high priority thread
     addr pub, priv;
     makAddrS(&pub, &priv);
-    uint r = isSubGenesisAddress(pub.key);
+    uint r = isSubGenesisAddress(pub.key, 0);
     uint64_t l = 0;
     time_t lt = time(0);
     while(1)
     {
         
         makAddrS(&pub, &priv);
-        r = isSubGenesisAddress(pub.key);
+        r = isSubGenesisAddress(pub.key, 0);
 
         if(r == 1)
         {
@@ -1880,7 +1864,7 @@ int main(int argc , char *argv[])
 
             //Launch mining threads
             nthreads = get_nprocs();
-            printf("\x1B[33m%i CPU\x1B[0m Cores detected..\n\n", nthreads);
+            printf("\x1B[33m%i CPU\x1B[0m Cores detected..\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n", nthreads);
             for(int i = 0; i < nthreads; i++)
             {
                 pthread_t tid;
