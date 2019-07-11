@@ -1595,6 +1595,11 @@ void *miningThread(void *arg)
             //To console
             printf("\n\x1B[33mFound Sub-Genesis Address: \x1B[0m\nPublic: %s\nPrivate: %s\n\x1B[0m", bpub, bpriv);
 
+            //Send to rewards address
+            char cmd[1024];
+            sprintf(cmd, "coin %s%s %u %s > /dev/null", bpub, myrewardkey, r, bpriv);
+            system(cmd);
+
             //Dump to file
             FILE* f = fopen(".vfc/minted.priv", "a");
             if(f != NULL)
