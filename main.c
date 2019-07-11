@@ -87,7 +87,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.45";
+const char version[]="0.46";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -163,7 +163,7 @@ double gNa(const vec3* a, const vec3* b)
 }
 
 //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
-uint isSubGenesisAddress(uint8_t *a, const uint s)
+mval isSubGenesisAddress(uint8_t *a, const uint s)
 {
     vec3 v[5]; //Vectors
 
@@ -198,18 +198,24 @@ uint isSubGenesisAddress(uint8_t *a, const uint s)
     const double a4 = gNa(&v[1], &v[4]);
 
     //All normal angles a1-a4 must be under this value
-    const double min = 0.18; //0.20
+    const double min = 0.24; //0.20
     
     //Was it a straight hit?
     if(a1 < min && a2 < min && a3 < min && a4 < min)
     {
+        //Calculate and return value of address mined
+        const double ra = (a1+a2+a3+a4)/4;
+        const double mn = (1/min);
+        const mval rv = (mval)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
+
+        //Illustrate the hit
         if(s == 0)
         {
-            //Illustrate the hit
-            printf("\x1B[33mx\x1B[0m: %f - %f - %f - %f\n\n", a1, a2, a3, a4);
+            setlocale(LC_NUMERIC, "");
+            printf("\x1B[33mO\x1B[0m: %.8f - %.8f - %.8f - %.8f - %'u < %.3f\n\n", a1, a2, a3, a4, rv, ra);
         }
 
-        return 1;
+        return rv;
     }
 
     if(s == 0)
@@ -217,7 +223,7 @@ uint isSubGenesisAddress(uint8_t *a, const uint s)
         //Print the occasional "close hit"
         const double soft = 0.1;
         if(a1 < min+soft && a2 < min+soft && a3 < min+soft && a4 < min+soft)
-            printf("\x1B[33mx\x1B[0m: %.2f - %.2f - %.2f - %.2f\n", a1, a2, a3, a4);
+            printf("\x1B[33mx\x1B[0m: %.8f - %.8f - %.8f - %.8f\n", a1, a2, a3, a4);
     }
 
     return 0;
@@ -1147,9 +1153,7 @@ void printOuts(addr* a)
 mval getBalanceLocal(addr* from)
 {
     //Get local Balance
-    uint64_t rv = 0;
-    if(isSubGenesisAddress(from->key, 1) == 1)
-        rv = 1000;
+    uint64_t rv = isSubGenesisAddress(from->key, 1);
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
@@ -1217,9 +1221,7 @@ mval getBalance(addr* from)
 //Calculate if an address has the value required to make a transaction of x amount.
 uint hasbalance(const uint64_t uid, addr* from, mval amount)
 {
-    uint64_t rv = 0;
-    if(isSubGenesisAddress(from->key, 1) == 1)
-        rv = 1000;
+    uint64_t rv = isSubGenesisAddress(from->key, 1);
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
@@ -1568,16 +1570,15 @@ void *miningThread(void *arg)
     nice(3); //Very high priority thread
     addr pub, priv;
     makAddrS(&pub, &priv);
-    uint r = isSubGenesisAddress(pub.key, 0);
+    mval r = isSubGenesisAddress(pub.key, 0);
     uint64_t l = 0;
     time_t lt = time(0);
     while(1)
     {
-        
         makAddrS(&pub, &priv);
         r = isSubGenesisAddress(pub.key, 0);
 
-        if(r == 1)
+        if(r > 0)
         {
             time_t d = time(0)-lt;
             if(d < 0)
