@@ -1870,8 +1870,8 @@ int main(int argc , char *argv[])
             printf("\x1B[33mClear all double spend transactions detected from other peers:\x1B[0m\n ./coin clearbad\n\n");
             printf("\x1B[33mReturns your Public Key stored in ~/.vfc/public.key for reward collections:\x1B[0m\n ./coin reward\n\n");
             printf("\x1B[33mReturns client version:\x1B[0m\n ./coin version\n\n");
-            printf("\x1B[33mReturns client blocks.dat size / height:\x1B[0m\n ./coin heigh\n\n");
-            printf("\n\x1B[33mTo get the circulating supply:\x1B[0m\n ./coin circulating\n\n");
+            printf("\x1B[33mReturns client blocks.dat size / num transactions:\x1B[0m\n ./coin heigh\n\n");
+            printf("\x1B[33mReturns the circulating supply:\x1B[0m\n ./coin circulating\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./coin scan\x1B[0m\n\n");
             
             printf("\x1B[33mTo get started running a dedicated node, execute ./coin on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
