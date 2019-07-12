@@ -87,7 +87,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.46";
+const char version[]="0.47";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -123,7 +123,7 @@ const char master_ip[] = "68.183.49.225";
 ulong err = 0;
 uint replay_allow = 0;
 uint replay_height = 0;
-mval balance_accumulator = 0;
+uint64_t balance_accumulator = 0;
 uint threads = 0;
 uint nthreads = 0;
 uint thread_ip[MAX_THREADS];
@@ -133,6 +133,8 @@ uint rewardindex = 0;
 uint rewardpaid = 1;
 char myrewardkey[MIN_LEN];
 char myrewardkeyp[MIN_LEN];
+uint8_t genesis_pub[ECC_CURVE+1];
+
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
@@ -164,8 +166,26 @@ double gNa(const vec3* a, const vec3* b)
 }
 
 //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
-mval isSubGenesisAddress(uint8_t *a, const uint s)
+uint64_t isSubGenesisAddress(uint8_t *a, const uint s)
 {
+    //Is this requesting the genesis balance
+    if(memcmp(a, &genesis_pub, ECC_CURVE+1) == 0)
+    {
+        //Get the tax
+        struct stat st;
+        stat(CHAIN_FILE, &st);
+        uint64_t ift = 0;
+        if(st.st_size > 0)
+            ift = (uint64_t)st.st_size / 133;
+        else
+            return 0;
+        
+        ift *= 1000; //every transaction inflates vfc by 10,000 VFC. This is a TAX paid to miners.
+        return ift;
+    }
+
+    //Requesting the balance of a possible existing subG address
+
     vec3 v[5]; //Vectors
 
     char *ofs = a;
@@ -207,13 +227,13 @@ mval isSubGenesisAddress(uint8_t *a, const uint s)
         //Calculate and return value of address mined
         const double ra = (a1+a2+a3+a4)/4;
         const double mn = (1/min);
-        const mval rv = (mval)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
+        const uint64_t rv = (uint64_t)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
 
         //Illustrate the hit
         if(s == 0)
         {
             setlocale(LC_NUMERIC, "");
-            printf("\x1B[33msubG\x1B[0m: %.8f - %.8f - %.8f - %.8f - %'u VFC < %.3f\n\n", a1, a2, a3, a4, rv, ra);
+            printf("\x1B[33msubG\x1B[0m: %.8f - %.8f - %.8f - %.8f - %'lu VFC < %.3f\n\n", a1, a2, a3, a4, rv, ra);
         }
 
         return rv;
@@ -370,11 +390,11 @@ time_t peer_timeouts[MAX_PEERS]; //Peer timeout UNIX epoch stamps
 uint num_peers = 0; //Current number of indexed peers
 uint peer_tcount[MAX_PEERS]; //Amount of transactions relayed by peer
 char peer_ua[MAX_PEERS][64]; //Peer user agent
-mval peer_ba[MAX_PEERS]; //Balance Aggregation
+uint64_t peer_ba[MAX_PEERS]; //Balance Aggregation
 
-mval trueBalance()
+uint64_t trueBalance()
 {
-    mval v[num_peers];
+    uint64_t v[num_peers];
     uint c[num_peers];
     uint vm = 0;
     for(uint i = 0; i < num_peers; i++)
@@ -402,7 +422,7 @@ mval trueBalance()
     }
 
     uint hc = 0;
-    mval hv = 0;
+    uint64_t hv = 0;
     for(uint i = 0; i < vm; i++)
     {
         if(c[i] > hc)
@@ -649,11 +669,11 @@ void RewardPeer(const uint ip, const char* pubkey)
         return;
 
     //Base amount
-    uint amount = 32;
+    uint amount = 2800;
 
     //Wrong / not latest version? Low reward
     if(strstr(peer_ua[rewardindex], version) == NULL)
-        amount = 7;
+        amount = 0;
 
     //Workout payment amount
     //const double p = ( ( time(0) - 1559605848 ) / 20 ) * 0.000032596;
@@ -850,7 +870,15 @@ uint gQueSize()
 //Get circulating supply
 uint64_t getCirculatingSupply()
 {
-    uint64_t rv = 4294967295; //Original genesis address value
+    //Get the tax
+    struct stat st;
+    stat(CHAIN_FILE, &st);
+    uint64_t ift = 0;
+    if(st.st_size > 0)
+        ift = (uint64_t)st.st_size / 133;
+    ift *= 10000; //every transaction inflates vfc by 10,000 VFC. This is a TAX paid to miners.
+
+    uint64_t rv = 4294967295 + ift; //Original genesis address value + tax
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
@@ -1185,7 +1213,7 @@ void printOuts(addr* a)
 }
 
 //get balance
-mval getBalanceLocal(addr* from)
+uint64_t getBalanceLocal(addr* from)
 {
     //Get local Balance
     uint64_t rv = isSubGenesisAddress(from->key, 1);
@@ -1221,7 +1249,7 @@ mval getBalanceLocal(addr* from)
 }
 
 //get balance
-mval getBalance(addr* from)
+uint64_t getBalance(addr* from)
 {
     //Reset our files & memory for last count
     balance_accumulator = 0;
@@ -1230,13 +1258,13 @@ mval getBalance(addr* from)
     FILE* f = fopen(".vfc/bal.mem", "w");
     if(f)
     {
-        fwrite(&balance_accumulator, sizeof(mval), 1, f);
+        fwrite(&balance_accumulator, sizeof(uint64_t), 1, f);
         fclose(f);
     }
     f = fopen(".vfc/balt.mem", "w");
     if(f)
     {
-        fwrite(&balance_accumulator, sizeof(mval), 1, f);
+        fwrite(&balance_accumulator, sizeof(uint64_t), 1, f);
         fclose(f);
     }
 
@@ -1249,7 +1277,7 @@ mval getBalance(addr* from)
     peersBroadcast(pc, ECC_CURVE+2);
 
     //Get local Balance
-    const mval rv = getBalanceLocal(from);
+    const uint64_t rv = getBalanceLocal(from);
     return rv;
 }
 
@@ -1756,6 +1784,10 @@ int main(int argc , char *argv[])
         fclose(f);
     }
 
+    //Set genesis public key
+    size_t len = ECC_CURVE+1;
+    b58tobin(genesis_pub, &len, "foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ", 44);
+
     //Set next reward time
     nextreward = time(0) + REWARD_INTERVAL;
 
@@ -2040,32 +2072,32 @@ int main(int argc , char *argv[])
             b58tobin(rk.key, &len, myrewardkey+1, strlen(myrewardkey)-1); //It's got a space in it (at the beginning) ;)
             printf("Please Wait...\n");
             
-            mval bal = getBalance(&rk);
-            mval baln = 0;
-            mval balt = 0;
+            uint64_t bal = getBalance(&rk);
+            uint64_t baln = 0;
+            uint64_t balt = 0;
             sleep(3);
             FILE* f = fopen(".vfc/bal.mem", "r");
             if(f)
             {
-                if(fread(&baln, sizeof(mval), 1, f) != 1)
+                if(fread(&baln, sizeof(uint64_t), 1, f) != 1)
                     printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
                 fclose(f);
             }
             f = fopen(".vfc/balt.mem", "r");
             if(f)
             {
-                if(fread(&balt, sizeof(mval), 1, f) != 1)
+                if(fread(&balt, sizeof(uint64_t), 1, f) != 1)
                     printf("\033[1m\x1B[31mbalt.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
                 fclose(f);
             }
 
-            mval fbal = bal;
+            uint64_t fbal = bal;
             if(balt > fbal)
                 fbal = balt;
 
             setlocale(LC_NUMERIC, "");
             printf("\x1B[33m(Local Balance / Mode Network Balance / Highest Network Balance)\x1B[0m\n");
-            printf("\x1B[33mYour reward address is:\x1B[0m%s\n(\x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m)\n\n\x1B[33mFinal Balance:\x1B[0m %'u VFC\n\n", myrewardkey, bal, balt, baln, fbal);
+            printf("\x1B[33mYour reward address is:\x1B[0m%s\n(\x1B[33m%'lu VFC\x1B[0m / \x1B[33m%'lu VFC\x1B[0m / \x1B[33m%'lu VFC\x1B[0m)\n\n\x1B[33mFinal Balance:\x1B[0m %'lu VFC\n\n", myrewardkey, bal, balt, baln, fbal);
             exit(0);
         }
 
@@ -2151,38 +2183,38 @@ int main(int argc , char *argv[])
         //Local
         struct timespec s;
         clock_gettime(CLOCK_MONOTONIC, &s);
-        mval bal = getBalance(&from);
+        uint64_t bal = getBalance(&from);
         struct timespec e;
         clock_gettime(CLOCK_MONOTONIC, &e);
-        uint64_t td = (e.tv_nsec - s.tv_nsec);
+        time_t td = (e.tv_nsec - s.tv_nsec);
         if(td > 0){td /= 1000000;}
         else if(td < 0){td = 0;}
 
         //Network
-        mval baln = 0, balt = 0;
+        uint64_t baln = 0, balt = 0;
         sleep(3);
         FILE* f = fopen(".vfc/bal.mem", "r");
         if(f)
         {
-            if(fread(&baln, sizeof(mval), 1, f) != 1)
+            if(fread(&baln, sizeof(uint64_t), 1, f) != 1)
                 printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
             fclose(f);
         }
         f = fopen(".vfc/balt.mem", "r");
         if(f)
         {
-            if(fread(&balt, sizeof(mval), 1, f) != 1)
+            if(fread(&balt, sizeof(uint64_t), 1, f) != 1)
                 printf("\033[1m\x1B[31mbalt.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
             fclose(f);
         }
 
-        mval fbal = bal;
+        uint64_t fbal = bal;
         if(balt > fbal)
             fbal = balt;
         
         setlocale(LC_NUMERIC, "");
         printf("\x1B[33m(Local Balance / Mode Network Balance / Highest Network Balance)\x1B[0m\n");
-        printf("\x1B[33mThe Balance for Address: \x1B[0m%s\n(\x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m / \x1B[33m%'u VFC\x1B[0m)\n\x1B[33mTime Taken\x1B[0m %li \x1B[33mMilliseconds (\x1B[0m%li ns\x1B[33m).\x1B[0m\n\n\x1B[33mFinal Balance:\x1B[0m %'u VFC\n\n", argv[1], bal, balt, baln, td, (e.tv_nsec - s.tv_nsec), fbal);
+        printf("\x1B[33mThe Balance for Address: \x1B[0m%s\n(\x1B[33m%'lu VFC\x1B[0m / \x1B[33m%'lu VFC\x1B[0m / \x1B[33m%'lu VFC\x1B[0m)\n\x1B[33mTime Taken\x1B[0m %li \x1B[33mMilliseconds (\x1B[0m%li ns\x1B[33m).\x1B[0m\n\n\x1B[33mFinal Balance:\x1B[0m %'lu VFC\n\n", argv[1], bal, balt, baln, td, (e.tv_nsec - s.tv_nsec), fbal);
         exit(0);
     }
 
@@ -2225,7 +2257,7 @@ int main(int argc , char *argv[])
         }
 
     //Get balance..
-    const mval bal0 = getBalanceLocal(&t.from);
+    const uint64_t bal0 = getBalanceLocal(&t.from);
 
         //UID Based on timestamp & signature
         time_t ltime = time(NULL);
@@ -2276,12 +2308,12 @@ int main(int argc , char *argv[])
 
     //Get balance again..
     sleep(6);
-    const mval bal1 = getBalanceLocal(&t.from);
+    const uint64_t bal1 = getBalanceLocal(&t.from);
     setlocale(LC_NUMERIC, "");
     if(bal0-bal1 <= 0)
         printf("\033[1m\x1B[31mTransaction Failed. (If you have not got the full blockchain, it may have succeeded)\x1B[0m\033[0m\n\n");
     else
-        printf("\x1B[33mVFC Sent: \x1B[0m%'u VFC\n\n", bal0-bal1);
+        printf("\x1B[33mVFC Sent: \x1B[0m%'lu VFC\n\n", bal0-bal1);
 
         //Done
         exit(0);
@@ -2546,37 +2578,37 @@ int main(int argc , char *argv[])
                     //Get balance for supplied address
                     addr from;
                     memcpy(from.key, rb+1, ECC_CURVE+1);
-                    const mval bal = getBalanceLocal(&from);
+                    const uint64_t bal = getBalanceLocal(&from);
 
                     //Send back balance for the supplied address
-                    char pc[16];
+                    char pc[64];
                     pc[0] = 'n';
                     char* ofs = pc+1;
-                    memcpy(ofs, &bal, sizeof(mval));
-                    csend(client.sin_addr.s_addr, pc, 1+sizeof(mval));
+                    memcpy(ofs, &bal, sizeof(uint64_t));
+                    csend(client.sin_addr.s_addr, pc, 1+sizeof(uint64_t));
                 }
             }
 
             //Returned address balance
-            else if(rb[0] == 'n' && read_size == sizeof(mval)+1)
+            else if(rb[0] == 'n' && read_size == sizeof(uint64_t)+1)
             {
                 //Check this is the replay peer
                 const int p = getPeer(client.sin_addr.s_addr);
                 if(p != -1)
                 {
                     //Load the current state (check if the client process reset the log)
-                    mval baln=0, balt=0;
+                    uint64_t baln=0, balt=0;
                     FILE* f = fopen(".vfc/bal.mem", "r");
                     if(f)
                     {
-                        if(fread(&baln, sizeof(mval), 1, f) != 1)
+                        if(fread(&baln, sizeof(uint64_t), 1, f) != 1)
                             printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
                         fclose(f);
                     }
                     f = fopen(".vfc/balt.mem", "r");
                     if(f)
                     {
-                        if(fread(&balt, sizeof(mval), 1, f) != 1)
+                        if(fread(&balt, sizeof(uint64_t), 1, f) != 1)
                             printf("\033[1m\x1B[31mbalt.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
                         fclose(f);
                     }
@@ -2589,8 +2621,8 @@ int main(int argc , char *argv[])
                             peer_ba[i] = 0;
 
                     //Log the new balances
-                    mval bal = 0;
-                    memcpy(&bal, rb+1, sizeof(mval));
+                    uint64_t bal = 0;
+                    memcpy(&bal, rb+1, sizeof(uint64_t));
                     peer_ba[p] = bal;
                     if(bal > balance_accumulator) //Update accumulator if higher balance returned
                         balance_accumulator = bal;
@@ -2599,14 +2631,14 @@ int main(int argc , char *argv[])
                     f = fopen(".vfc/bal.mem", "w");
                     if(f)
                     {
-                        fwrite(&balance_accumulator, sizeof(mval), 1, f);
+                        fwrite(&balance_accumulator, sizeof(uint64_t), 1, f);
                         fclose(f);
                     }
                     f = fopen(".vfc/balt.mem", "w");
                     if(f)
                     {
-                        const mval tb = trueBalance();
-                        fwrite(&tb, sizeof(mval), 1, f);
+                        const uint64_t tb = trueBalance();
+                        fwrite(&tb, sizeof(uint64_t), 1, f);
                         fclose(f);
                     }
 
