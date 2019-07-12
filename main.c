@@ -212,7 +212,7 @@ mval isSubGenesisAddress(uint8_t *a, const uint s)
         if(s == 0)
         {
             setlocale(LC_NUMERIC, "");
-            printf("\x1B[33mO\x1B[0m: %.8f - %.8f - %.8f - %.8f - %'u < %.3f\n\n", a1, a2, a3, a4, rv, ra);
+            printf("\x1B[33msubG\x1B[0m: %.8f - %.8f - %.8f - %.8f - %'u VFC < %.3f\n\n", a1, a2, a3, a4, rv, ra);
         }
 
         return rv;
@@ -845,6 +845,40 @@ uint gQueSize()
 //
 /* ~ Blockchain Transversal & Functions
 */
+
+//Get circulating supply
+uint64_t getCirculatingSupply()
+{
+    uint64_t rv = 4294967295;
+    FILE* f = fopen(CHAIN_FILE, "r");
+    if(f)
+    {
+        fseek(f, 0, SEEK_END);
+        const size_t len = ftell(f);
+
+        struct trans t;
+        for(size_t i = sizeof(struct trans); i < len; i += sizeof(struct trans))
+        {
+            fseek(f, i, SEEK_SET);
+            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+            {
+                const mval v = isSubGenesisAddress(t.from.key, 1);
+                if(v > 0)
+                    rv += v;
+            }
+            else
+            {
+                printf("There was a problem, blocks.dat looks corrupt.\n");
+                fclose(f);
+                return rv;
+            }
+            
+        }
+
+        fclose(f);
+    }
+    return rv;
+}
 
 //Replay blocks to x address
 void replayBlocks(const uint ip)
@@ -1804,9 +1838,18 @@ int main(int argc , char *argv[])
             printf("\x1B[33mReturns your Public Key stored in ~/.vfc/public.key for reward collections:\x1B[0m\n ./coin reward\n\n");
             printf("\x1B[33mReturns client version:\x1B[0m\n ./coin version\n\n");
             printf("\x1B[33mReturns client blocks.dat size / height:\x1B[0m\n ./coin heigh\n\n");
+            printf("\n\x1B[33mTo get the circulating supply:\x1B[0m\n ./coin circulating\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./coin scan\x1B[0m\n\n");
             
             printf("\x1B[33mTo get started running a dedicated node, execute ./coin on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
+            exit(0);
+        }
+
+
+        //circulating supply
+        if(strcmp(argv[1], "circulating") == 0)
+        {
+            printf("%lu\n", getCirculatingSupply());
             exit(0);
         }
 
