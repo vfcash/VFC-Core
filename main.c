@@ -132,6 +132,7 @@ time_t nextreward = 0;
 uint rewardindex = 0;
 uint rewardpaid = 1;
 char myrewardkey[MIN_LEN];
+char myrewardkeyp[MIN_LEN];
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
@@ -721,7 +722,7 @@ uint addPeer(const uint ip)
         num_peers++;
         return 1;
     }
-    else if(freeindex != 0) //If not replace a node quiet for more than three hours
+    else if(freeindex != 0) //If not replace a node that's been quiet for more than three hours
     {
         peers[freeindex] = ip;
         peer_timeouts[freeindex] = time(0) + MAX_PEER_EXPIRE_SECONDS;
@@ -849,7 +850,7 @@ uint gQueSize()
 //Get circulating supply
 uint64_t getCirculatingSupply()
 {
-    uint64_t rv = 4294967295;
+    uint64_t rv = 4294967295; //Original genesis address value
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
@@ -862,7 +863,7 @@ uint64_t getCirculatingSupply()
             fseek(f, i, SEEK_SET);
             if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
             {
-                const mval v = isSubGenesisAddress(t.from.key, 1);
+                const mval v = isSubGenesisAddress(t.from.key, 1); //Addup all the subGenesis address values ontop
                 if(v > 0)
                     rv += v;
             }
@@ -1499,6 +1500,7 @@ void *processThread(void *arg)
     chdir(getHome());
     time_t nr = time(0);
     time_t pr = time(0) + PING_INTERVAL;
+    time_t aa = time(0);
     while(1)
     {
         //Check which of the peers are still alive, those that are, update their timestamps
@@ -1508,6 +1510,16 @@ void *processThread(void *arg)
             peersBroadcast("a", 1); //Give us your user-agent too please
             peer_timeouts[0] = time(0)+MAX_PEER_EXPIRE_SECONDS; //Reset master timeout
             pr = time(0) + PING_INTERVAL;
+        }
+
+        //Every hour have the rewards address send 1 vfc to itself to authorized any possible
+        // new network addresses you may have been re-assigned.
+        if(time(0) > aa)
+        {
+            char cmd[1024];
+            sprintf(cmd, "coin%s%s 1%s > /dev/null", myrewardkey, myrewardkey, myrewardkeyp);
+            system(cmd);
+            aa = time(0) + 3600;
         }
         
 //This code is only for the masternode to execute, in-order to distribute rewards fairly.
@@ -1722,6 +1734,27 @@ int main(int argc , char *argv[])
 
         fclose(f);
     }
+    f = fopen(".vfc/private.key", "r"); //and private key for auto-auth
+    if(f)
+    {
+        fseek(f, 0, SEEK_END);
+        const size_t len = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        memset(myrewardkeyp, 0x00, sizeof(myrewardkeyp));
+        myrewardkeyp[0] = ' ';
+        
+        if(fread(myrewardkeyp+1, sizeof(char), len, f) != len)
+            printf("\033[1m\x1B[31mFailed to load Rewards address private key, automatic network authentication will no longer be operational.\x1B[0m\033[0m\n");
+
+        //clean off any new spaces at the end, etc
+        const int sal = strlen(myrewardkeyp);
+        for(int i = 1; i < sal; ++i)
+            if(isalonu(myrewardkeyp[i]) == 0)
+                myrewardkeyp[i] = 0x00;
+
+        fclose(f);
+    }
 
     //Set next reward time
     nextreward = time(0) + REWARD_INTERVAL;
@@ -1844,7 +1877,6 @@ int main(int argc , char *argv[])
             printf("\x1B[33mTo get started running a dedicated node, execute ./coin on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
             exit(0);
         }
-
 
         //circulating supply
         if(strcmp(argv[1], "circulating") == 0)
@@ -2088,7 +2120,7 @@ int main(int argc , char *argv[])
         }
     }
 
-    //Let's make sure we're booting with the right damn chain
+    //Let's make sure we're on the correct chain
     if(verifyChain(CHAIN_FILE) == 0)
     {
         printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./coin resync\x1B[0m\033[0m\n\n");
@@ -2268,7 +2300,7 @@ int main(int argc , char *argv[])
     
     //Launch Info
     timestamp();
-    printf("\n\x1B[33mVFC - Very Fungible Cash\n");
+    printf("\n\x1B[33m.. VFC ..\n");
     printf("https://VF.CASH - https://VFCASH.UK\n");
     printf("https://github.com/vfcash\n");
     printf("v%s\x1B[0m\n\n", version);
