@@ -3,7 +3,7 @@ VF Cash is the most efficient IoT Cryptocurrency project, at the current point i
 
 The project started on the 23rd of April 2019. It has no Proof-of-Work (POW) rather it has a transaction rate limit per address / public key of three seconds. This prevents the sender or the receiver of a transaction from making any further transactions during this period. The chain is unordered, and the networking uses UDP. The Digital Signature algorithm uses secp256r1.
 
-This is a non-divisible coin, pre-mined, written in C, compiled with GCC, 256-bit key length, Transactions are 76.16% smaller than an average Bitcoin-Core transaction, relating to total blockchain size.
+Divisible to three decimal places, mineable, written in C, compiled with GCC, 256-bit key length, Transactions are 76.16% smaller than an average Bitcoin-Core transaction, relating to total blockchain size.
 
 Transactions are truly free, there is no charge for making a transaction on the network.
 
