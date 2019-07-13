@@ -7,7 +7,7 @@
 //Run as root or not, recommended to run as root if your using this as a local service, for personal use, run as user (0)
 #define RUN_AS_ROOT 0
 
-// How often to pay rewards qRand(540, 660)
+// How often to pay rewards
 #define REWARD_INTERVAL 20
 
 // How often to ping the peer requesting a reward address during their reward interval period
