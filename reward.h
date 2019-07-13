@@ -4,6 +4,9 @@
 // For compile time, is this going to be a client or a reward-paying masternode?
 #define MASTER_NODE 0
 
+//Run as root or not, recommended to run as root if your using this as a local service, for personal use, run as user (0)
+#define RUN_AS_ROOT 0
+
 // How often to pay rewards qRand(540, 660)
 #define REWARD_INTERVAL 20
 
