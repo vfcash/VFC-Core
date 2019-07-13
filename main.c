@@ -149,6 +149,12 @@ uint8_t genesis_pub[ECC_CURVE+1];
 /* ~ Mining
 */
 
+//Convert to decimal balance
+double toDB(const uint64_t b)
+{
+    return (double)(b) / 1000;
+}
+
 //Vector3
 struct vec3
 {
@@ -233,7 +239,7 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint s)
         if(s == 0)
         {
             setlocale(LC_NUMERIC, "");
-            printf("\x1B[33msubG\x1B[0m: %.8f - %.8f - %.8f - %.8f - %'lu VFC < %.3f\n\n", a1, a2, a3, a4, rv, ra);
+            printf("\x1B[33msubG\x1B[0m: %.8f - %.8f - %.8f - %.8f - %'.3f VFC < %.3f\n\n", a1, a2, a3, a4, toDB(rv), ra);
         }
 
         return rv;
@@ -876,7 +882,7 @@ uint64_t getCirculatingSupply()
     uint64_t ift = 0;
     if(st.st_size > 0)
         ift = (uint64_t)st.st_size / 133;
-    ift *= 10000; //every transaction inflates vfc by 10,000 VFC. This is a TAX paid to miners.
+    ift *= 1000; //every transaction inflates vfc by 10,000 VFC. This is a TAX paid to miners.
 
     uint64_t rv = 4294967295 + ift; //Original genesis address value + tax
     FILE* f = fopen(CHAIN_FILE, "r");
@@ -1913,7 +1919,7 @@ int main(int argc , char *argv[])
         //circulating supply
         if(strcmp(argv[1], "circulating") == 0)
         {
-            printf("%lu\n", getCirculatingSupply());
+            printf("%.3f\n", toDB(getCirculatingSupply()));
             exit(0);
         }
 
@@ -2097,7 +2103,7 @@ int main(int argc , char *argv[])
 
             setlocale(LC_NUMERIC, "");
             printf("\x1B[33m(Local Balance / Mode Network Balance / Highest Network Balance)\x1B[0m\n");
-            printf("\x1B[33mYour reward address is:\x1B[0m%s\n(\x1B[33m%'lu VFC\x1B[0m / \x1B[33m%'lu VFC\x1B[0m / \x1B[33m%'lu VFC\x1B[0m)\n\n\x1B[33mFinal Balance:\x1B[0m %'lu VFC\n\n", myrewardkey, bal, balt, baln, fbal);
+            printf("\x1B[33mYour reward address is:\x1B[0m%s\n(\x1B[33m%'.3f VFC\x1B[0m / \x1B[33m%'.3f VFC\x1B[0m / \x1B[33m%'.3f VFC\x1B[0m)\n\n\x1B[33mFinal Balance:\x1B[0m %'.3f VFC\n\n", myrewardkey, toDB(bal), toDB(balt), toDB(baln), toDB(fbal));
             exit(0);
         }
 
@@ -2133,21 +2139,21 @@ int main(int argc , char *argv[])
                     ac++;
                 }
             }
-            printf("\x1B[33mAlive Peers:\x1B[0m %u\n", ac);
-            printf("\n--- Possibly Dead Peers ---\n\n");
-            uint dc = 0;
-            for(uint i = 0; i < num_peers; ++i)
-            {
-                struct in_addr ip_addr;
-                ip_addr.s_addr = peers[i];
-                const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS); //ping delta
-                if(pd > 540)
-                {
-                    printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
-                    dc++;
-                }
-            }
-            printf("\x1B[33mDead Peers:\x1B[0m %u\n\n", dc);
+            printf("\x1B[33mAlive Peers:\x1B[0m %u\n\n", ac);
+            // printf("\n--- Possibly Dead Peers ---\n\n");
+            // uint dc = 0;
+            // for(uint i = 0; i < num_peers; ++i)
+            // {
+            //     struct in_addr ip_addr;
+            //     ip_addr.s_addr = peers[i];
+            //     const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS); //ping delta
+            //     if(pd > 540)
+            //     {
+            //         printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
+            //         dc++;
+            //     }
+            // }
+            // printf("\x1B[33mDead Peers:\x1B[0m %u\n\n", dc);
             exit(0);
         }
     }
@@ -2214,7 +2220,7 @@ int main(int argc , char *argv[])
         
         setlocale(LC_NUMERIC, "");
         printf("\x1B[33m(Local Balance / Mode Network Balance / Highest Network Balance)\x1B[0m\n");
-        printf("\x1B[33mThe Balance for Address: \x1B[0m%s\n(\x1B[33m%'lu VFC\x1B[0m / \x1B[33m%'lu VFC\x1B[0m / \x1B[33m%'lu VFC\x1B[0m)\n\x1B[33mTime Taken\x1B[0m %li \x1B[33mMilliseconds (\x1B[0m%li ns\x1B[33m).\x1B[0m\n\n\x1B[33mFinal Balance:\x1B[0m %'lu VFC\n\n", argv[1], bal, balt, baln, td, (e.tv_nsec - s.tv_nsec), fbal);
+        printf("\x1B[33mThe Balance for Address: \x1B[0m%s\n(\x1B[33m%'.3f VFC\x1B[0m / \x1B[33m%'.3f VFC\x1B[0m / \x1B[33m%'.3f VFC\x1B[0m)\n\x1B[33mTime Taken\x1B[0m %li \x1B[33mMilliseconds (\x1B[0m%li ns\x1B[33m).\x1B[0m\n\n\x1B[33mFinal Balance:\x1B[0m %'.3f VFC\n\n", argv[1], toDB(bal), toDB(balt), toDB(baln), td, (e.tv_nsec - s.tv_nsec), toDB(fbal));
         exit(0);
     }
 
@@ -2313,7 +2319,7 @@ int main(int argc , char *argv[])
     if(bal0-bal1 <= 0)
         printf("\033[1m\x1B[31mTransaction Failed. (If you have not got the full blockchain, it may have succeeded)\x1B[0m\033[0m\n\n");
     else
-        printf("\x1B[33mVFC Sent: \x1B[0m%'lu VFC\n\n", bal0-bal1);
+        printf("\x1B[33mVFC Sent: \x1B[0m%'.3f VFC\n\n", toDB(bal0-bal1));
 
         //Done
         exit(0);
