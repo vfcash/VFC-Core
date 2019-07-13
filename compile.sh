@@ -1,3 +1,4 @@
+pkill coin
 clear
 clear
 rm coin
@@ -6,7 +7,6 @@ gcc -pthread base58.c crc64.c ecc.c sha3.c main.c -lm -o coin
 cp coin /usr/bin/coin
 chmod 0777 /usr/bin/coin
 
-apt install crontab
 crontab -l > ncron
 echo "@reboot /usr/bin/coin" >> ncron
 crontab ncron
