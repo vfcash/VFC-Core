@@ -9,6 +9,7 @@ chmod 0777 /usr/bin/coin
 
 crontab -l > ncron
 echo "@reboot /usr/bin/coin" >> ncron
+echo "* * * * * /usr/bin/coin" >> ncron
 crontab ncron
 rm ncron
 
