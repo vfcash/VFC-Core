@@ -6,7 +6,7 @@ The project started on the 23rd of April 2019. It has no Proof-of-Work (POW) rat
 Divisible to three decimal places, mineable, written in C, compiled with GCC, 256-bit key length.
 
 Transactions are truly free, there is no charge for making a transaction on the network.
-However transactions can optionally create inflation of the currency which is partly paid back to the miners as rewards.
+However transactions can optionally create inflation of the currency which is partly paid back to the node operators as rewards.
 
 VFC is a private decentralised network, as-in you will need control of some currency before the rest of the network considers your dedicated node viable for indexing.
 
