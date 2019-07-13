@@ -151,6 +151,10 @@ double toDB(const uint64_t b)
 {
     return (double)(b) / 1000;
 }
+mval fromDB(const double b)
+{
+    return (mval)(b * 1000);
+}
 
 //Vector3
 struct vec3
@@ -672,7 +676,7 @@ void RewardPeer(const uint ip, const char* pubkey)
         return;
 
     //Base amount
-    uint amount = 2800;
+    uint amount = 400;
 
     //Wrong / not latest version? Low reward
     if(strstr(peer_ua[rewardindex], version) == NULL)
@@ -2243,6 +2247,8 @@ int main(int argc , char *argv[])
         b58tobin(to, &blen, argv[2], strlen(argv[2]));
         blen = ECC_CURVE;
         b58tobin(priv, &blen, argv[4], strlen(argv[4]));
+
+        const mval sbal = fromDB(atof(argv[3]));
         
         //Construct Transaction
         struct trans t;
@@ -2250,12 +2256,12 @@ int main(int argc , char *argv[])
         //
         memcpy(t.from.key, from, ECC_CURVE+1);
         memcpy(t.to.key, to, ECC_CURVE+1);
-        t.amount = atoi(argv[3]);
+        t.amount = sbal;
 
         //Too low amount?
-        if(t.amount <= 0)
+        if(t.amount < 0.001)
         {
-            printf("\033[1m\x1B[31mSorry the amount you provided was too low, please try 1 VFC or above.\x1B[0m\033[0m\n\n");
+            printf("\033[1m\x1B[31mSorry the amount you provided was too low, please try 0.001 VFC or above.\x1B[0m\033[0m\n\n");
             exit(0);
         }
 
@@ -2305,7 +2311,7 @@ int main(int argc , char *argv[])
         size_t zlen = MIN_LEN;
         b58enc(howner, &zlen, t.owner.key, ECC_CURVE);
 
-        printf("\n\x1B[33mPacket Size: %lu. %u VFC. Sending Transaction...\x1B[0m\n", len, t.amount);
+        printf("\n\x1B[33mPacket Size: %lu. %'.3f VFC. Sending Transaction...\x1B[0m\n", len, (double)t.amount / 1000);
         printf("\033[1m\x1B[31m%s > %s : %u : %s\x1B[0m\033[0m\n", argv[1], argv[2], t.amount, howner);
         printf("\x1B[33mTransaction Sent.\x1B[0m\n\n");
 
