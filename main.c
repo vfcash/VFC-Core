@@ -91,9 +91,6 @@ const char version[]="0.47";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
-//Run as root or not, recommended to run as root if your using this as a local service, for personal use, run as user (0)
-#define RUN_AS_ROOT 1
-
 //Error Codes
 #define ERROR_NOFUNDS -1
 #define ERROR_SIGFAIL -2
