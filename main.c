@@ -131,9 +131,9 @@ char mid[8];
 time_t nextreward = 0;
 uint rewardindex = 0;
 uint rewardpaid = 1;
-char myrewardkey[MIN_LEN];
-char myrewardkeyp[MIN_LEN];
-uint8_t genesis_pub[ECC_CURVE+1];
+char myrewardkey[MIN_LEN]; //reward addr public key
+char myrewardkeyp[MIN_LEN]; //reward addr private key
+uint8_t genesis_pub[ECC_CURVE+1]; //genesis address public key
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -186,7 +186,7 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint s)
         else
             return 0;
         
-        ift *= 1000; //every transaction inflates vfc by 10,000 VFC. This is a TAX paid to miners.
+        ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
         return ift;
     }
 
@@ -882,7 +882,7 @@ uint64_t getCirculatingSupply()
     uint64_t ift = 0;
     if(st.st_size > 0)
         ift = (uint64_t)st.st_size / 133;
-    ift *= 1000; //every transaction inflates vfc by 10,000 VFC. This is a TAX paid to miners.
+    ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
 
     uint64_t rv = 4294967295 + ift; //Original genesis address value + tax
     FILE* f = fopen(CHAIN_FILE, "r");
