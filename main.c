@@ -900,7 +900,7 @@ uint64_t getCirculatingSupply()
             {
                 const mval v = isSubGenesisAddress(t.from.key, 1); //Addup all the subGenesis address values ontop
                 if(v > 0)
-                    rv += v;
+                    rv += t.amount;
             }
             else
             {
@@ -1090,7 +1090,8 @@ void dumptrans()
                 len = MIN_LEN;
                 b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
 
-                printf("%s > %s : %u\n", frompub, topub, t.amount);
+                setlocale(LC_NUMERIC, "");
+                printf("%s > %s : %'.3f\n", frompub, topub, toDB(t.amount));
             }
             else
             {
@@ -1130,7 +1131,8 @@ void dumpbadtrans()
                 len = MIN_LEN;
                 b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
 
-                printf("%s > %s : %u\n", frompub, topub, t.amount);
+                setlocale(LC_NUMERIC, "");
+                printf("%s > %s : %'.3f\n", frompub, topub, toDB(t.amount));
             }
             else
             {
@@ -1166,7 +1168,8 @@ void printIns(addr* a)
                     memset(pub, 0, sizeof(pub));
                     size_t len = MIN_LEN;
                     b58enc(pub, &len, t.from.key, ECC_CURVE+1);
-                    printf("%s > %u\n", pub, t.amount);
+                    setlocale(LC_NUMERIC, "");
+                    printf("%s > %'.3f\n", pub, toDB(t.amount));
                 }
             }
             else
@@ -1203,7 +1206,8 @@ void printOuts(addr* a)
                     memset(pub, 0, sizeof(pub));
                     size_t len = MIN_LEN;
                     b58enc(pub, &len, t.to.key, ECC_CURVE+1);
-                    printf("%s > %u\n", pub, t.amount);
+                    setlocale(LC_NUMERIC, "");
+                    printf("%s > %'.3f\n", pub, toDB(t.amount));
                 }
             }
             else
@@ -1648,7 +1652,7 @@ void *processThread(void *arg)
 void *miningThread(void *arg)
 {
     chdir(getHome());
-    nice(3); //Very high priority thread
+    nice(1); //Very high priority thread
     addr pub, priv;
     makAddrS(&pub, &priv);
     mval r = isSubGenesisAddress(pub.key, 0);
