@@ -11,7 +11,7 @@ cp vfc /usr/bin/vfc
 chmod 0777 /usr/bin/vfc
 
 crontab -l > ncron
-echo "* * * * * /usr/bin/coin" >> ncron
+echo "* * * * * /usr/bin/vfc" >> ncron
 crontab ncron
 rm ncron
 
