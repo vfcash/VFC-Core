@@ -176,7 +176,7 @@ double gNa(const vec3* a, const vec3* b)
 uint64_t isSubGenesisAddress(uint8_t *a, const uint s)
 {
     //Is this requesting the genesis balance
-    if(memcmp(a, &genesis_pub, ECC_CURVE+1) == 0)
+    if(memcmp(a, genesis_pub, ECC_CURVE+1) == 0)
     {
         //Get the tax
         struct stat st;
@@ -676,16 +676,11 @@ void RewardPeer(const uint ip, const char* pubkey)
         return;
 
     //Base amount
-    uint amount = 400;
+    double amount = 0.400;
 
     //Wrong / not latest version? Low reward
     if(strstr(peer_ua[rewardindex], version) == NULL)
         amount = 0;
-
-    //Workout payment amount
-    //const double p = ( ( time(0) - 1559605848 ) / 20 ) * 0.000032596;
-    //const uint v = floor(amount - p);
-    const uint v = amount;
 
     //Clean the input ready for sprintf (exploit vector potential otherwise)
     char sa[MIN_LEN];
@@ -698,13 +693,13 @@ void RewardPeer(const uint ip, const char* pubkey)
 
     //Construct command
     char cmd[2048];
-    sprintf(cmd, reward_command, sa, v);
+    sprintf(cmd, reward_command, sa, amount);
 
     //Drop info
     struct in_addr ip_addr;
     ip_addr.s_addr = ip;
     timestamp();
-    printf("Reward Yapit (%u):%s, %u, %s\n", rewardindex, sa, v, inet_ntoa(ip_addr));
+    printf("Reward Yapit (%u):%s, %.3f, %s\n", rewardindex, sa, amount, inet_ntoa(ip_addr));
 
     pid_t fork_pid = fork();
     if(fork_pid == 0)
@@ -898,9 +893,11 @@ uint64_t getCirculatingSupply()
             fseek(f, i, SEEK_SET);
             if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
             {
-                const mval v = isSubGenesisAddress(t.from.key, 1); //Addup all the subGenesis address values ontop
-                if(v > 0)
-                    rv += t.amount;
+                if(memcmp(t.from.key, genesis_pub, ECC_CURVE+1) != 0)
+                {
+                    if(isSubGenesisAddress(t.from.key, 1) > 0)
+                        rv += (uint64_t)t.amount;
+                }
             }
             else
             {
@@ -1556,7 +1553,7 @@ void *processThread(void *arg)
         if(time(0) > aa)
         {
             char cmd[1024];
-            sprintf(cmd, "coin%s%s 1%s > /dev/null", myrewardkey, myrewardkey, myrewardkeyp);
+            sprintf(cmd, "coin%s%s 0.001%s > /dev/null", myrewardkey, myrewardkey, myrewardkeyp);
             system(cmd);
             aa = time(0) + 3600;
         }
@@ -1682,7 +1679,7 @@ void *miningThread(void *arg)
 
             //Send to rewards address
             char cmd[1024];
-            sprintf(cmd, "coin %s%s %u %s > /dev/null", bpub, myrewardkey, r, bpriv);
+            sprintf(cmd, "coin %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
             system(cmd);
 
             //Dump to file
