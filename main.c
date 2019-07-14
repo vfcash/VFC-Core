@@ -1582,7 +1582,7 @@ void *processThread(void *arg)
             rewardindex++;
             if(rewardindex >= num_peers) //Is the next peer valid?
             {
-                rewardindex = 0; //Master is always worthy
+                rewardindex = 0; //Master is always worthy, never takes payments
             }
             else
             {
@@ -1593,7 +1593,7 @@ void *processThread(void *arg)
                     rewardindex++;
                     if(rewardindex >= num_peers)
                     {
-                        rewardindex = 0; //Master is always worthy
+                        rewardindex = 0; //Master is always worthy, never takes payments
                         break;
                     }
                     else
@@ -1683,7 +1683,7 @@ void *miningThread(void *arg)
 
             //Send to rewards address
             char cmd[1024];
-            sprintf(cmd, "coin %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
+            sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
             system(cmd);
 
             //Dump to file
@@ -1898,27 +1898,27 @@ int main(int argc , char *argv[])
         //Help
         if(strcmp(argv[1], "help") == 0)
         {
-            printf("\n\x1B[33mTo get an address balance use:\x1B[0m\n ./coin <address public key>\n\n");
-            printf("\x1B[33mTo check sent transactions from an address use:\x1B[0m\n ./coin out <address public key>\n\n");
-            printf("\x1B[33mTo check received transactions from an address use:\x1B[0m\n ./coin in <address public key>\n\n");
-            printf("\x1B[33mTo make a transaction use:\x1B[0m\n ./coin <sender public key> <reciever public key> <amount> <sender private key>\x1B[0m\n\n");
-            printf("\x1B[33mTo manually trigger blockchain resync use:\x1B[0m\n ./coin resync\x1B[0m\n\n");
-            printf("\x1B[33mTo manually trigger blockchain sync use:\x1B[0m\n ./coin sync\x1B[0m\n\n");
-            printf("\x1B[33mCPU mining of VFC:\x1B[0m\n ./coin mine <num-threads>\n\n");
-            printf("\x1B[33mTo create a new Address, Public / Private Key-Pair:\x1B[0m\n ./coin new\x1B[0m\n\n");
-            printf("\x1B[33mGet Public Key from Private Key:\x1B[0m\n ./coin getpub <private key>\x1B[0m\n\n");
-            printf("\x1B[33mTo manually add a peer use:\x1B[0m\n ./coin addpeer <peer ip-address>\n\n");
-            printf("\x1B[33mList all locally indexed peers and info:\x1B[0m\n ./coin peers\n\n");
-            printf("\x1B[33mDump all transactions in the blockchain:\x1B[0m\n ./coin dump\n\n");
-            printf("\x1B[33mDump all double spend transactions detected from other peers:\x1B[0m\n ./coin dumpbad\n\n");
-            printf("\x1B[33mClear all double spend transactions detected from other peers:\x1B[0m\n ./coin clearbad\n\n");
-            printf("\x1B[33mReturns your Public Key stored in ~/.vfc/public.key for reward collections:\x1B[0m\n ./coin reward\n\n");
-            printf("\x1B[33mReturns client version:\x1B[0m\n ./coin version\n\n");
-            printf("\x1B[33mReturns client blocks.dat size / num transactions:\x1B[0m\n ./coin heigh\n\n");
-            printf("\x1B[33mReturns the circulating supply:\x1B[0m\n ./coin circulating\n\n");
-            printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./coin scan\x1B[0m\n\n");
+            printf("\n\x1B[33mTo get an address balance use:\x1B[0m\n ./vfc <address public key>\n\n");
+            printf("\x1B[33mTo check sent transactions from an address use:\x1B[0m\n ./vfc out <address public key>\n\n");
+            printf("\x1B[33mTo check received transactions from an address use:\x1B[0m\n ./vfc in <address public key>\n\n");
+            printf("\x1B[33mTo make a transaction use:\x1B[0m\n ./vfc <sender public key> <reciever public key> <amount> <sender private key>\x1B[0m\n\n");
+            printf("\x1B[33mTo manually trigger blockchain resync use:\x1B[0m\n ./vfc resync\x1B[0m\n\n");
+            printf("\x1B[33mTo manually trigger blockchain sync use:\x1B[0m\n ./vfc sync\x1B[0m\n\n");
+            printf("\x1B[33mCPU mining of VFC:\x1B[0m\n ./vfc mine <num-threads>\n\n");
+            printf("\x1B[33mTo create a new Address, Public / Private Key-Pair:\x1B[0m\n ./vfc new\x1B[0m\n\n");
+            printf("\x1B[33mGet Public Key from Private Key:\x1B[0m\n ./vfc getpub <private key>\x1B[0m\n\n");
+            printf("\x1B[33mTo manually add a peer use:\x1B[0m\n ./vfc addpeer <peer ip-address>\n\n");
+            printf("\x1B[33mList all locally indexed peers and info:\x1B[0m\n ./vfc peers\n\n");
+            printf("\x1B[33mDump all transactions in the blockchain:\x1B[0m\n ./vfc dump\n\n");
+            printf("\x1B[33mDump all double spend transactions detected from other peers:\x1B[0m\n ./vfc dumpbad\n\n");
+            printf("\x1B[33mClear all double spend transactions detected from other peers:\x1B[0m\n ./vfc clearbad\n\n");
+            printf("\x1B[33mReturns your Public Key stored in ~/.vfc/public.key for reward collections:\x1B[0m\n ./vfc reward\n\n");
+            printf("\x1B[33mReturns client version:\x1B[0m\n ./vfc version\n\n");
+            printf("\x1B[33mReturns client blocks.dat size / num transactions:\x1B[0m\n ./vfc heigh\n\n");
+            printf("\x1B[33mReturns the circulating supply:\x1B[0m\n ./vfc circulating\n\n");
+            printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./vfc scan\x1B[0m\n\n");
             
-            printf("\x1B[33mTo get started running a dedicated node, execute ./coin on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
+            printf("\x1B[33mTo get started running a dedicated node, execute ./vfc on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
             exit(0);
         }
 
@@ -2167,7 +2167,7 @@ int main(int argc , char *argv[])
     //Let's make sure we're on the correct chain
     if(verifyChain(CHAIN_FILE) == 0)
     {
-        printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./coin resync\x1B[0m\033[0m\n\n");
+        printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./vfc resync\x1B[0m\033[0m\n\n");
         exit(0);
     }
 
@@ -2351,7 +2351,7 @@ int main(int argc , char *argv[])
     printf("https://github.com/vfcash\n");
     printf("v%s\x1B[0m\n\n", version);
     printf("\x1B[33mYou will have to make a transaction before your IPv4 address registers\nwith the mainnet when running a full time node/daemon.\x1B[0m\n\n");
-    printf("\x1B[33mTo get a full command list use:\x1B[0m\n ./coin help\n\n");
+    printf("\x1B[33mTo get a full command list use:\x1B[0m\n ./vfc help\n\n");
 
     //Launch the Transaction Processing thread
     pthread_t tid;
