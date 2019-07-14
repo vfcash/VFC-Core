@@ -22,15 +22,13 @@ git clone https://github.com/vfcash/VFC-Core && cd VFC-Core
 sudo chmod 0777 compile.sh
 sudo ./compile.sh
 ```
-Then use the `coin help` command in the console for a full command list.
-
-If you wish the full node to launch on startup of the server, `edit /etc/rc.local` and add the command `coin` at the end of the file. Alternatively you can SSH in and launch an instance of coin in a screen or tmux, or if running a crontab add `@restart coin`.
+Then use the `vfc help` command in the console for a full command list.
 
 **Windows Install Instructions (Full Node & Client Wallet):**
 
 For a Windows installation you can follow the steps above but first install the Ubuntu Terminal software on Windows first: https://www.microsoft.com/en-us/p/ubuntu/9nblggh4msv6
 
-**To become an active part of the network leave the coin program running in a screen and make sure any necessary ports are forwarded, VFC uses UDP Port 8787.** You will need to make atleast one valid transaction on the network before the mainnet indexes you as a peer and will commuicate with your node. We recommend that you send 1 VFC to yourself, to and from the same address. If you are sent VFC your balance will still show 0 until you perform this operation from your network node. Alternatively you can mine VFC with `coin mine` and your first successful mined VFC will register you on the network. 
+**To become an active part of the network leave the coin program running in a screen and make sure any necessary ports are forwarded, VFC uses UDP Port 8787.** You will need to make atleast one valid transaction on the network before the mainnet indexes you as a peer and will commuicate with your node. We recommend that you send 1 VFC to yourself, to and from the same address. If you are sent VFC your balance will still show 0 until you perform this operation from your network node. Alternatively you can mine VFC with `vfc mine` and your first successful mined VFC will register you on the network. 
 
 Each address is limited to one transaction every three seconds, once a transaction is made the sender cannot make another transaction to a different address for three seconds.
 
