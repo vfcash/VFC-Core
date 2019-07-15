@@ -1230,7 +1230,7 @@ void printOuts(addr* a)
 uint64_t getBalanceLocal(addr* from)
 {
     //Get local Balance
-    uint64_t rv = isSubGenesisAddress(from->key, 1);
+    int64_t rv = isSubGenesisAddress(from->key, 1);
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
@@ -1252,13 +1252,15 @@ uint64_t getBalanceLocal(addr* from)
             {
                 printf("There was a problem, blocks.dat looks corrupt.\n");
                 fclose(f);
-                return 0;
+                return rv;
             }
             
         }
 
         fclose(f);
     }
+    if(rv < 0)
+        return 0;
     return rv;
 }
 
@@ -1298,7 +1300,7 @@ uint64_t getBalance(addr* from)
 //Calculate if an address has the value required to make a transaction of x amount.
 uint hasbalance(const uint64_t uid, addr* from, mval amount)
 {
-    uint64_t rv = isSubGenesisAddress(from->key, 1);
+    int64_t rv = isSubGenesisAddress(from->key, 1);
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
@@ -1862,6 +1864,17 @@ int main(int argc , char *argv[])
             b58enc(bpub, &len, p_publicKey, ECC_CURVE+1);
 
             printf("\n\x1B[33mPublic Key Generated\x1B[0m\n\nPublic: %s\n\n\x1B[0m", bpub);
+            
+            exit(0);
+        }
+
+        if(strcmp(argv[1], "issub") == 0)
+        {
+            //Get Private Key
+            uint8_t p_pub[ECC_BYTES+1];
+            size_t len = ECC_CURVE+1;
+            b58tobin(p_pub, &len, argv[2], strlen(argv[2]));
+            isSubGenesisAddress(p_pub, 0);
             
             exit(0);
         }
