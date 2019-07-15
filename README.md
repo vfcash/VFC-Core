@@ -1,7 +1,7 @@
 # VF Cash
 VF Cash is the most efficient IoT Cryptocurrency project, at the current point in time it uses only 1.8 MB of memory, a maximum of 8 threads or 2 threads idle, no proof of work (PoW) and blockchain file that grows at a rate 76% less than Bitcoin. [Whitepaper.pdf](https://github.com/vfcash/RELEASES/blob/master/vfcash.pdf)
 
-The project started on the 23rd of April 2019. It has no Proof-of-Work (POW) rather it has a finders-keeps distribution system similar to mining and a transaction rate limit per address / public key of three seconds for the confirmation period. This prevents the sender or the receiver of a transaction from making any further transactions during this period. The chain is unordered, and the networking uses UDP. The Digital Signature algorithm uses secp256r1.
+The project started on the 23rd of April 2019. It has no Proof-of-Work (POW) rather it has a finders-keeps distribution system similar to mining and a transaction rate limit per address / public key of three seconds for the confirmation period. This prevents the sender of a transaction from making any further transactions during this period. The chain is unordered, and the networking uses UDP. The Digital Signature algorithm uses secp256r1.
 
 Divisible to three decimal places, mineable, written in C, compiled with GCC, 256-bit key length.
 
