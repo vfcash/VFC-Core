@@ -87,7 +87,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.47";
+const char version[]="0.48";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -117,6 +117,12 @@ const char master_ip[] = "68.183.49.225";
 #define ulong unsigned long long int
 
 //Operating Global Variables
+#if MASTER_NODE == 1
+    time_t nextreward = 0;
+    uint rewardindex = 0;
+    uint rewardpaid = 1;
+#endif
+char mid[8];
 ulong err = 0;
 uint replay_allow = 0;
 uint replay_height = 0;
@@ -124,10 +130,6 @@ uint64_t balance_accumulator = 0;
 uint threads = 0;
 uint nthreads = 0;
 uint thread_ip[MAX_THREADS];
-char mid[8];
-time_t nextreward = 0;
-uint rewardindex = 0;
-uint rewardpaid = 1;
 char myrewardkey[MIN_LEN]; //reward addr public key
 char myrewardkeyp[MIN_LEN]; //reward addr private key
 uint8_t genesis_pub[ECC_CURVE+1]; //genesis address public key
@@ -151,7 +153,7 @@ double toDB(const uint64_t b)
 {
     return (double)(b) / 1000;
 }
-mval fromDB(const double b)
+mval fromDB(const double b) //and from
 {
     return (mval)(b * 1000);
 }
@@ -1557,7 +1559,7 @@ void *processThread(void *arg)
         if(time(0) > aa)
         {
             char cmd[1024];
-            sprintf(cmd, "coin%s%s 0.001%s > /dev/null", myrewardkey, myrewardkey, myrewardkeyp);
+            sprintf(cmd, "vfc%s%s 0.001%s > /dev/null", myrewardkey, myrewardkey, myrewardkeyp);
             system(cmd);
             aa = time(0) + 3600;
         }
