@@ -15,9 +15,9 @@ if grep -qxF '* * * * * /usr/bin/vfc' ncron; then
     echo "Cron Exists";
 else
     echo "* * * * * /usr/bin/vfc" >> ncron
+    crontab ncron
     echo "Cron Added";
 fi
-crontab ncron
 rm ncron
 
 echo "Compiled and Installed /usr/bin/vfc and /srv/.vfc or ~/.vfc "
