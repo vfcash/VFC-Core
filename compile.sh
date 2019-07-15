@@ -11,8 +11,14 @@ cp vfc /usr/bin/vfc
 chmod 0777 /usr/bin/vfc
 
 crontab -l > ncron
-echo "* * * * * /usr/bin/vfc" >> ncron
+if grep -qxF '* * * * * /usr/bin/vfc' ncron; then
+    echo "Cron Exists";
+else
+    echo "* * * * * /usr/bin/vfc" >> ncron
+    echo "Cron Added";
+fi
 crontab ncron
 rm ncron
 
-echo "Compiled and Installed /usr/bin/coin and /srv/.vfc or ~/.vfc "
+echo "Compiled and Installed /usr/bin/vfc and /srv/.vfc or ~/.vfc "
+echo "vfc help"
