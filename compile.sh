@@ -8,6 +8,8 @@ clear
 pkill coin
 rm coin
 rm /usr/bin/coin
+clear
+clear
 pkill vfc
 rm vfc
 rm /usr/bin/vfc
