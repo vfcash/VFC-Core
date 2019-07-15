@@ -31,7 +31,7 @@ For a Windows installation you can follow the steps above but first install the 
 Each address is limited to one transaction every three seconds, once a transaction is made the sender cannot make another transaction to a different address for three seconds.
 
 # No IPv4 address?
-We reccomend users who do not have access to an IPv4 address to use a VPN service that offers port forwarding on IPv4 addresses, such as [airvpn.org](AirVPN).
+It is reccomend that users who do not have access to an IPv4 address to use a VPN service that offers port forwarding on IPv4 addresses, such as [airvpn.org](AirVPN).
 
 # Denial-of-service Protection
 
