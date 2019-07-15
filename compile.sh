@@ -1,5 +1,10 @@
 clear
 clear
+apt update && upgrade
+apt install crontab
+apt install gcc
+clear
+clear
 pkill coin
 rm coin
 rm /usr/bin/coin
@@ -22,3 +27,4 @@ rm ncron
 
 echo "Compiled and Installed /usr/bin/vfc and /srv/.vfc or ~/.vfc "
 echo "vfc help"
+echo "Don't forget to forward UDP port 8787 if behind a router."
