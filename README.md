@@ -22,6 +22,8 @@ sudo ./compile.sh
 ```
 Then use the `vfc help` command in the console for a full command list.
 
+By default your data-dir is ~/.vfc if you would like to set a custom path please set the envionment variable VFCDIR, for example if running as root choose a directory such as /srv
+
 **Windows Install Instructions (Full Node & Client Wallet):**
 
 For a Windows installation you can follow the steps above but first install the Ubuntu Terminal software on Windows first: https://www.microsoft.com/en-us/p/ubuntu/9nblggh4msv6
