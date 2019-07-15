@@ -16,6 +16,7 @@ Join us on Telegram [@vfcash](https://t.me/vfcash)
 
 **Linux Compile & Install Instructions (Full Node & Client Wallet):**
 ```
+sudo apt update && upgrade
 sudo apt install gcc
 sudo apt install crontab
 git clone https://github.com/vfcash/VFC-Core && cd VFC-Core
