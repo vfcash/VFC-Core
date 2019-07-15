@@ -1805,7 +1805,9 @@ int main(int argc , char *argv[])
     b58tobin(genesis_pub, &len, "foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ", 44);
 
     //Set next reward time
+#if MASTER_NODE == 1
     nextreward = time(0) + REWARD_INTERVAL;
+#endif
 
     //Set the MID
     mid[0] = '\t';
