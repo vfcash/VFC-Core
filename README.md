@@ -30,6 +30,9 @@ For a Windows installation you can follow the steps above but first install the 
 
 Each address is limited to one transaction every three seconds, once a transaction is made the sender cannot make another transaction to a different address for three seconds.
 
+# Only have an IPv6 address?
+We reccomend users who do not have access to an IPv4 address to use a VPN service that offers port forwarding on IPv4 addresses, such as [airvpn.org](AirVPN).
+
 # Denial-of-service Protection
 
 We recommend configuring iptables to throttle incoming UDP packets on port 8787 to 7,133 every minute [~119 packets a second]. 
