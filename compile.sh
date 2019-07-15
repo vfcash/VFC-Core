@@ -6,7 +6,7 @@ rm coin
 rm vfc
 rm /usr/bin/coin
 rm /usr/bin/vfc
-gcc -pthread base58.c crc64.c ecc.c sha3.c main.c -lm -o coin
+gcc -pthread base58.c crc64.c ecc.c sha3.c main.c -lm -o vfc
 cp vfc /usr/bin/vfc
 chmod 0777 /usr/bin/vfc
 
