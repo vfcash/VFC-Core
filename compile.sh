@@ -1,8 +1,8 @@
 clear
 clear
-apt update && upgrade
-apt install crontab
-apt install gcc
+apt --assume-yes update && upgrade
+apt install --assume-yes crontab
+apt install --assume-yes gcc
 clear
 clear
 pkill coin
