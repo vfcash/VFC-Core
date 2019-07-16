@@ -98,7 +98,6 @@ const char master_ip[] = "68.183.49.225";
 
 //Node Settings
 #define MAX_TRANS_QUEUE 256             // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
-#define MAX_THREADS 6                   // Maximum replay threads this node can spawn (about 3 syncs or 6 replays)
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
 #define PING_INTERVAL 180               // How often top ping the peers to see if they are still alive
@@ -121,18 +120,21 @@ const char master_ip[] = "68.183.49.225";
     time_t nextreward = 0;
     uint rewardindex = 0;
     uint rewardpaid = 1;
+    #define MAX_THREADS 256 //[1] //We go high-load for the master server
+#else
+    #define MAX_THREADS 6 //[1] // Maximum replay threads this node can spawn
 #endif
-char mid[8];
-ulong err = 0;
-uint replay_allow = 0;
-uint replay_height = 0;
-uint64_t balance_accumulator = 0;
-uint threads = 0;
-uint nthreads = 0;
-uint thread_ip[MAX_THREADS];
-char myrewardkey[MIN_LEN]; //reward addr public key
-char myrewardkeyp[MIN_LEN]; //reward addr private key
-uint8_t genesis_pub[ECC_CURVE+1]; //genesis address public key
+char mid[8];                        //Clients private identification code used in pings etc.
+ulong err = 0;                      //Global error count
+uint replay_allow = 0;              //Is the local client allowing a local replay at this time 0-1
+uint replay_height = 0;             //Block Height of current peer authorized to receive a replay from
+uint64_t balance_accumulator = 0;   //For accumulating the highest network balance of a requested address
+uint threads = 0;                   //number of replay threads
+uint thread_ip[MAX_THREADS];        //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
+uint nthreads = 0;                  //number of mining threads
+char myrewardkey[MIN_LEN];          //client reward addr public key
+char myrewardkeyp[MIN_LEN];         //client reward addr private key
+uint8_t genesis_pub[ECC_CURVE+1];   //genesis address public key
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -919,6 +921,24 @@ uint64_t getCirculatingSupply()
     return rv;
 }
 
+//Replay thread queue
+uint32_t replay_peers[MAX_PEERS];
+
+//Get replay peer
+uint32_t getRP()
+{
+    for(int i = 0; i < MAX_PEERS; ++i)
+    {
+        if(replay_peers[i] != 0)
+        {
+            const uint32_t r = replay_peers[i];
+            replay_peers[i] = 0;
+            return r;
+        }
+    }
+    return 0;
+}
+
 //Replay blocks to x address
 void replayBlocks(const uint ip)
 {
@@ -966,7 +986,13 @@ void replayBlocks(const uint ip)
                 ofs += sizeof(mval);
                 memcpy(ofs, t.owner.key, ECC_CURVE*2);
                 csend(ip, pc, len);
-                usleep(200000); //333 = 3k, 211 byte packets / 618kb a second
+
+                //333 = 3k, 211 byte packets / 618kb a second
+                #if MASTER_NODE == 1
+                    usleep(25000); //
+                #else
+                    usleep(200000); //
+                #endif
             }
             else
             {
@@ -984,8 +1010,7 @@ void *replayBlocksThread(void *arg)
 {
     chdir(getHome());
     nice(19); //Very low priority thread
-    const uint *iip = arg;
-    const uint ip = *iip;
+    const uint ip = getRP();
     replayBlocks(ip);
     threads--;
     for(int i = 0; i < MAX_THREADS; i++)
@@ -1040,7 +1065,13 @@ void replayBlocksRev(const uint ip)
                 ofs += sizeof(mval);
                 memcpy(ofs, t.owner.key, ECC_CURVE*2);
                 csend(ip, pc, len);
-                usleep(200000); //333 = 3k, 211 byte packets / 618kb a second
+
+                //333 = 3k, 211 byte packets / 618kb a second
+                #if MASTER_NODE == 1
+                    usleep(25000); //
+                #else
+                    usleep(200000); //
+                #endif
             }
             else
             {
@@ -1059,13 +1090,40 @@ void *replayBlocksRevThread(void *arg)
     sleep(3); //Offset threads--; collisions
     chdir(getHome());
     nice(19); //Very low priority thread
-    const uint *iip = arg;
-    const uint ip = *iip;
+    const uint ip = getRP();
     replayBlocksRev(ip);
     threads--;
     for(int i = 0; i < MAX_THREADS; i++)
         if(thread_ip[i] == ip)
             thread_ip[i] = 0;
+}
+
+//Set replay peer ip
+void setRP(const uint32_t ip)
+{
+    for(int i = 0; i < MAX_PEERS; ++i)
+    {
+        if(replay_peers[i] == 0)
+        {
+            replay_peers[i] = ip;
+            break;
+        } 
+    }
+}
+
+//Launch a replay thread
+void launchReplayThread(const uint32_t ip, const uint32_t bi)
+{
+    thread_ip[threads] = ip;
+    setRP(ip);
+
+    pthread_t tid;
+    if(bi == 0)
+        pthread_create(&tid, NULL, replayBlocksThread, NULL); //Threaded not to jam up UDP relay
+    else
+        pthread_create(&tid, NULL, replayBlocksRevThread, NULL);
+    
+    threads++;
 }
 
 //dump all trans
@@ -2185,6 +2243,7 @@ int main(int argc , char *argv[])
     if(verifyChain(CHAIN_FILE) == 0)
     {
         printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./vfc resync\x1B[0m\033[0m\n\n");
+        system("vfc resync");
         exit(0);
     }
 
@@ -2503,12 +2562,7 @@ int main(int argc , char *argv[])
 
                         //If not replay to peer
                         if(cp == 1)
-                        {
-                            pthread_t tid;
-                            pthread_create(&tid, NULL, replayBlocksThread, &client.sin_addr.s_addr); //Threaded not to jam up UDP relay
-                            thread_ip[threads] = client.sin_addr.s_addr;
-                            threads++;
-                        }
+                            launchReplayThread(client.sin_addr.s_addr, 0);
                     }
 
                     //Increment Requests
@@ -2537,15 +2591,7 @@ int main(int argc , char *argv[])
 
                         //If not replay to peer
                         if(cp == 1)
-                        {
-                            pthread_t tid;
-                            if(qRand(0, 100) < 50)
-                                pthread_create(&tid, NULL, replayBlocksThread, &client.sin_addr.s_addr); //Threaded not to jam up UDP relay
-                            else
-                                pthread_create(&tid, NULL, replayBlocksRevThread, &client.sin_addr.s_addr);
-                            thread_ip[threads] = client.sin_addr.s_addr;
-                            threads++;
-                        }
+                            launchReplayThread(client.sin_addr.s_addr, qRand(0, 1));
                     }
 
                     //Increment Requests
