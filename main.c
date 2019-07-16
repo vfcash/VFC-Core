@@ -126,7 +126,7 @@ const char master_ip[] = "68.183.49.225";
 #endif
 char mid[8];                        //Clients private identification code used in pings etc.
 ulong err = 0;                      //Global error count
-uint replay_allow = 0;              //Is the local client allowing a local replay at this time 0-1
+uint replay_allow = 0;              //Is the local client allowing a replay at this time (0-1)
 uint replay_height = 0;             //Block Height of current peer authorized to receive a replay from
 uint64_t balance_accumulator = 0;   //For accumulating the highest network balance of a requested address
 uint threads = 0;                   //number of replay threads
@@ -927,7 +927,7 @@ uint32_t replay_peers[MAX_PEERS];
 //Get replay peer
 uint32_t getRP()
 {
-    for(int i = 0; i < MAX_PEERS; ++i)
+    for(int i = 0; i < MAX_THREADS; ++i)
     {
         if(replay_peers[i] != 0)
         {
@@ -937,6 +937,19 @@ uint32_t getRP()
         }
     }
     return 0;
+}
+
+//Set replay peer ip
+void setRP(const uint32_t ip)
+{
+    for(int i = 0; i < MAX_THREADS; ++i)
+    {
+        if(replay_peers[i] == 0)
+        {
+            replay_peers[i] = ip;
+            break;
+        } 
+    }
 }
 
 //Replay blocks to x address
@@ -1096,19 +1109,6 @@ void *replayBlocksRevThread(void *arg)
     for(int i = 0; i < MAX_THREADS; i++)
         if(thread_ip[i] == ip)
             thread_ip[i] = 0;
-}
-
-//Set replay peer ip
-void setRP(const uint32_t ip)
-{
-    for(int i = 0; i < MAX_PEERS; ++i)
-    {
-        if(replay_peers[i] == 0)
-        {
-            replay_peers[i] = ip;
-            break;
-        } 
-    }
 }
 
 //Launch a replay thread
