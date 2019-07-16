@@ -1024,6 +1024,8 @@ void *replayBlocksThread(void *arg)
     chdir(getHome());
     nice(19); //Very low priority thread
     const uint ip = getRP();
+    if(ip == 0)
+        return 0;
     replayBlocks(ip);
     threads--;
     for(int i = 0; i < MAX_THREADS; i++)
@@ -1104,6 +1106,8 @@ void *replayBlocksRevThread(void *arg)
     chdir(getHome());
     nice(19); //Very low priority thread
     const uint ip = getRP();
+    if(ip == 0)
+        return 0;
     replayBlocksRev(ip);
     threads--;
     for(int i = 0; i < MAX_THREADS; i++)
