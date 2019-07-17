@@ -100,7 +100,8 @@ const char master_ip[] = "68.183.49.225";
 #define MAX_TRANS_QUEUE 256             // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
-#define PING_INTERVAL 180               // How often top ping the peers to see if they are still alive
+#define PING_INTERVAL 540               // How often top ping the peers to see if they are still alive
+#define REPLAY_SIZE 3072                // How many transactions to send a peer in one replay request
 
 //Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
@@ -873,6 +874,47 @@ uint gQueSize()
 /* ~ Blockchain Transversal & Functions
 */
 
+
+//Get mined supply
+uint64_t getMinedSupply()
+{
+    uint64_t rv = 0;
+    FILE* f = fopen(CHAIN_FILE, "r");
+    if(f)
+    {
+        fseek(f, 0, SEEK_END);
+        const size_t len = ftell(f);
+
+        struct trans t;
+        for(size_t i = sizeof(struct trans); i < len; i += sizeof(struct trans))
+        {
+            fseek(f, i, SEEK_SET);
+            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+            {
+                if(memcmp(t.from.key, genesis_pub, ECC_CURVE+1) != 0)
+                {
+                    const uint64_t w = isSubGenesisAddress(t.from.key, 1);
+                    if(w > 0)
+                    {
+                        rv += w;
+                    }
+                }
+            }
+            else
+            {
+                printf("There was a problem, blocks.dat looks corrupt.\n");
+                fclose(f);
+                return rv;
+            }
+            
+        }
+
+        fclose(f);
+    }
+    return rv;
+}
+
+
 //Get circulating supply
 uint64_t getCirculatingSupply()
 {
@@ -884,7 +926,6 @@ uint64_t getCirculatingSupply()
         ift = (uint64_t)st.st_size / 133;
     ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
 
-    uint64_t yy = 0;
     uint64_t rv = 4294967295 + ift; //Original genesis address value + tax
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
@@ -968,7 +1009,7 @@ void replayBlocks(const uint ip)
         csend(ip, pc, 1+sizeof(uint));
         struct in_addr ip_addr;
         ip_addr.s_addr = ip;
-        printf("Replaying: %.1f kb to %s\n", (double)height / 1000, inet_ntoa(ip_addr));
+        printf("Replaying: %.1f kb to %s\n", (double)(sizeof(struct trans)*REPLAY_SIZE) / 1000, inet_ntoa(ip_addr));
     }
 
     //Replay blocks
@@ -977,9 +1018,14 @@ void replayBlocks(const uint ip)
     {
         fseek(f, 0, SEEK_END);
         const size_t len = ftell(f);
+        
+        // *
+        //  Always send your most recent graph-ends first
+        // *
 
+        size_t end = len-(333*sizeof(struct trans)); //top 333 transactions
         struct trans t;
-        for(size_t i = sizeof(struct trans); i < len; i += sizeof(struct trans))
+        for(size_t i = len-sizeof(struct trans); i > end; i -= sizeof(struct trans))
         {
             fseek(f, i, SEEK_SET);
             if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
@@ -1005,6 +1051,52 @@ void replayBlocks(const uint ip)
                     usleep(25000); //
                 #else
                     usleep(200000); //
+                #endif
+            }
+            else
+            {
+                printf("There was a problem, blocks.dat looks corrupt.\n");
+                fclose(f);
+                return;
+            }
+        }
+
+        // *
+        //  Now send a random block of transaction data of REPLAY_SIZE
+        // *
+
+        //Pick a random block of data from the chain of the specified REPLAY_SIZE
+        const size_t rpbs = (sizeof(struct trans)*REPLAY_SIZE);
+        const size_t lp = len / rpbs; //How many REPLAY_SIZE fit into the current blockchain length
+        const size_t st = sizeof(struct trans) + (rpbs * qRand(1, lp-1)); //Start at one of these x offsets excluding the end of the last block (no more blocks after this point)
+        end = st+rpbs; //End after that offset + REPLAY_SIZE amount of transactions later
+
+        for(size_t i = st; i < len && i < end; i += sizeof(struct trans))
+        {
+            fseek(f, i, SEEK_SET);
+            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+            {
+                //Generate Packet (pc)
+                const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //lol this is always sizeof(struct trans)+1 im silly but i've done it now so..
+                char pc[MIN_LEN];
+                pc[0] = 'p'; //This is a re*P*lay
+                char* ofs = pc + 1;
+                memcpy(ofs, &t.uid, sizeof(uint64_t));
+                ofs += sizeof(uint64_t);
+                memcpy(ofs, t.from.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, t.to.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, &t.amount, sizeof(mval));
+                ofs += sizeof(mval);
+                memcpy(ofs, t.owner.key, ECC_CURVE*2);
+                csend(ip, pc, len);
+
+                //333 = 3k, 211 byte packets / 618kb a second
+                #if MASTER_NODE == 1
+                    usleep(10000); //
+                #else
+                    usleep(120000); //
                 #endif
             }
             else
@@ -1033,99 +1125,15 @@ void *replayBlocksThread(void *arg)
             thread_ip[i] = 0;
 }
 
-//(in reverse, latest first to oldest last)
-void replayBlocksRev(const uint ip)
-{
-    //Send block height
-    struct stat st;
-    stat(CHAIN_FILE, &st);
-    if(st.st_size > 0)
-    {
-        char pc[MIN_LEN];
-        pc[0] = 'h';
-        char* ofs = pc + 1;
-        const uint height = st.st_size;
-        memcpy(ofs, &height, sizeof(uint));
-        csend(ip, pc, 1+sizeof(uint));
-        struct in_addr ip_addr;
-        ip_addr.s_addr = ip;
-        printf("Replaying: %.1f kb to %s\n", (double)height / 1000, inet_ntoa(ip_addr));
-    }
-
-    //Replay blocks
-    FILE* f = fopen(CHAIN_FILE, "r");
-    if(f)
-    {
-        fseek(f, 0, SEEK_END);
-        const size_t len = ftell(f);
-
-        struct trans t;
-        for(size_t i = len - sizeof(struct trans); i > 0; i -= sizeof(struct trans))
-        {
-            fseek(f, i, SEEK_SET);
-            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
-            {
-                //Generate Packet (pc)
-                const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //lol this is always sizeof(struct trans)+1 im silly but i've done it now so..
-                char pc[MIN_LEN];
-                pc[0] = 'p'; //This is a re*P*lay
-                char* ofs = pc + 1;
-                memcpy(ofs, &t.uid, sizeof(uint64_t));
-                ofs += sizeof(uint64_t);
-                memcpy(ofs, t.from.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, t.to.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, &t.amount, sizeof(mval));
-                ofs += sizeof(mval);
-                memcpy(ofs, t.owner.key, ECC_CURVE*2);
-                csend(ip, pc, len);
-
-                //333 = 3k, 211 byte packets / 618kb a second
-                #if MASTER_NODE == 1
-                    usleep(25000); //
-                #else
-                    usleep(200000); //
-                #endif
-            }
-            else
-            {
-                printf("There was a problem, blocks.dat looks corrupt.\n");
-                fclose(f);
-                return;
-            }
-            
-        }
-
-        fclose(f);
-    }
-}
-void *replayBlocksRevThread(void *arg)
-{
-    sleep(3); //Offset threads--; collisions
-    chdir(getHome());
-    nice(19); //Very low priority thread
-    const uint ip = getRP();
-    if(ip == 0)
-        return 0;
-    replayBlocksRev(ip);
-    threads--;
-    for(int i = 0; i < MAX_THREADS; i++)
-        if(thread_ip[i] == ip)
-            thread_ip[i] = 0;
-}
 
 //Launch a replay thread
-void launchReplayThread(const uint32_t ip, const uint32_t bi)
+void launchReplayThread(const uint32_t ip)
 {
     thread_ip[threads] = ip;
     setRP(ip);
 
     pthread_t tid;
-    if(bi == 0)
-        pthread_create(&tid, NULL, replayBlocksThread, NULL); //Threaded not to jam up UDP relay
-    else
-        pthread_create(&tid, NULL, replayBlocksRevThread, NULL);
+    pthread_create(&tid, NULL, replayBlocksThread, NULL); //Threaded not to jam up UDP relay
     
     threads++;
 }
@@ -1625,7 +1633,7 @@ void *processThread(void *arg)
             char cmd[1024];
             sprintf(cmd, "vfc%s%s 0.001%s > /dev/null", myrewardkey, myrewardkey, myrewardkeyp);
             system(cmd);
-            aa = time(0) + 3600;
+            aa = time(0) + 3600; //every hour
         }
         
 //This code is only for the masternode to execute, in-order to distribute rewards fairly.
@@ -1676,7 +1684,7 @@ void *processThread(void *arg)
         const int i = gQue();
         if(i == -1)
         {
-            usleep(333); //Little delay if queue is empty we dont want to thrash cycles
+            usleep(3333); //Little delay if queue is empty we dont want to thrash cycles
             continue;
         }  
         
@@ -1995,6 +2003,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mReturns client version:\x1B[0m\n ./vfc version\n\n");
             printf("\x1B[33mReturns client blocks.dat size / num transactions:\x1B[0m\n ./vfc heigh\n\n");
             printf("\x1B[33mReturns the circulating supply:\x1B[0m\n ./vfc circulating\n\n");
+            printf("\x1B[33mReturns the mined supply:\x1B[0m\n ./vfc mined\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./vfc scan\x1B[0m\n\n");
             
             printf("\x1B[33mTo get started running a dedicated node, execute ./vfc on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
@@ -2005,6 +2014,12 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "circulating") == 0)
         {
             printf("%.3f\n", toDB(getCirculatingSupply()));
+            exit(0);
+        }
+
+        if(strcmp(argv[1], "mined") == 0)
+        {
+            printf("%.3f\n", toDB(getMinedSupply()));
             exit(0);
         }
 
@@ -2060,7 +2075,7 @@ int main(int argc , char *argv[])
             while(1)
             {
                 printf("\033[H\033[J");
-                if(tc >= 99)
+                if(tc >= 9)
                 {
                     tc = 0;
                     resyncBlocks('s'); //Sync from a new random peer if no data after x seconds
@@ -2566,7 +2581,7 @@ int main(int argc , char *argv[])
 
                         //If not replay to peer
                         if(cp == 1)
-                            launchReplayThread(client.sin_addr.s_addr, 0);
+                            launchReplayThread(client.sin_addr.s_addr);
                     }
 
                     //Increment Requests
@@ -2595,7 +2610,7 @@ int main(int argc , char *argv[])
 
                         //If not replay to peer
                         if(cp == 1)
-                            launchReplayThread(client.sin_addr.s_addr, qRand(0, 1));
+                            launchReplayThread(client.sin_addr.s_addr);
                     }
 
                     //Increment Requests
