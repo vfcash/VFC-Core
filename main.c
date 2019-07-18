@@ -1048,9 +1048,9 @@ void replayBlocks(const uint ip)
 
                 //333 = 3k, 211 byte packets / 618kb a second
                 #if MASTER_NODE == 1
-                    usleep(25000); //
+                    usleep(10000); //
                 #else
-                    usleep(200000); //
+                    usleep(120000); //
                 #endif
             }
             else
@@ -2829,8 +2829,8 @@ int main(int argc , char *argv[])
                 //Log Metrics
                 printf("\x1B[33mSTAT: Req/s: %ld, Peers: %u/%u, UDP Que: %u/%u, Threads %u/%u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, MAX_THREADS, err);
 
-                //Let's execute a Sync every 3*60 mins (3hr)
-                if(rsi >= 60)
+                //Let's execute a Sync every 3*3 mins = 9 mins
+                if(rsi >= 3)
                 {
                     //Reset loop
                     rsi = 0;
