@@ -854,8 +854,9 @@ int gQue()
 {
     for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
     {
-        if((tq[i].amount != 0 && time(0) - delta[i] > 2) || replay[i] == 1) //Only process transactions more than 3 second old [replays are instant]
-            return i;
+        if(tq[i].amount != 0)
+            if(time(0) - delta[i] > 2 || replay[i] == 1) //Only process transactions more than 3 second old [replays are instant]
+                return i;
     }
     return -1;
 }
@@ -1710,7 +1711,7 @@ void *processThread(void *arg)
         const int i = gQue();
         if(i == -1)
         {
-            usleep(333); //Little delay if queue is empty we dont want to thrash cycles
+            usleep(3333); //Little delay if queue is empty we dont want to thrash cycles
             continue;
         }  
         
@@ -1812,6 +1813,15 @@ int main(int argc , char *argv[])
 
     //set local working directory
     chdir(getHome());
+
+    //Init arrays
+    memset(&thread_ip, 0, sizeof(uint)*MAX_THREADS);
+    memset(&tq, 0, sizeof(struct trans)*MAX_TRANS_QUEUE);
+    memset(&ip, 0, sizeof(uint)*MAX_TRANS_QUEUE);
+    memset(&ipo, 0, sizeof(uint)*MAX_TRANS_QUEUE);
+    memset(&replay, 0, sizeof(unsigned char)*MAX_TRANS_QUEUE);
+    memset(&delta, 0, sizeof(time_t)*MAX_TRANS_QUEUE);
+    // < Peer arrays do not need initilisation >
 
     //Debug
     //char cwd[MIN_LEN];
@@ -2577,7 +2587,7 @@ int main(int argc , char *argv[])
                 //Process Transaction (Threaded (using processThread()) not to jam up UDP relay)
                 if(aQue(&t, client.sin_addr.s_addr, origin, 1) == 1)
                 {
-                    //printf("Q: %u %lu %u\n", t.amount, t.uid, gQueSize());
+                    printf("Q: %u %lu %u\n", t.amount, t.uid, gQueSize());
 
                     //Broadcast to peers
                     origin = client.sin_addr.s_addr;
