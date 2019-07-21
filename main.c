@@ -121,21 +121,22 @@ const char master_ip[] = "68.183.49.225";
     time_t nextreward = 0;
     uint rewardindex = 0;
     uint rewardpaid = 1;
-    #define MAX_THREADS 256 //[1] //We go high-load for the master server
+    #define MAX_THREADS 256 //We go high-load for the master server
 #else
-    #define MAX_THREADS 6 //[1] // Maximum replay threads this node can spawn
+    #define MAX_THREADS 6 // Maximum replay threads this node can spawn
 #endif
 char mid[8];                        //Clients private identification code used in pings etc.
 ulong err = 0;                      //Global error count
 uint replay_allow = 0;              //Is the local client allowing a replay at this time (0-1)
 uint replay_height = 0;             //Block Height of current peer authorized to receive a replay from
 uint64_t balance_accumulator = 0;   //For accumulating the highest network balance of a requested address
-uint threads = 0;                   //number of replay threads
-uint thread_ip[MAX_THREADS];        //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
 uint nthreads = 0;                  //number of mining threads
 char myrewardkey[MIN_LEN];          //client reward addr public key
 char myrewardkeyp[MIN_LEN];         //client reward addr private key
 uint8_t genesis_pub[ECC_CURVE+1];   //genesis address public key
+uint thread_ip[MAX_THREADS];        //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
+uint threads = 0;                   //number of replay threads
+pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -174,7 +175,11 @@ double gNa(const vec3* a, const vec3* b)
     const double dot = ((double)(a->x) * (double)(b->x)) + ((double)(a->y) * (double)(b->y)) + (double)((a->z) * (double)(b->z)); //dot product of both vectors
     const double m1 = sqrt((double)((a->x) * (double)(a->x)) + (double)((a->y) * (double)(a->y)) + (double)((a->z) * (double)(a->z))); //magnitude
     const double m2 = sqrt((double)((b->x) * (double)(b->x)) + (double)((b->y) * (double)(b->y)) + (double)((b->z) * (double)(b->z))); //magnitude
-    return dot/(m1*m2);
+
+    if((m1 == 0 && m2 == 0) || dot == 0)
+        return 1; //returns angle that is too wide, exclusion / (aka/equiv) ret0
+
+    return dot / (m1*m2); //Should never divide by 0
 }
 
 //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
@@ -237,8 +242,11 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint s)
     if(a1 < min && a2 < min && a3 < min && a4 < min)
     {
         //Calculate and return value of address mined
-        const double ra = (a1+a2+a3+a4)/4;
-        const double mn = (1/min);
+        const double a = (a1+a2+a3+a4);
+        if(a <= 0)
+            return 0; //not want zero address.
+        const double ra = a/4;
+        const double mn = 0.041666667; //(1/min);
         const uint64_t rv = (uint64_t)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
 
         //Illustrate the hit
@@ -603,10 +611,10 @@ void triBroadcast(const char* dat, const size_t len)
     }
 }
 
-void resyncBlocks(const char type)
+void resyncBlocks()
 {
     //Resync from Master
-    csend(peers[0], &type, 1);
+    csend(peers[0], "r", 1);
 
     //Also Sync from a Random Node (Sync is called fairly often so eventually the random distribution across nodes will fair well)
     replay_allow = 0;
@@ -635,7 +643,7 @@ void resyncBlocks(const char type)
 
     //Alright ask this peer to replay to us too
     if(num_peers > 1 && replay_allow != 0)
-        csend(replay_allow, &type, 1);
+        csend(replay_allow, "r", 1);
 
     //Set the file memory
     struct in_addr ip_addr;
@@ -1009,7 +1017,7 @@ void replayBlocks(const uint ip)
         csend(ip, pc, 1+sizeof(uint));
         struct in_addr ip_addr;
         ip_addr.s_addr = ip;
-        printf("Replaying: %.1f kb to %s\n", (double)(sizeof(struct trans)*REPLAY_SIZE) / 1000, inet_ntoa(ip_addr));
+        printf("Replaying: %.1f kb to %s\n", (double) ( (sizeof(struct trans)*REPLAY_SIZE) + (sizeof(struct trans)*3333)) / 1000, inet_ntoa(ip_addr));
     }
 
     //Replay blocks
@@ -1023,7 +1031,7 @@ void replayBlocks(const uint ip)
         //  Always send your most recent graph-ends first
         // *
 
-        size_t end = len-(333*sizeof(struct trans)); //top 333 transactions
+        size_t end = len-(3333*sizeof(struct trans)); //top 333 transactions
         struct trans t;
         for(size_t i = len-sizeof(struct trans); i > end; i -= sizeof(struct trans))
         {
@@ -1048,7 +1056,7 @@ void replayBlocks(const uint ip)
 
                 //333 = 3k, 211 byte packets / 618kb a second
                 #if MASTER_NODE == 1
-                    usleep(10000); //
+                    usleep(1000); //
                 #else
                     usleep(120000); //
                 #endif
@@ -1118,24 +1126,36 @@ void *replayBlocksThread(void *arg)
     const uint ip = getRP();
     if(ip == 0)
         return 0;
+        
     replayBlocks(ip);
+
+    pthread_mutex_lock(&mutex1);
     threads--;
     for(int i = 0; i < MAX_THREADS; i++)
         if(thread_ip[i] == ip)
             thread_ip[i] = 0;
+    pthread_mutex_unlock(&mutex1);
 }
 
 
 //Launch a replay thread
 void launchReplayThread(const uint32_t ip)
 {
-    thread_ip[threads] = ip;
-    setRP(ip);
+    uint cp = 1;
+    for(int i = 0; i < MAX_THREADS; i++)
+        if(thread_ip[i] == ip)
+            cp = 0;
 
-    pthread_t tid;
-    pthread_create(&tid, NULL, replayBlocksThread, NULL); //Threaded not to jam up UDP relay
-    
-    threads++;
+    if(cp == 1)
+    {
+        setRP(ip);
+
+        pthread_t tid;
+        pthread_create(&tid, NULL, replayBlocksThread, NULL);
+
+        thread_ip[threads] = ip;
+        threads++;
+    }
 }
 
 //dump all trans
@@ -2068,7 +2088,7 @@ int main(int argc , char *argv[])
         {
             setMasterNode();
             loadmem();
-            resyncBlocks('s');
+            resyncBlocks();
             
             __off_t ls = 0;
             uint tc = 0;
@@ -2078,7 +2098,7 @@ int main(int argc , char *argv[])
                 if(tc >= 9)
                 {
                     tc = 0;
-                    resyncBlocks('s'); //Sync from a new random peer if no data after x seconds
+                    resyncBlocks(); //Sync from a new random peer if no data after x seconds
                 }
                 struct stat st;
                 stat(CHAIN_FILE, &st);
@@ -2119,7 +2139,7 @@ int main(int argc , char *argv[])
             makGenesis(); //Erases chain and resets it for a full resync
             setMasterNode();
             loadmem();
-            resyncBlocks('r');
+            resyncBlocks();
             FILE* f = fopen(".vfc/rp.mem", "w");
             if(f)
             {
@@ -2366,7 +2386,7 @@ int main(int argc , char *argv[])
         }
 
     //Get balance..
-    const uint64_t bal0 = getBalanceLocal(&t.from);
+    const int64_t bal0 = getBalanceLocal(&t.from);
 
         //UID Based on timestamp & signature
         time_t ltime = time(NULL);
@@ -2417,7 +2437,7 @@ int main(int argc , char *argv[])
 
     //Get balance again..
     sleep(6);
-    const uint64_t bal1 = getBalanceLocal(&t.from);
+    const int64_t bal1 = getBalanceLocal(&t.from);
     setlocale(LC_NUMERIC, "");
     if(bal0-bal1 <= 0)
         printf("\033[1m\x1B[31mTransaction Failed. (If you have not got the full blockchain, it may have succeeded)\x1B[0m\033[0m\n\n");
@@ -2433,6 +2453,13 @@ int main(int argc , char *argv[])
     {
         //Looks like some unknown command was executed.
         printf("Command not recognised.\n");
+        exit(0);
+    }
+
+    //Don't run a node twice
+    if(isNodeRunning() == 1)
+    {
+        printf("\033[1m\x1B[31mThe VFC node is already running.\x1B[0m\033[0m\n\n");
         exit(0);
     }
 
@@ -2453,7 +2480,7 @@ int main(int argc , char *argv[])
     pthread_create(&tid, NULL, processThread, NULL);
 	
     //Sync Blocks
-    resyncBlocks('s');
+    resyncBlocks();
      
     //Loop, until sigterm
     while(1)
@@ -2566,53 +2593,9 @@ int main(int argc , char *argv[])
                 //Is this peer even registered? if not, suspect foul play, not part of verified network.
                 if(isPeer(client.sin_addr.s_addr) == 1)
                 {
-                    //Max threads limit; reset every x time period
-                    if(threads < MAX_THREADS)
-                    {
-                        //Check that this IP is not currently being replayed to
-                        uint cp = 1;
-                        for(int i = 0; i < MAX_THREADS; i++)
-                        {
-                            if(thread_ip[i] == client.sin_addr.s_addr)
-                            {
-                                cp = 0;
-                            }
-                        }
-
-                        //If not replay to peer
-                        if(cp == 1)
-                            launchReplayThread(client.sin_addr.s_addr);
-                    }
-
-                    //Increment Requests
-                    reqs++;
-                }
-            }
-
-            //Request to replay all my blocks? (sync)
-            else if(rb[0] == 's' && read_size == 1)
-            {
-                //Is this peer even registered? if not, suspect foul play, not part of verified network.
-                if(isPeer(client.sin_addr.s_addr) == 1)
-                {
-                    //Max threads limit; reset every x time period
-                    if(threads < MAX_THREADS)
-                    {
-                        //Check that this IP is not currently being replayed to
-                        uint cp = 1;
-                        for(int i = 0; i < MAX_THREADS; i++)
-                        {
-                            if(thread_ip[i] == client.sin_addr.s_addr)
-                            {
-                                cp = 0;
-                            }
-                        }
-
-                        //If not replay to peer
-                        if(cp == 1)
-                            launchReplayThread(client.sin_addr.s_addr);
-                    }
-
+                    //Launch replay
+                    launchReplayThread(client.sin_addr.s_addr);
+                    
                     //Increment Requests
                     reqs++;
                 }
@@ -2827,7 +2810,7 @@ int main(int argc , char *argv[])
             if(st < time(0))
             {
                 //Log Metrics
-                printf("\x1B[33mSTAT: Req/s: %ld, Peers: %u/%u, UDP Que: %u/%u, Threads %u/%u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, MAX_THREADS, err);
+                printf("\x1B[33mSTAT: Req/s: %ld, Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, MAX_THREADS, err);
 
                 //Let's execute a Sync every 3*3 mins = 9 mins
                 if(rsi >= 3)
@@ -2836,7 +2819,7 @@ int main(int argc , char *argv[])
                     rsi = 0;
                     
                     //Request a resync
-                    resyncBlocks('s');
+                    resyncBlocks();
                 }
 
                 //Prep next loop
