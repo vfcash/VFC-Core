@@ -2587,7 +2587,7 @@ int main(int argc , char *argv[])
                 //Process Transaction (Threaded (using processThread()) not to jam up UDP relay)
                 if(aQue(&t, client.sin_addr.s_addr, origin, 1) == 1)
                 {
-                    printf("Q: %u %lu %u\n", t.amount, t.uid, gQueSize());
+                    //printf("Q: %u %lu %u\n", t.amount, t.uid, gQueSize());
 
                     //Broadcast to peers
                     origin = client.sin_addr.s_addr;
