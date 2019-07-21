@@ -782,6 +782,7 @@ uint addPeer(const uint ip)
 
     aQue() - Add Transaction to Queue
     gQue() - Return pointer to fist valid transaction
+    gQueSize() - Number of items in Queue
 
 */
 
@@ -851,7 +852,7 @@ int gQue()
 {
     for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
     {
-        if(tq[i].amount != 0 && time(0) - delta[i] > 2) //Only process transactions more than 3 second old
+        if((tq[i].amount != 0 && time(0) - delta[i] > 2) || replay[i] == 1) //Only process transactions more than 3 second old [replays are instant]
             return i;
     }
     return -1;
