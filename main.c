@@ -246,7 +246,7 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint s)
         if(a <= 0)
             return 0; //not want zero address.
         const double ra = a/4;
-        const double mn = 0.041666667; //(1/min);
+        const double mn = 4.166666667; //(1/min);
         const uint64_t rv = (uint64_t)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
 
         //Illustrate the hit
