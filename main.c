@@ -472,7 +472,7 @@ uint countLivingPeers()
     for(uint i = 0; i < num_peers; i++)
     {
         const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS);
-        if(pd <= PING_INTERVAL*2)
+        if(pd <= PING_INTERVAL*4)
             c++;
     }
     return c;
@@ -589,7 +589,7 @@ void triBroadcast(const char* dat, const size_t len)
         do
         {
             const uint pd = time(0)-(peer_timeouts[si]-MAX_PEER_EXPIRE_SECONDS);
-            if(pd <= PING_INTERVAL*2)
+            if(pd <= PING_INTERVAL*4)
                 break;
             si++;
         }
@@ -613,8 +613,10 @@ void triBroadcast(const char* dat, const size_t len)
 
 void resyncBlocks()
 {
+#if MASTER_NODE == 0
     //Resync from Master
     csend(peers[0], "r", 1);
+#endif
 
     //Also Sync from a Random Node (Sync is called fairly often so eventually the random distribution across nodes will fair well)
     replay_allow = 0;
@@ -625,7 +627,7 @@ void resyncBlocks()
         do // find next living peer from offset
         {
             const uint pd = time(0)-(peer_timeouts[si]-MAX_PEER_EXPIRE_SECONDS); //ping delta
-            if(pd <= PING_INTERVAL*2)
+            if(pd <= PING_INTERVAL*4)
                 break;
             si++;
         }
@@ -1686,7 +1688,7 @@ void *processThread(void *arg)
             {
                 //Is it ping worthy of a payment?
                 uint dt = (time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS)); //Prevent negative numbers, causes wrap
-                while(dt > PING_INTERVAL*2)
+                while(dt > PING_INTERVAL*4)
                 {
                     rewardindex++;
                     if(rewardindex >= num_peers)
@@ -1708,7 +1710,7 @@ void *processThread(void *arg)
         const int i = gQue();
         if(i == -1)
         {
-            usleep(3333); //Little delay if queue is empty we dont want to thrash cycles
+            usleep(333); //Little delay if queue is empty we dont want to thrash cycles
             continue;
         }  
         
@@ -2264,7 +2266,7 @@ int main(int argc , char *argv[])
                 struct in_addr ip_addr;
                 ip_addr.s_addr = peers[i];
                 const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS); //ping delta
-                if(pd <= PING_INTERVAL*2)
+                if(pd <= PING_INTERVAL*4)
                 {
                     printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
                     ac++;
@@ -2278,7 +2280,7 @@ int main(int argc , char *argv[])
             //     struct in_addr ip_addr;
             //     ip_addr.s_addr = peers[i];
             //     const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS); //ping delta
-            //     if(pd > PING_INTERVAL*2)
+            //     if(pd > PING_INTERVAL*4)
             //     {
             //         printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
             //         dc++;
@@ -2575,6 +2577,8 @@ int main(int argc , char *argv[])
                 //Process Transaction (Threaded (using processThread()) not to jam up UDP relay)
                 if(aQue(&t, client.sin_addr.s_addr, origin, 1) == 1)
                 {
+                    //printf("Q: %u %lu %u\n", t.amount, t.uid, gQueSize());
+
                     //Broadcast to peers
                     origin = client.sin_addr.s_addr;
                     char pc[MIN_LEN];
