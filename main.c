@@ -1960,7 +1960,7 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
-        if(strcmp(argv[1], "subg") == 0)
+        if(strcmp(argv[1], "issub") == 0)
         {
             //Get Public Key
             uint8_t p_publicKey[ECC_BYTES+1];
@@ -1973,17 +1973,6 @@ int main(int argc , char *argv[])
                 printf("\n\x1B[33msubG: \x1B[0m %lu\n\n\x1B[0m", v);
             else
                 printf("\033[1m\x1B[31mThis is not a subGenesis (subG) Address.\x1B[0m\033[0m\n");
-            
-            exit(0);
-        }
-
-        if(strcmp(argv[1], "issub") == 0)
-        {
-            //Get Private Key
-            uint8_t p_pub[ECC_BYTES+1];
-            size_t len = ECC_CURVE+1;
-            b58tobin(p_pub, &len, argv[2], strlen(argv[2]));
-            isSubGenesisAddress(p_pub, 0);
             
             exit(0);
         }
@@ -2041,7 +2030,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mReturns client blocks.dat size / num transactions:\x1B[0m\n ./vfc heigh\n\n");
             printf("\x1B[33mReturns the circulating supply:\x1B[0m\n ./vfc circulating\n\n");
             printf("\x1B[33mReturns the mined supply:\x1B[0m\n ./vfc mined\n\n");
-            printf("\x1B[33mCheck's if supplied address is subG, if so returns value of subG address:\x1B[0m\n ./vfc subg <public key>\n\n");
+            printf("\x1B[33mCheck's if supplied address is subG, if so returns value of subG address:\x1B[0m\n ./vfc issub <public key>\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./vfc scan\x1B[0m\n\n");
             
             printf("\x1B[33mTo get started running a dedicated node, execute ./vfc on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
