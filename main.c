@@ -1141,6 +1141,9 @@ void *replayBlocksThread(void *arg)
 //Launch a replay thread
 void launchReplayThread(const uint32_t ip)
 {
+    if(threads >= MAX_THREADS)
+        return;
+
     uint cp = 1;
     for(int i = 0; i < MAX_THREADS; i++)
         if(thread_ip[i] == ip)
