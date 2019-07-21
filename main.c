@@ -472,7 +472,7 @@ uint countLivingPeers()
     for(uint i = 0; i < num_peers; i++)
     {
         const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS);
-        if(pd <= 540)
+        if(pd <= PING_INTERVAL*2)
             c++;
     }
     return c;
@@ -589,7 +589,7 @@ void triBroadcast(const char* dat, const size_t len)
         do
         {
             const uint pd = time(0)-(peer_timeouts[si]-MAX_PEER_EXPIRE_SECONDS);
-            if(pd <= 540)
+            if(pd <= PING_INTERVAL*2)
                 break;
             si++;
         }
@@ -625,7 +625,7 @@ void resyncBlocks()
         do // find next living peer from offset
         {
             const uint pd = time(0)-(peer_timeouts[si]-MAX_PEER_EXPIRE_SECONDS); //ping delta
-            if(pd <= 540)
+            if(pd <= PING_INTERVAL*2)
                 break;
             si++;
         }
@@ -1637,7 +1637,7 @@ void *processThread(void *arg)
 {
     chdir(getHome());
     time_t nr = time(0);
-    time_t pr = time(0) + PING_INTERVAL;
+    time_t pr = time(0);
     time_t aa = time(0);
     while(1)
     {
@@ -1686,7 +1686,7 @@ void *processThread(void *arg)
             {
                 //Is it ping worthy of a payment?
                 uint dt = (time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS)); //Prevent negative numbers, causes wrap
-                while(dt > 540)
+                while(dt > PING_INTERVAL*2)
                 {
                     rewardindex++;
                     if(rewardindex >= num_peers)
@@ -2264,7 +2264,7 @@ int main(int argc , char *argv[])
                 struct in_addr ip_addr;
                 ip_addr.s_addr = peers[i];
                 const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS); //ping delta
-                if(pd <= 540)
+                if(pd <= PING_INTERVAL*2)
                 {
                     printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
                     ac++;
@@ -2278,7 +2278,7 @@ int main(int argc , char *argv[])
             //     struct in_addr ip_addr;
             //     ip_addr.s_addr = peers[i];
             //     const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS); //ping delta
-            //     if(pd > 540)
+            //     if(pd > PING_INTERVAL*2)
             //     {
             //         printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
             //         dc++;
