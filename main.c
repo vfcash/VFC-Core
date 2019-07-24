@@ -1060,7 +1060,7 @@ void replayBlocks(const uint ip)
 
                 //333 = 3k, 211 byte packets / 618kb a second
                 #if MASTER_NODE == 1
-                    usleep(1000); //
+                    usleep(10000); //
                 #else
                     usleep(120000); //
                 #endif
@@ -1125,14 +1125,24 @@ void replayBlocks(const uint ip)
 }
 void *replayBlocksThread(void *arg)
 {
-    chdir(getHome());
-    nice(19); //Very low priority thread
+    //Is thread needed?
     const uint ip = getRP();
     if(ip == 0)
+    {
+        pthread_mutex_lock(&mutex1);
+        threads--;
+        pthread_mutex_unlock(&mutex1);
         return 0;
-        
+    }
+
+    //Prep the thread
+    chdir(getHome());
+    nice(19); //Very low priority thread
+
+    //Replay the blocks
     replayBlocks(ip);
 
+    //End the thread
     pthread_mutex_lock(&mutex1);
     threads--;
     for(int i = 0; i < MAX_THREADS; i++)
@@ -1145,23 +1155,26 @@ void *replayBlocksThread(void *arg)
 //Launch a replay thread
 void launchReplayThread(const uint32_t ip)
 {
+    //Are there enough thread slots left?
     if(threads >= MAX_THREADS)
         return;
 
+    //Are we already replaying to this IP address?
     uint cp = 1;
     for(int i = 0; i < MAX_THREADS; i++)
         if(thread_ip[i] == ip)
             cp = 0;
 
+    //We're not replaying to this IP address, so let's launch a replay thread
     if(cp == 1)
     {
         setRP(ip);
 
         pthread_t tid;
-        pthread_create(&tid, NULL, replayBlocksThread, NULL);
+        if(pthread_create(&tid, NULL, replayBlocksThread, NULL) == 0)
+            threads++;
 
         thread_ip[threads] = ip;
-        threads++;
     }
 }
 
@@ -1397,7 +1410,15 @@ uint64_t getBalance(addr* from)
 //Calculate if an address has the value required to make a transaction of x amount.
 uint hasbalance(const uint64_t uid, addr* from, mval amount)
 {
+    //static time_t lsgc = time(0); //Next subG claim
     int64_t rv = isSubGenesisAddress(from->key, 1);
+    // if(rv != 0)
+    // {
+    //     if(time(0) < lsgc)
+    //         return 0; //Do not process
+    //     else
+    //         lsgc = time(0) + 30; //Process and set wait for next claim
+    // }
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
