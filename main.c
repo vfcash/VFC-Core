@@ -1749,7 +1749,7 @@ void *processThread(void *arg)
 
             //Construct a non-repeatable transaction and tell our peers
             const uint32_t origin = ip[i];
-            const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //Again it's basically sizeof(struct trans)+uint64_t+1
+            const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
             char pc[MIN_LEN];
             pc[0] = 't';
             char* ofs = pc + 1;
@@ -2053,6 +2053,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mTo check received transactions from an address use:\x1B[0m\n ./vfc in <address public key>\n\n");
             printf("\x1B[33mTo make a transaction use:\x1B[0m\n ./vfc <sender public key> <reciever public key> <amount> <sender private key>\x1B[0m\n\n");
             printf("\x1B[33mTo manually trigger blockchain resync use:\x1B[0m\n ./vfc resync\x1B[0m\n\n");
+            printf("\x1B[33mTo manually trigger blockchain resync only from the master use:\x1B[0m\n ./vfc master_resync\x1B[0m\n\n");
             printf("\x1B[33mTo manually trigger blockchain sync use:\x1B[0m\n ./vfc sync\x1B[0m\n\n");
             printf("\x1B[33mCPU mining of VFC:\x1B[0m\n ./vfc mine <num-threads>\n\n");
             printf("\x1B[33mTo create a new Address, Public / Private Key-Pair:\x1B[0m\n ./vfc new\x1B[0m\n\n");
@@ -2174,6 +2175,15 @@ int main(int argc , char *argv[])
                 sleep(1);
             }
 
+            exit(0);
+        }
+
+        //master_resync
+        if(strcmp(argv[1], "master_resync") == 0)
+        {
+            remove("blocks.dat");
+            system("wget -O.vfc/blocks.dat https://vfcash.uk/sync");
+            printf("\x1B[33mResync from master complete.\x1B[0m\n\n");
             exit(0);
         }
 
@@ -2325,8 +2335,8 @@ int main(int argc , char *argv[])
     //Let's make sure we're on the correct chain
     if(verifyChain(CHAIN_FILE) == 0)
     {
-        printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./vfc resync\x1B[0m\033[0m\n\n");
-        system("vfc resync");
+        printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./vfc resync or for a faster resync try ./vfc master_resync\x1B[0m\033[0m\n\n");
+        system("vfc master_resync");
         exit(0);
     }
 
