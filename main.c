@@ -137,6 +137,7 @@ uint8_t genesis_pub[ECC_CURVE+1];   //genesis address public key
 uint thread_ip[MAX_THREADS];        //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
 uint threads = 0;                   //number of replay threads
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -938,7 +939,7 @@ uint64_t getCirculatingSupply()
         ift = (uint64_t)st.st_size / 133;
     ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
 
-    uint64_t rv = 4294967295 + ift; //Original genesis address value + tax
+    uint64_t rv = ((4294967295 + ift) / 100) * 20; //Original genesis address value + tax
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
@@ -975,7 +976,7 @@ uint64_t getCirculatingSupply()
 }
 
 //Replay thread queue
-uint32_t replay_peers[MAX_PEERS];
+uint32_t replay_peers[MAX_THREADS];
 
 //Get replay peer
 uint32_t getRP()
@@ -1126,7 +1127,9 @@ void replayBlocks(const uint ip)
 void *replayBlocksThread(void *arg)
 {
     //Is thread needed?
-    const uint ip = getRP();
+    pthread_mutex_lock(&mutex2);
+    const uint ip = getRP(); //This does contain a write
+    pthread_mutex_unlock(&mutex2);
     if(ip == 0)
     {
         pthread_mutex_lock(&mutex1);
@@ -1161,7 +1164,7 @@ void launchReplayThread(const uint32_t ip)
 
     //Are we already replaying to this IP address?
     uint cp = 1;
-    for(int i = 0; i < MAX_THREADS; i++)
+    for(uint i = 0; i < MAX_THREADS; i++)
         if(thread_ip[i] == ip)
             cp = 0;
 
