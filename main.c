@@ -1177,9 +1177,10 @@ void launchReplayThread(const uint32_t ip)
 
         pthread_t tid;
         if(pthread_create(&tid, NULL, replayBlocksThread, NULL) == 0)
+        {
+            thread_ip[threads] = ip;
             threads++;
-
-        thread_ip[threads] = ip;
+        }
     }
 }
 
