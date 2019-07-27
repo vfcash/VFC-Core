@@ -65,8 +65,8 @@
 #include <pwd.h>
 #include <sys/sysinfo.h> //Cpu cores
 #include <sys/stat.h> //mkdir
-#include <fcntl.h> 
-#include <time.h> //time()
+#include <fcntl.h> //open
+#include <time.h> //time
 #include <sys/mman.h> //mmap
 #include <unistd.h> //sleep
 #include <sys/utsname.h> //uname
@@ -1363,7 +1363,7 @@ uint64_t getBalanceLocal(addr* from)
 
                 if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
                     rv += t.amount;
-                if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
                     rv -= t.amount;
             }
 
@@ -1411,15 +1411,7 @@ uint64_t getBalance(addr* from)
 //Calculate if an address has the value required to make a transaction of x amount.
 uint hasbalance(const uint64_t uid, addr* from, mval amount)
 {
-    //static time_t lsgc = time(0); //Next subG claim
     int64_t rv = isSubGenesisAddress(from->key, 1);
-    // if(rv != 0)
-    // {
-    //     if(time(0) < lsgc)
-    //         return 0; //Do not process
-    //     else
-    //         lsgc = time(0) + 30; //Process and set wait for next claim
-    // }
     int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
@@ -1437,7 +1429,7 @@ uint hasbalance(const uint64_t uid, addr* from, mval amount)
 
                 if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
                     rv += t.amount;
-                if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
                     rv -= t.amount;
             }
 
