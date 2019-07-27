@@ -65,7 +65,9 @@
 #include <pwd.h>
 #include <sys/sysinfo.h> //Cpu cores
 #include <sys/stat.h> //mkdir
+#include <fcntl.h> 
 #include <time.h> //time()
+#include <sys/mman.h> //mmap
 #include <unistd.h> //sleep
 #include <sys/utsname.h> //uname
 #include <locale.h> //setlocale
@@ -1344,33 +1346,29 @@ uint64_t getBalanceLocal(addr* from)
 {
     //Get local Balance
     int64_t rv = isSubGenesisAddress(from->key, 1);
-    FILE* f = fopen(CHAIN_FILE, "r");
+    int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
-        fseek(f, 0, SEEK_END);
-        const size_t len = ftell(f);
+        const size_t len = lseek(f, 0, SEEK_END);
 
-        struct trans t;
-        for(size_t i = 0; i < len; i += sizeof(struct trans))
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != NULL)
         {
-            fseek(f, i, SEEK_SET);
-            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+            close(f);
+
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
+                memcpy(&t, m+i, sizeof(struct trans));
+
                 if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
                     rv += t.amount;
                 if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
                     rv -= t.amount;
             }
-            else
-            {
-                printf("There was a problem, blocks.dat looks corrupt.\n");
-                fclose(f);
-                return rv;
-            }
-            
-        }
 
-        fclose(f);
+            munmap(m, len);
+        }
     }
     if(rv < 0)
         return 0;
@@ -1422,39 +1420,29 @@ uint hasbalance(const uint64_t uid, addr* from, mval amount)
     //     else
     //         lsgc = time(0) + 30; //Process and set wait for next claim
     // }
-    FILE* f = fopen(CHAIN_FILE, "r");
+    int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
-        fseek(f, 0, SEEK_END);
-        const size_t len = ftell(f);
+        const size_t len = lseek(f, 0, SEEK_END);
 
-        struct trans t;
-        for(size_t i = 0; i < len; i += sizeof(struct trans))
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
         {
-            fseek(f, i, SEEK_SET);
-            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
-            {
-                if(t.uid == uid)
-                {
-                    fclose(f);
-                    return ERROR_UIDEXIST;
-                }
+            close(f);
 
-                if(memcmp(&t.to, from, ECC_CURVE+1) == 0)
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
+            {
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
                     rv += t.amount;
-                if(memcmp(&t.from, from, ECC_CURVE+1) == 0)
+                if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
                     rv -= t.amount;
             }
-            else
-            {
-                printf("There was a problem, blocks.dat looks corrupt.\n");
-                fclose(f);
-                return 0;
-            }
-            
-        }
 
-        fclose(f);
+            munmap(m, len);
+        }
     }
     if(rv >= amount)
         return 1;
