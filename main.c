@@ -1162,32 +1162,25 @@ void launchReplayThread(const uint32_t ip)
     if(threads >= MAX_THREADS)
         return;
 
-    printf("L1 - ");
-
     //Are we already replaying to this IP address?
     uint cp = 1;
     for(uint i = 0; i < MAX_THREADS; i++)
         if(thread_ip[i] == ip)
             cp = 0;
 
-    printf("L2 - ");
-
     //We're not replaying to this IP address, so let's launch a replay thread
     if(cp == 1)
     {
         setRP(ip);
-        printf("L3 - ");
 
         pthread_t tid;
         if(pthread_create(&tid, NULL, replayBlocksThread, NULL) == 0)
         {
-            printf("L4 - ");
+            pthread_detach(tid);
             pthread_mutex_lock(&mutex1);
-            printf("L5 - ");
             thread_ip[threads] = ip;
             threads++;
             pthread_mutex_unlock(&mutex1);
-            printf("L6 - ");
         }
     }
 }
@@ -1361,7 +1354,7 @@ uint64_t getBalanceLocal(addr* from)
         const size_t len = lseek(f, 0, SEEK_END);
 
         unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-        if(m != NULL)
+        if(m != MAP_FAILED)
         {
             close(f);
 
@@ -1418,7 +1411,7 @@ uint64_t getBalance(addr* from)
 }
 
 //Calculate if an address has the value required to make a transaction of x amount.
-uint hasbalance(const uint64_t uid, addr* from, mval amount)
+int hasbalance(const uint64_t uid, addr* from, mval amount)
 {
     int64_t rv = isSubGenesisAddress(from->key, 1);
     int f = open(CHAIN_FILE, O_RDONLY);
@@ -1456,6 +1449,125 @@ uint hasbalance(const uint64_t uid, addr* from, mval amount)
         return 0;
 }
 
+//This is a quick hackup for a function that scans through the whole local chain, and removes duplicates
+//then saving the new chain to .vfc/cblocks.dat
+int chasbalance(const uint64_t uid, addr* from, mval amount)
+{
+    int64_t rv = isSubGenesisAddress(from->key, 1);
+    int f = open(".vfc/cblocks.dat", O_RDONLY);
+    if(f)
+    {
+        const size_t len = lseek(f, 0, SEEK_END);
+
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
+        {
+            close(f);
+
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
+            {
+                if(t.uid == uid)
+                {
+                    close(f);
+                    return ERROR_UIDEXIST;
+                }
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
+                    rv += t.amount;
+                else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                    rv -= t.amount;
+            }
+
+            munmap(m, len);
+        }
+    }
+    if(rv >= amount)
+        return 1;
+    else
+        return 0;
+}
+void newClean()
+{
+    uint8_t gpub[ECC_CURVE+1];
+    size_t len = ECC_CURVE+1;
+    b58tobin(gpub, &len, "foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ", 44);
+    struct trans t;
+    memset(&t, 0, sizeof(struct trans));
+    t.amount = 0xFFFFFFFF;
+    memcpy(&t.to.key, gpub, ECC_CURVE+1);
+    FILE* f = fopen(".vfc/cblocks.dat", "w");
+    if(f)
+    {
+        fwrite(&t, sizeof(struct trans), 1, f);
+        fclose(f);
+    }
+}
+void cleanChain()
+{
+    int f = open(CHAIN_FILE, O_RDONLY);
+    if(f)
+    {
+        const size_t len = lseek(f, 0, SEEK_END);
+
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
+        {
+            close(f);
+
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
+            {
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                //Create trans struct
+                struct trans nt;
+                memset(&nt, 0, sizeof(struct trans));
+                nt.uid = t.uid;
+                memcpy(nt.from.key, t.from.key, ECC_CURVE+1);
+                memcpy(nt.to.key, t.to.key, ECC_CURVE+1);
+                nt.amount = t.amount;
+
+                uint8_t thash[ECC_CURVE];
+                makHash(thash, &nt);
+                if(ecdsa_verify(nt.from.key, thash, t.owner.key) == 0)
+                {
+                    //printf("rejected: no verification\n");
+                    continue;
+                }
+
+                memcpy(nt.owner.key, t.owner.key, ECC_CURVE*2);
+                
+                const int hbr = chasbalance(t.uid, &t.from, t.amount);
+                if(hbr == 0)
+                {
+                    //printf("rejected: no balance\n");
+                    continue;
+                }
+                else if(hbr < 0)
+                {
+                    //printf("rejected: uid exists\n");
+                    continue;
+                }
+
+                //Ok let's write the transaction to chain
+                if(memcmp(t.from.key, t.to.key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
+                {
+                    FILE* f = fopen(".vfc/cblocks.dat", "a");
+                    if(f)
+                    {
+                        fwrite(&t, sizeof(struct trans), 1, f);
+                        fclose(f);
+                    }
+                }
+            }
+
+            munmap(m, len);
+        }
+    }
+}
+
 //Execute Transaction
 int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* owner)
 {
@@ -1481,7 +1593,7 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     if(hbr == 0)
         return ERROR_NOFUNDS;
     else if(hbr < 0)
-        return hbr;
+        return hbr; //it's an error code
 
     //Ok let's write the transaction to chain
     if(memcmp(from->key, to->key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
@@ -2125,6 +2237,24 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
+        //clean
+        if(strcmp(argv[1], "newclean") == 0)
+        {
+            newClean();
+            printf("New clean chain ready .vfc/cblocks.dat\n");
+            exit(0);
+        }
+        if(strcmp(argv[1], "clean") == 0)
+        {
+            while(1)
+            {
+                cleanChain();
+                timestamp();
+                printf("chain cleaned to .vfc/cblocks.dat\n");
+            }
+            exit(0);
+        }
+
         //sync
         if(strcmp(argv[1], "sync") == 0)
         {
@@ -2643,11 +2773,9 @@ int main(int argc , char *argv[])
             //Request to replay all my blocks? (resync)
             else if(rb[0] == 'r' && read_size == 1)
             {
-                printf("Replay Requested: %u\n", client.sin_addr.s_addr);
                 //Is this peer even registered? if not, suspect foul play, not part of verified network.
                 if(isPeer(client.sin_addr.s_addr) == 1)
                 {
-                    printf("It's a peer should replay now: %u\n", client.sin_addr.s_addr);
                     //Launch replay
                     launchReplayThread(client.sin_addr.s_addr);
                     
