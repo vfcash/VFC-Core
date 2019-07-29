@@ -139,7 +139,6 @@ uint8_t genesis_pub[ECC_CURVE+1];   //genesis address public key
 uint thread_ip[MAX_THREADS];        //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
 uint threads = 0;                   //number of replay threads
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1129,16 +1128,15 @@ void replayBlocks(const uint ip)
 void *replayBlocksThread(void *arg)
 {
     //Is thread needed?
-    pthread_mutex_lock(&mutex2);
-    const uint ip = getRP(); //This does contain a write
-    pthread_mutex_unlock(&mutex2);
+    pthread_mutex_lock(&mutex1);
+    const uint ip = getRP(); //This contains a write
     if(ip == 0)
     {
-        pthread_mutex_lock(&mutex1);
         threads--;
         pthread_mutex_unlock(&mutex1);
         return 0;
     }
+    pthread_mutex_unlock(&mutex1);
 
     //Prep the thread
     chdir(getHome());
@@ -1164,22 +1162,32 @@ void launchReplayThread(const uint32_t ip)
     if(threads >= MAX_THREADS)
         return;
 
+    printf("L1 - ");
+
     //Are we already replaying to this IP address?
     uint cp = 1;
     for(uint i = 0; i < MAX_THREADS; i++)
         if(thread_ip[i] == ip)
             cp = 0;
 
+    printf("L2 - ");
+
     //We're not replaying to this IP address, so let's launch a replay thread
     if(cp == 1)
     {
         setRP(ip);
+        printf("L3 - ");
 
         pthread_t tid;
         if(pthread_create(&tid, NULL, replayBlocksThread, NULL) == 0)
         {
+            printf("L4 - ");
+            pthread_mutex_lock(&mutex1);
+            printf("L5 - ");
             thread_ip[threads] = ip;
             threads++;
+            pthread_mutex_unlock(&mutex1);
+            printf("L6 - ");
         }
     }
 }
@@ -1426,6 +1434,11 @@ uint hasbalance(const uint64_t uid, addr* from, mval amount)
             struct trans t;
             for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
+                if(t.uid == uid)
+                {
+                    close(f);
+                    return ERROR_UIDEXIST;
+                }
                 memcpy(&t, m+i, sizeof(struct trans));
 
                 if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
@@ -2630,9 +2643,11 @@ int main(int argc , char *argv[])
             //Request to replay all my blocks? (resync)
             else if(rb[0] == 'r' && read_size == 1)
             {
+                printf("Replay Requested: %u\n", client.sin_addr.s_addr);
                 //Is this peer even registered? if not, suspect foul play, not part of verified network.
                 if(isPeer(client.sin_addr.s_addr) == 1)
                 {
+                    printf("It's a peer should replay now: %u\n", client.sin_addr.s_addr);
                     //Launch replay
                     launchReplayThread(client.sin_addr.s_addr);
                     
