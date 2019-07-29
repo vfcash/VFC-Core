@@ -104,6 +104,7 @@ const char master_ip[] = "68.183.49.225";
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
 #define PING_INTERVAL 540               // How often top ping the peers to see if they are still alive
 #define REPLAY_SIZE 3072                // How many transactions to send a peer in one replay request
+#define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scalling cannot exceed this.
 
 //Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
@@ -123,9 +124,6 @@ const char master_ip[] = "68.183.49.225";
     time_t nextreward = 0;
     uint rewardindex = 0;
     uint rewardpaid = 1;
-    #define MAX_THREADS 256 //We go high-load for the master server
-#else
-    #define MAX_THREADS 6 // Maximum replay threads this node can spawn
 #endif
 char mid[8];                        //Clients private identification code used in pings etc.
 ulong err = 0;                      //Global error count
@@ -136,8 +134,9 @@ uint nthreads = 0;                  //number of mining threads
 char myrewardkey[MIN_LEN];          //client reward addr public key
 char myrewardkeyp[MIN_LEN];         //client reward addr private key
 uint8_t genesis_pub[ECC_CURVE+1];   //genesis address public key
-uint thread_ip[MAX_THREADS];        //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
+uint thread_ip[MAX_THREADS_BUFF];                //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
 uint threads = 0;                   //number of replay threads
+uint MAX_THREADS = 6;               //maximum number of replay threads
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 
 
@@ -977,7 +976,7 @@ uint64_t getCirculatingSupply()
 }
 
 //Replay thread queue
-uint32_t replay_peers[MAX_THREADS];
+uint32_t replay_peers[MAX_THREADS_BUFF];
 
 //Get replay peer
 uint32_t getRP()
@@ -1952,6 +1951,13 @@ int main(int argc , char *argv[])
     memset(&replay, 0, sizeof(unsigned char)*MAX_TRANS_QUEUE);
     memset(&delta, 0, sizeof(time_t)*MAX_TRANS_QUEUE);
     // < Peer arrays do not need initilisation >
+
+    //Workout size of server for replay scaling
+    nthreads = get_nprocs();
+    if(nthreads > 2)
+        MAX_THREADS = 16*(nthreads-2);
+    if(MAX_THREADS > 512)
+        MAX_THREADS = 512;
 
     //Debug
     //char cwd[MIN_LEN];
