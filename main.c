@@ -89,7 +89,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.49.2";
+const char version[]="0.49.3";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -1372,9 +1372,8 @@ uint64_t getBalanceLocal(addr* from)
                 else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
                     rv -= t.amount;
             }
-
-            munmap(m, len);
         }
+        munmap(m, len);
     }
     if(rv < 0)
         return 0;
@@ -1436,6 +1435,7 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
                 if(t.uid == uid)
                 {
                     close(f);
+                    munmap(m, len);
                     return ERROR_UIDEXIST;
                 }
                 memcpy(&t, m+i, sizeof(struct trans));
@@ -1445,9 +1445,8 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
                 else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
                     rv -= t.amount;
             }
-
-            munmap(m, len);
         }
+        munmap(m, len);
     }
     if(rv >= amount)
         return 1;
@@ -1478,6 +1477,7 @@ int chasbalance(const uint64_t uid, addr* from, mval amount)
                 if(t.uid == uid)
                 {
                     close(f);
+                    munmap(m, len);
                     return ERROR_UIDEXIST;
                 }
                 memcpy(&t, m+i, sizeof(struct trans));
@@ -1487,9 +1487,8 @@ int chasbalance(const uint64_t uid, addr* from, mval amount)
                 else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
                     rv -= t.amount;
             }
-
-            munmap(m, len);
         }
+        munmap(m, len);
     }
     if(rv >= amount)
         return 1;
@@ -1571,8 +1570,8 @@ void cleanChain()
                 }
             }
 
-            munmap(m, len);
         }
+        munmap(m, len);
     }
 }
 #endif
