@@ -89,7 +89,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.49.1";
+const char version[]="0.49.2";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -134,7 +134,7 @@ uint nthreads = 0;                  //number of mining threads
 char myrewardkey[MIN_LEN];          //client reward addr public key
 char myrewardkeyp[MIN_LEN];         //client reward addr private key
 uint8_t genesis_pub[ECC_CURVE+1];   //genesis address public key
-uint thread_ip[MAX_THREADS_BUFF];                //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
+uint thread_ip[MAX_THREADS_BUFF];   //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
 uint threads = 0;                   //number of replay threads
 uint MAX_THREADS = 6;               //maximum number of replay threads
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
@@ -648,6 +648,11 @@ void resyncBlocks()
     if(num_peers > 1 && replay_allow != 0)
         csend(replay_allow, "r", 1);
 
+    //The master resyncs off everyone
+#if MASTER_NODE == 1
+        peersBroadcast("r", 1);
+#endif
+
     //Set the file memory
     struct in_addr ip_addr;
     ip_addr.s_addr = replay_allow;
@@ -692,7 +697,7 @@ void RewardPeer(const uint ip, const char* pubkey)
         return;
 
     //Base amount
-    double amount = 0.400;
+    double amount = 1.000;
 
     //Wrong / not latest version? Low reward
     if(strstr(peer_ua[rewardindex], version) == NULL)
@@ -1396,6 +1401,7 @@ uint64_t getBalance(addr* from)
         fclose(f);
     }
 
+#if MASTER_NODE == 0
     //Tell peers to fill our accumulator
     char pc[ECC_CURVE+2];
     pc[0] = '$';
@@ -1403,6 +1409,7 @@ uint64_t getBalance(addr* from)
     memcpy(ofs, from->key, ECC_CURVE+1);
     sendMaster(pc, ECC_CURVE+2);
     peersBroadcast(pc, ECC_CURVE+2);
+#endif
 
     //Get local Balance
     const uint64_t rv = getBalanceLocal(from);
@@ -1448,6 +1455,8 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
         return 0;
 }
 
+
+#if MASTER_NODE == 1
 //This is a quick hackup for a function that scans through the whole local chain, and removes duplicates
 //then saving the new chain to .vfc/cblocks.dat
 int chasbalance(const uint64_t uid, addr* from, mval amount)
@@ -1566,6 +1575,7 @@ void cleanChain()
         }
     }
 }
+#endif
 
 //Execute Transaction
 int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* owner)
@@ -1955,14 +1965,9 @@ int main(int argc , char *argv[])
     //Workout size of server for replay scaling
     nthreads = get_nprocs();
     if(nthreads > 2)
-        MAX_THREADS = 16*(nthreads-2);
+        MAX_THREADS = 8*(nthreads-2);
     if(MAX_THREADS > 512)
         MAX_THREADS = 512;
-
-    //Debug
-    //char cwd[MIN_LEN];
-    //getcwd(cwd, sizeof(cwd));
-    //printf("WR: %s\n", cwd);
 
     //create vfc dir
 #if RUN_AS_ROOT == 1
@@ -2163,6 +2168,7 @@ int main(int argc , char *argv[])
         //Help
         if(strcmp(argv[1], "help") == 0)
         {
+            printf("\n\x1B[33mTo update your client use:\x1B[0m\n ./vfc update\n\n");
             printf("\n\x1B[33mTo get an address balance use:\x1B[0m\n ./vfc <address public key>\n\n");
             printf("\x1B[33mTo check sent transactions from an address use:\x1B[0m\n ./vfc out <address public key>\n\n");
             printf("\x1B[33mTo check received transactions from an address use:\x1B[0m\n ./vfc in <address public key>\n\n");
@@ -2197,6 +2203,7 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
+        //Mined VFC in circulation
         if(strcmp(argv[1], "mined") == 0)
         {
             printf("%.3f\n", toDB(getMinedSupply()));
@@ -2210,7 +2217,19 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
-        //version
+        //Updates installed client from official git
+        if(strcmp(argv[1], "update") == 0)
+        {
+            printf("Please run this command with sudo, aka sudo vfc update\n");
+            system("rm -r VFC-Core");
+            system("git clone https://github.com/vfcash/VFC-Core");
+            chdir("VFC-Core");
+            system("sudo chmod 0777 compile.sh");
+            system("sudo ./compile.sh");
+            exit(0);
+        }
+
+        //Block height / total blocks / size
         if(strcmp(argv[1], "heigh") == 0)
         {
             struct stat st;
@@ -2243,7 +2262,8 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
-        //clean
+#if MASTER_NODE == 1
+        //clean [undocumented functions, for full chain verification, rm/bad trans]
         if(strcmp(argv[1], "newclean") == 0)
         {
             newClean();
@@ -2260,6 +2280,7 @@ int main(int argc , char *argv[])
             }
             exit(0);
         }
+#endif
 
         //sync
         if(strcmp(argv[1], "sync") == 0)
@@ -2408,6 +2429,10 @@ int main(int argc , char *argv[])
             if(balt > fbal)
                 fbal = balt;
 
+#if MASTER_NODE == 1
+            fbal = bal;
+#endif
+
             setlocale(LC_NUMERIC, "");
             printf("\x1B[33m(Local Balance / Mode Network Balance / Highest Network Balance)\x1B[0m\n");
             printf("\x1B[33mYour reward address is:\x1B[0m%s\n(\x1B[33m%'.3f VFC\x1B[0m / \x1B[33m%'.3f VFC\x1B[0m / \x1B[33m%'.3f VFC\x1B[0m)\n\n\x1B[33mFinal Balance:\x1B[0m %'.3f VFC\n\n", myrewardkey, toDB(bal), toDB(balt), toDB(baln), toDB(fbal));
@@ -2506,7 +2531,9 @@ int main(int argc , char *argv[])
 
         //Network
         uint64_t baln = 0, balt = 0;
+#if MASTER_NODE == 0
         sleep(3);
+#endif
         FILE* f = fopen(".vfc/bal.mem", "r");
         if(f)
         {
@@ -2525,6 +2552,10 @@ int main(int argc , char *argv[])
         uint64_t fbal = bal;
         if(balt > fbal)
             fbal = balt;
+
+#if MASTER_NODE == 1
+        fbal = bal;
+#endif
         
         setlocale(LC_NUMERIC, "");
         printf("\x1B[33m(Local Balance / Mode Network Balance / Highest Network Balance)\x1B[0m\n");
@@ -2623,7 +2654,9 @@ int main(int argc , char *argv[])
         printf("\x1B[33mTransaction Sent.\x1B[0m\n\n");
 
     //Get balance again..
+#if MASTER_NODE == 0
     sleep(6);
+#endif
     const int64_t bal1 = getBalanceLocal(&t.from);
     setlocale(LC_NUMERIC, "");
     if(bal0-bal1 <= 0)
@@ -2661,6 +2694,9 @@ int main(int argc , char *argv[])
     printf("v%s\x1B[0m\n\n", version);
     printf("\x1B[33mYou will have to make a transaction before your IPv4 address registers\nwith the mainnet when running a full time node/daemon.\x1B[0m\n\n");
     printf("\x1B[33mTo get a full command list use:\x1B[0m\n ./vfc help\n\n");
+    char cwd[MIN_LEN];
+    getcwd(cwd, sizeof(cwd));
+    printf("Current Directory: %s\n\n", cwd);
 
     //Launch the Transaction Processing thread
     pthread_t tid;
@@ -2824,10 +2860,18 @@ int main(int argc , char *argv[])
             //Replay peer is setting block height
             else if(rb[0] == 'h' && read_size == sizeof(uint)+1)
             {
+                //`hk; Allows master to resync from any peer, any time, injection is just as fine.
+#if MASTER_NODE == 1
+                client.sin_addr.s_addr = replay_allow;
+#endif
+
                 //Check this is the replay peer
                 if(client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
                 {
-                    memcpy(&replay_height, rb+1, sizeof(uint)); //Set the block height
+                    uint32_t trh = 0;
+                    memcpy(&trh, rb+1, sizeof(uint)); //Set the block height
+                    if(trh > replay_height)
+                        replay_height = trh;
                     FILE* f = fopen(".vfc/rph.mem", "w");
                     if(f)
                     {
@@ -2916,6 +2960,11 @@ int main(int argc , char *argv[])
             //Is this a replay block?
             else if(rb[0] == 'p' && read_size == replay_size)
             {
+                //`hk; Allows master to resync from any peer, any time, injection is just as fine.
+#if MASTER_NODE == 1
+                client.sin_addr.s_addr = replay_allow;
+#endif
+
                 //This replay has to be from the specific trusted node, or the master. If it's a trusted node, we know it's also a peer so. All good.
                 if(client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
                 {
