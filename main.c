@@ -1041,7 +1041,7 @@ void replayBlocks(const uint ip)
         //  Always send your most recent graph-ends first
         // *
 
-        size_t end = len-(3333*sizeof(struct trans)); //top 333 transactions
+        size_t end = len-(3333*sizeof(struct trans)); //top 3333 transactions
         struct trans t;
         for(size_t i = len-sizeof(struct trans); i > end; i -= sizeof(struct trans))
         {
@@ -1049,7 +1049,7 @@ void replayBlocks(const uint ip)
             if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
             {
                 //Generate Packet (pc)
-                const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //lol this is always sizeof(struct trans)+1 im silly but i've done it now so..
+                const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
                 char pc[MIN_LEN];
                 pc[0] = 'p'; //This is a re*P*lay
                 char* ofs = pc + 1;
@@ -1073,9 +1073,9 @@ void replayBlocks(const uint ip)
             }
             else
             {
-                printf("There was a problem, blocks.dat looks corrupt.\n");
-                fclose(f);
-                return;
+                printf("Replay top read failed at; %li\n", i);
+                //fclose(f);
+                //return;
             }
         }
 
@@ -1095,7 +1095,7 @@ void replayBlocks(const uint ip)
             if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
             {
                 //Generate Packet (pc)
-                const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE; //lol this is always sizeof(struct trans)+1 im silly but i've done it now so..
+                const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
                 char pc[MIN_LEN];
                 pc[0] = 'p'; //This is a re*P*lay
                 char* ofs = pc + 1;
@@ -1119,9 +1119,9 @@ void replayBlocks(const uint ip)
             }
             else
             {
-                printf("There was a problem, blocks.dat looks corrupt.\n");
-                fclose(f);
-                return;
+                printf("Replay read failed at; %li\n", i);
+                //fclose(f);
+                //return;
             }
             
         }
@@ -2168,7 +2168,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "help") == 0)
         {
             printf("\n\x1B[33mTo update your client use:\x1B[0m\n ./vfc update\n\n");
-            printf("\n\x1B[33mTo get an address balance use:\x1B[0m\n ./vfc <address public key>\n\n");
+            printf("\x1B[33mTo get an address balance use:\x1B[0m\n ./vfc <address public key>\n\n");
             printf("\x1B[33mTo check sent transactions from an address use:\x1B[0m\n ./vfc out <address public key>\n\n");
             printf("\x1B[33mTo check received transactions from an address use:\x1B[0m\n ./vfc in <address public key>\n\n");
             printf("\x1B[33mTo make a transaction use:\x1B[0m\n ./vfc <sender public key> <reciever public key> <amount> <sender private key>\x1B[0m\n\n");
@@ -2653,9 +2653,8 @@ int main(int argc , char *argv[])
         printf("\x1B[33mTransaction Sent.\x1B[0m\n\n");
 
     //Get balance again..
-#if MASTER_NODE == 0
     sleep(6);
-#endif
+
     const int64_t bal1 = getBalanceLocal(&t.from);
     setlocale(LC_NUMERIC, "");
     if(bal0-bal1 <= 0)
