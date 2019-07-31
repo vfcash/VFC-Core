@@ -89,7 +89,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.49.3";
+const char version[]="0.49.4";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -103,7 +103,7 @@ const char master_ip[] = "68.183.49.225";
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
 #define PING_INTERVAL 540               // How often top ping the peers to see if they are still alive
-#define REPLAY_SIZE 3072                // How many transactions to send a peer in one replay request
+#define REPLAY_SIZE 6144                // How many transactions to send a peer in one replay request
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scalling cannot exceed this.
 
 //Generic Buffer Sizes
@@ -907,22 +907,30 @@ uint64_t getMinedSupply()
         for(size_t i = sizeof(struct trans); i < len; i += sizeof(struct trans))
         {
             fseek(f, i, SEEK_SET);
-            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+
+            uint fc = 0;
+            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
             {
-                if(memcmp(t.from.key, genesis_pub, ECC_CURVE+1) != 0)
-                {
-                    const uint64_t w = isSubGenesisAddress(t.from.key, 1);
-                    if(w > 0)
-                    {
-                        rv += w;
-                    }
-                }
-            }
-            else
-            {
-                printf("There was a problem, blocks.dat looks corrupt.\n");
                 fclose(f);
-                return rv;
+                f = fopen(CHAIN_FILE, "r");
+                fc++;
+                if(fc > 333)
+                {
+                    printf("\033[1m\x1B[31mERROR: fread() in getMinedSupply() has failed.\x1B[0m\033[0m\n");
+                    fclose(f);
+                    return 0;
+                }
+                if(f == NULL)
+                    continue;
+            }
+
+            if(memcmp(t.from.key, genesis_pub, ECC_CURVE+1) != 0)
+            {
+                const uint64_t w = isSubGenesisAddress(t.from.key, 1);
+                if(w > 0)
+                {
+                    rv += w;
+                }
             }
             
         }
@@ -955,22 +963,30 @@ uint64_t getCirculatingSupply()
         for(size_t i = sizeof(struct trans); i < len; i += sizeof(struct trans))
         {
             fseek(f, i, SEEK_SET);
-            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+
+            uint fc = 0;
+            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
             {
-                if(memcmp(t.from.key, genesis_pub, ECC_CURVE+1) != 0)
-                {
-                    const uint64_t w = isSubGenesisAddress(t.from.key, 1);
-                    if(w > 0)
-                    {
-                        rv += w;
-                    }
-                }
-            }
-            else
-            {
-                printf("There was a problem, blocks.dat looks corrupt.\n");
                 fclose(f);
-                return rv;
+                f = fopen(CHAIN_FILE, "r");
+                fc++;
+                if(fc > 333)
+                {
+                    printf("\033[1m\x1B[31mERROR: fread() in getCirculatingSupply() has failed.\x1B[0m\033[0m\n");
+                    fclose(f);
+                    return 0;
+                }
+                if(f == NULL)
+                    continue;
+            }
+
+            if(memcmp(t.from.key, genesis_pub, ECC_CURVE+1) != 0)
+            {
+                const uint64_t w = isSubGenesisAddress(t.from.key, 1);
+                if(w > 0)
+                {
+                    rv += w;
+                }
             }
             
         }
@@ -1014,6 +1030,9 @@ void setRP(const uint32_t ip)
 //Replay blocks to x address
 void replayBlocks(const uint ip)
 {
+    struct in_addr ip_addr;
+    ip_addr.s_addr = ip;
+
     //Send block height
     struct stat st;
     stat(CHAIN_FILE, &st);
@@ -1025,8 +1044,6 @@ void replayBlocks(const uint ip)
         const uint height = st.st_size;
         memcpy(ofs, &height, sizeof(uint));
         csend(ip, pc, 1+sizeof(uint));
-        struct in_addr ip_addr;
-        ip_addr.s_addr = ip;
         printf("Replaying: %.1f kb to %s\n", (double) ( (sizeof(struct trans)*REPLAY_SIZE) + (sizeof(struct trans)*3333)) / 1000, inet_ntoa(ip_addr));
     }
 
@@ -1046,37 +1063,52 @@ void replayBlocks(const uint ip)
         for(size_t i = len-sizeof(struct trans); i > end; i -= sizeof(struct trans))
         {
             fseek(f, i, SEEK_SET);
-            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
-            {
-                //Generate Packet (pc)
-                const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
-                char pc[MIN_LEN];
-                pc[0] = 'p'; //This is a re*P*lay
-                char* ofs = pc + 1;
-                memcpy(ofs, &t.uid, sizeof(uint64_t));
-                ofs += sizeof(uint64_t);
-                memcpy(ofs, t.from.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, t.to.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, &t.amount, sizeof(mval));
-                ofs += sizeof(mval);
-                memcpy(ofs, t.owner.key, ECC_CURVE*2);
-                csend(ip, pc, len);
 
-                //333 = 3k, 211 byte packets / 618kb a second
-                #if MASTER_NODE == 1
-                    usleep(10000); //
-                #else
-                    usleep(120000); //
-                #endif
-            }
-            else
+            uint fc = 0;
+            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
             {
-                printf("Replay top read failed at; %li\n", i);
-                //fclose(f);
-                //return;
+                //if(fc == 0)
+                //    printf("\033[1m\x1B[31mError: fread failed. Retrying... %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
+
+                fclose(f);
+                f = fopen(CHAIN_FILE, "r");
+                
+                fc++;
+                if(fc > 333)
+                {
+                    printf("\033[1m\x1B[31mERROR: fread() in replayBlocks() #1 has failed for peer %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
+                    fclose(f);
+                    return;
+                }
+
+                if(f == NULL)
+                    continue;
             }
+            // if(fc != 0)
+            //     printf("\033[1m\x1B[31mSuccess: fread succeded after %u retries. %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
+
+            //Generate Packet (pc)
+            const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+            char pc[MIN_LEN];
+            pc[0] = 'p'; //This is a re*P*lay
+            char* ofs = pc + 1;
+            memcpy(ofs, &t.uid, sizeof(uint64_t));
+            ofs += sizeof(uint64_t);
+            memcpy(ofs, t.from.key, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, t.to.key, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, &t.amount, sizeof(mval));
+            ofs += sizeof(mval);
+            memcpy(ofs, t.owner.key, ECC_CURVE*2);
+            csend(ip, pc, len);
+
+            //333 = 3k, 211 byte packets / 618kb a second
+            #if MASTER_NODE == 1
+                usleep(10000); //
+            #else
+                usleep(120000); //
+            #endif
         }
 
         // *
@@ -1092,37 +1124,45 @@ void replayBlocks(const uint ip)
         for(size_t i = st; i < len && i < end; i += sizeof(struct trans))
         {
             fseek(f, i, SEEK_SET);
-            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
-            {
-                //Generate Packet (pc)
-                const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
-                char pc[MIN_LEN];
-                pc[0] = 'p'; //This is a re*P*lay
-                char* ofs = pc + 1;
-                memcpy(ofs, &t.uid, sizeof(uint64_t));
-                ofs += sizeof(uint64_t);
-                memcpy(ofs, t.from.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, t.to.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, &t.amount, sizeof(mval));
-                ofs += sizeof(mval);
-                memcpy(ofs, t.owner.key, ECC_CURVE*2);
-                csend(ip, pc, len);
 
-                //333 = 3k, 211 byte packets / 618kb a second
-                #if MASTER_NODE == 1
-                    usleep(10000); //
-                #else
-                    usleep(120000); //
-                #endif
-            }
-            else
+            uint fc = 0;
+            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
             {
-                printf("Replay read failed at; %li\n", i);
-                //fclose(f);
-                //return;
+                fclose(f);
+                f = fopen(CHAIN_FILE, "r");
+                fc++;
+                if(fc > 333)
+                {
+                    printf("\033[1m\x1B[31mERROR: fread() in replayBlocks() #2 has failed for peer %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
+                    fclose(f);
+                    return;
+                }
+                if(f == NULL)
+                    continue;
             }
+
+            //Generate Packet (pc)
+            const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+            char pc[MIN_LEN];
+            pc[0] = 'p'; //This is a re*P*lay
+            char* ofs = pc + 1;
+            memcpy(ofs, &t.uid, sizeof(uint64_t));
+            ofs += sizeof(uint64_t);
+            memcpy(ofs, t.from.key, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, t.to.key, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, &t.amount, sizeof(mval));
+            ofs += sizeof(mval);
+            memcpy(ofs, t.owner.key, ECC_CURVE*2);
+            csend(ip, pc, len);
+
+            //333 = 3k, 211 byte packets / 618kb a second
+            #if MASTER_NODE == 1
+                usleep(10000); //
+            #else
+                usleep(120000); //
+            #endif
             
         }
 
@@ -1202,28 +1242,35 @@ void dumptrans()
         for(size_t i = 0; i < len; i += sizeof(struct trans))
         {
             fseek(f, i, SEEK_SET);
-            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
-            {
-                char topub[MIN_LEN];
-                memset(topub, 0, sizeof(topub));
-                size_t len = MIN_LEN;
-                b58enc(topub, &len, t.to.key, ECC_CURVE+1);
 
-                char frompub[MIN_LEN];
-                memset(frompub, 0, sizeof(frompub));
-                len = MIN_LEN;
-                b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
-
-                setlocale(LC_NUMERIC, "");
-                printf("%s > %s : %'.3f\n", frompub, topub, toDB(t.amount));
-            }
-            else
+            uint fc = 0;
+            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
             {
-                printf("There was a problem, blocks.dat looks corrupt.\n");
                 fclose(f);
-                return;
+                f = fopen(CHAIN_FILE, "r");
+                fc++;
+                if(fc > 333)
+                {
+                    printf("\033[1m\x1B[31mERROR: fread() in dumptrans() has failed.\x1B[0m\033[0m\n");
+                    fclose(f);
+                    return;
+                }
+                if(f == NULL)
+                    continue;
             }
-            
+
+            char topub[MIN_LEN];
+            memset(topub, 0, sizeof(topub));
+            size_t len = MIN_LEN;
+            b58enc(topub, &len, t.to.key, ECC_CURVE+1);
+
+            char frompub[MIN_LEN];
+            memset(frompub, 0, sizeof(frompub));
+            len = MIN_LEN;
+            b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
+
+            setlocale(LC_NUMERIC, "");
+            printf("%s > %s : %'.3f\n", frompub, topub, toDB(t.amount));
         }
 
         fclose(f);
@@ -1243,28 +1290,36 @@ void dumpbadtrans()
         for(size_t i = 0; i < len; i += sizeof(struct trans))
         {
             fseek(f, i, SEEK_SET);
-            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
-            {
-                char topub[MIN_LEN];
-                memset(topub, 0, sizeof(topub));
-                size_t len = MIN_LEN;
-                b58enc(topub, &len, t.to.key, ECC_CURVE+1);
 
-                char frompub[MIN_LEN];
-                memset(frompub, 0, sizeof(frompub));
-                len = MIN_LEN;
-                b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
-
-                setlocale(LC_NUMERIC, "");
-                printf("%s > %s : %'.3f\n", frompub, topub, toDB(t.amount));
-            }
-            else
+            uint fc = 0;
+            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
             {
-                printf("There was a problem, bad_blocks.dat looks corrupt.\n");
                 fclose(f);
-                return;
+                f = fopen(BADCHAIN_FILE, "r");
+                fc++;
+                if(fc > 333)
+                {
+                    printf("\033[1m\x1B[31mERROR: fread() in dumpbadtrans() has failed.\x1B[0m\033[0m\n");
+                    fclose(f);
+                    return;
+                }
+                if(f == NULL)
+                    continue;
             }
-            
+
+            char topub[MIN_LEN];
+            memset(topub, 0, sizeof(topub));
+            size_t len = MIN_LEN;
+            b58enc(topub, &len, t.to.key, ECC_CURVE+1);
+
+            char frompub[MIN_LEN];
+            memset(frompub, 0, sizeof(frompub));
+            len = MIN_LEN;
+            b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
+
+            setlocale(LC_NUMERIC, "");
+            printf("%s > %s : %'.3f\n", frompub, topub, toDB(t.amount));
+        
         }
 
         fclose(f);
@@ -1284,23 +1339,31 @@ void printIns(addr* a)
         for(size_t i = 0; i < len; i += sizeof(struct trans))
         {
             fseek(f, i, SEEK_SET);
-            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+
+            uint fc = 0;
+            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
             {
-                if(memcmp(&t.to.key, a->key, ECC_CURVE+1) == 0)
-                {
-                    char pub[MIN_LEN];
-                    memset(pub, 0, sizeof(pub));
-                    size_t len = MIN_LEN;
-                    b58enc(pub, &len, t.from.key, ECC_CURVE+1);
-                    setlocale(LC_NUMERIC, "");
-                    printf("%s > %'.3f\n", pub, toDB(t.amount));
-                }
-            }
-            else
-            {
-                printf("There was a problem, blocks.dat looks corrupt.\n");
                 fclose(f);
-                return;
+                f = fopen(CHAIN_FILE, "r");
+                fc++;
+                if(fc > 333)
+                {
+                    printf("\033[1m\x1B[31mERROR: fread() in printIns() has failed.\x1B[0m\033[0m\n");
+                    fclose(f);
+                    return;
+                }
+                if(f == NULL)
+                    continue;
+            }
+
+            if(memcmp(&t.to.key, a->key, ECC_CURVE+1) == 0)
+            {
+                char pub[MIN_LEN];
+                memset(pub, 0, sizeof(pub));
+                size_t len = MIN_LEN;
+                b58enc(pub, &len, t.from.key, ECC_CURVE+1);
+                setlocale(LC_NUMERIC, "");
+                printf("%s > %'.3f\n", pub, toDB(t.amount));
             }
             
         }
@@ -1322,23 +1385,31 @@ void printOuts(addr* a)
         for(size_t i = 0; i < len; i += sizeof(struct trans))
         {
             fseek(f, i, SEEK_SET);
-            if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+
+            uint fc = 0;
+            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
             {
-                if(memcmp(&t.from.key, a->key, ECC_CURVE+1) == 0)
-                {
-                    char pub[MIN_LEN];
-                    memset(pub, 0, sizeof(pub));
-                    size_t len = MIN_LEN;
-                    b58enc(pub, &len, t.to.key, ECC_CURVE+1);
-                    setlocale(LC_NUMERIC, "");
-                    printf("%s > %'.3f\n", pub, toDB(t.amount));
-                }
-            }
-            else
-            {
-                printf("There was a problem, blocks.dat looks corrupt.\n");
                 fclose(f);
-                return;
+                f = fopen(CHAIN_FILE, "r");
+                fc++;
+                if(fc > 333)
+                {
+                    printf("\033[1m\x1B[31mERROR: fread() in printOuts() has failed.\x1B[0m\033[0m\n");
+                    fclose(f);
+                    return;
+                }
+                if(f == NULL)
+                    continue;
+            }
+
+            if(memcmp(&t.from.key, a->key, ECC_CURVE+1) == 0)
+            {
+                char pub[MIN_LEN];
+                memset(pub, 0, sizeof(pub));
+                size_t len = MIN_LEN;
+                b58enc(pub, &len, t.to.key, ECC_CURVE+1);
+                setlocale(LC_NUMERIC, "");
+                printf("%s > %'.3f\n", pub, toDB(t.amount));
             }
             
         }
@@ -1372,8 +1443,9 @@ uint64_t getBalanceLocal(addr* from)
                 else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
                     rv -= t.amount;
             }
+
+            munmap(m, len);
         }
-        munmap(m, len);
     }
     if(rv < 0)
         return 0;
@@ -1445,8 +1517,9 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
                 else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
                     rv -= t.amount;
             }
+
+            munmap(m, len);
         }
-        munmap(m, len);
     }
     if(rv >= amount)
         return 1;
@@ -1487,8 +1560,9 @@ int chasbalance(const uint64_t uid, addr* from, mval amount)
                 else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
                     rv -= t.amount;
             }
+
+            munmap(m, len);
         }
-        munmap(m, len);
     }
     if(rv >= amount)
         return 1;
@@ -1570,8 +1644,8 @@ void cleanChain()
                 }
             }
 
+            munmap(m, len);
         }
-        munmap(m, len);
     }
 }
 #endif
