@@ -1446,6 +1446,8 @@ uint64_t getBalanceLocal(addr* from)
 
             munmap(m, len);
         }
+	
+	close(f);
     }
     if(rv < 0)
         return 0;
@@ -1506,7 +1508,6 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
             {
                 if(t.uid == uid)
                 {
-                    close(f);
                     munmap(m, len);
                     return ERROR_UIDEXIST;
                 }
@@ -1520,6 +1521,8 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
 
             munmap(m, len);
         }
+	    
+	close(f);
     }
     if(rv >= amount)
         return 1;
@@ -1549,7 +1552,6 @@ int chasbalance(const uint64_t uid, addr* from, mval amount)
             {
                 if(t.uid == uid)
                 {
-                    close(f);
                     munmap(m, len);
                     return ERROR_UIDEXIST;
                 }
@@ -1563,6 +1565,8 @@ int chasbalance(const uint64_t uid, addr* from, mval amount)
 
             munmap(m, len);
         }
+	    
+	close(f);
     }
     if(rv >= amount)
         return 1;
@@ -1646,6 +1650,8 @@ void cleanChain()
 
             munmap(m, len);
         }
+	    
+	close(f);
     }
 }
 #endif
