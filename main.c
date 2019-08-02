@@ -89,7 +89,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.50";
+const char version[]="0.51";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -151,7 +151,7 @@ pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 //
 //
 //
-/* ~ Mining
+/* ~ Util Functions
 */
 
 //Convert to decimal balance
@@ -163,305 +163,6 @@ mval fromDB(const double b) //and from
 {
     return (mval)(b * 1000);
 }
-
-//Vector3
-struct vec3
-{
-    uint16_t x,y,z;
-};
-typedef struct vec3 vec3;
-
-//Get normal angle
-double gNa(const vec3* a, const vec3* b)
-{
-    const double dot = ((double)(a->x) * (double)(b->x)) + ((double)(a->y) * (double)(b->y)) + (double)((a->z) * (double)(b->z)); //dot product of both vectors
-    const double m1 = sqrt((double)((a->x) * (double)(a->x)) + (double)((a->y) * (double)(a->y)) + (double)((a->z) * (double)(a->z))); //magnitude
-    const double m2 = sqrt((double)((b->x) * (double)(b->x)) + (double)((b->y) * (double)(b->y)) + (double)((b->z) * (double)(b->z))); //magnitude
-
-    if((m1 == 0 && m2 == 0) || dot == 0)
-        return 1; //returns angle that is too wide, exclusion / (aka/equiv) ret0
-
-    return dot / (m1*m2); //Should never divide by 0
-}
-
-// void xOv(vec3* a)
-// {
-//     const time_t lt = time(0);
-//     const struct tm* tmi = gmtime(&lt);
-
-//     struct stat st;
-//     stat(CHAIN_FILE, &st);
-
-//     const uint16_t c = tmi->tm_mday * sqrt(st.st_size);
-//     a->x ^= c;
-//     a->y ^= c;
-//     a->z ^= c;
-// }
-
-// //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
-// uint64_t isSubGenesisAddressNew(uint8_t *a, const uint s)
-// {
-//     //Is this requesting the genesis balance
-//     if(memcmp(a, genesis_pub, ECC_CURVE+1) == 0)
-//     {
-//         //Get the tax
-//         struct stat st;
-//         stat(CHAIN_FILE, &st);
-//         uint64_t ift = 0;
-//         if(st.st_size > 0)
-//             ift = (uint64_t)st.st_size / 133;
-//         else
-//             return 0;
-        
-//         ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
-//         return ift;
-//     }
-
-//     //Requesting the balance of a possible existing subG address
-
-//     vec3 v[5]; //Vectors
-
-//     char *ofs = a;
-//     memcpy(&v[0].x, ofs, sizeof(uint16_t));
-//     memcpy(&v[0].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-//     memcpy(&v[0].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-//     ofs = ofs + (sizeof(uint16_t)*3);
-//     memcpy(&v[1].x, ofs, sizeof(uint16_t));
-//     memcpy(&v[1].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-//     memcpy(&v[1].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-//     ofs = ofs + (sizeof(uint16_t)*3);
-//     memcpy(&v[2].x, ofs, sizeof(uint16_t));
-//     memcpy(&v[2].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-//     memcpy(&v[2].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-//     ofs = ofs + (sizeof(uint16_t)*3);
-//     memcpy(&v[3].x, ofs, sizeof(uint16_t));
-//     memcpy(&v[3].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-//     memcpy(&v[3].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-//     ofs = ofs + (sizeof(uint16_t)*3);
-//     memcpy(&v[4].x, ofs, sizeof(uint16_t));
-//     memcpy(&v[4].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-//     memcpy(&v[4].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-//     xOv(&v[0]);
-//     xOv(&v[1]);
-//     xOv(&v[2]);
-//     xOv(&v[3]);
-//     xOv(&v[4]);
-
-//     const double a1 = gNa(&v[0], &v[3]);
-//     const double a2 = gNa(&v[3], &v[2]);
-//     const double a3 = gNa(&v[2], &v[1]);
-//     const double a4 = gNa(&v[1], &v[4]);
-
-//     //All normal angles a1-a4 must be under this value
-//     const double min = 0.24; //0.20
-    
-//     //Was it a straight hit?
-//     if(a1 < min && a2 < min && a3 < min && a4 < min)
-//     {
-//         //Calculate and return value of address mined
-//         const double a = (a1+a2+a3+a4);
-//         if(a <= 0)
-//             return 0; //not want zero address.
-//         const double ra = a/4;
-//         const double mn = 4.166666667; //(1/min);
-//         const uint64_t rv = (uint64_t)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
-
-//         //Illustrate the hit
-//         if(s == 0)
-//         {
-//             setlocale(LC_NUMERIC, "");
-//             printf("\x1B[33msubG\x1B[0m: %.8f - %.8f - %.8f - %.8f - %'.3f VFC < %.3f\n\n", a1, a2, a3, a4, toDB(rv), ra);
-//         }
-
-//         return rv;
-//     }
-
-//     if(s == 0)
-//     {
-//         //Print the occasional "close hit"
-//         const double soft = 0.1;
-//         if(a1 < min+soft && a2 < min+soft && a3 < min+soft && a4 < min+soft)
-//             printf("\x1B[33mx\x1B[0m: %.8f - %.8f - %.8f - %.8f\n", a1, a2, a3, a4);
-//     }
-
-//     return 0;
-
-// }
-
-// //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
-// uint64_t isSubGenesisAddressOld(uint8_t *a)
-// {
-//     //Requesting the balance of a possible existing subG address
-
-//     vec3 v[5]; //Vectors
-
-//     char *ofs = a;
-//     memcpy(&v[0].x, ofs, sizeof(uint16_t));
-//     memcpy(&v[0].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-//     memcpy(&v[0].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-//     ofs = ofs + (sizeof(uint16_t)*3);
-//     memcpy(&v[1].x, ofs, sizeof(uint16_t));
-//     memcpy(&v[1].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-//     memcpy(&v[1].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-//     ofs = ofs + (sizeof(uint16_t)*3);
-//     memcpy(&v[2].x, ofs, sizeof(uint16_t));
-//     memcpy(&v[2].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-//     memcpy(&v[2].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-//     ofs = ofs + (sizeof(uint16_t)*3);
-//     memcpy(&v[3].x, ofs, sizeof(uint16_t));
-//     memcpy(&v[3].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-//     memcpy(&v[3].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-//     ofs = ofs + (sizeof(uint16_t)*3);
-//     memcpy(&v[4].x, ofs, sizeof(uint16_t));
-//     memcpy(&v[4].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-//     memcpy(&v[4].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-//     const double a1 = gNa(&v[0], &v[3]);
-//     const double a2 = gNa(&v[3], &v[2]);
-//     const double a3 = gNa(&v[2], &v[1]);
-//     const double a4 = gNa(&v[1], &v[4]);
-
-//     //All normal angles a1-a4 must be under this value
-//     const double min = 0.24; //0.20
-    
-//     //Was it a straight hit?
-//     if(a1 < min && a2 < min && a3 < min && a4 < min)
-//     {
-//         //Calculate and return value of address mined
-//         const double a = (a1+a2+a3+a4);
-//         if(a <= 0)
-//             return 0; //not want zero address.
-//         const double ra = a/4;
-//         const double mn = 4.166666667; //(1/min);
-//         const uint64_t rv = (uint64_t)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
-
-//         return rv;
-//     }
-
-//     return 0;
-// }
-
-//This is the algorthm to check if a genesis address is a valid "SubGenesis" address
-uint64_t isSubGenesisAddress(uint8_t *a, const uint s)
-{
-    //Is this requesting the genesis balance
-    if(memcmp(a, genesis_pub, ECC_CURVE+1) == 0)
-    {
-        //Get the tax
-        struct stat st;
-        stat(CHAIN_FILE, &st);
-        uint64_t ift = 0;
-        if(st.st_size > 0)
-            ift = (uint64_t)st.st_size / 133;
-        else
-            return 0;
-        
-        ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
-        return ift;
-    }
-
-    // //Is old subG?
-    // const uint64_t or = isSubGenesisAddressOld(a);
-    // if(or > 0)
-    //     return or;
-
-    //Requesting the balance of a possible existing subG address
-
-    vec3 v[5]; //Vectors
-
-    char *ofs = a;
-    memcpy(&v[0].x, ofs, sizeof(uint16_t));
-    memcpy(&v[0].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-    memcpy(&v[0].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-    ofs = ofs + (sizeof(uint16_t)*3);
-    memcpy(&v[1].x, ofs, sizeof(uint16_t));
-    memcpy(&v[1].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-    memcpy(&v[1].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-    ofs = ofs + (sizeof(uint16_t)*3);
-    memcpy(&v[2].x, ofs, sizeof(uint16_t));
-    memcpy(&v[2].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-    memcpy(&v[2].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-    ofs = ofs + (sizeof(uint16_t)*3);
-    memcpy(&v[3].x, ofs, sizeof(uint16_t));
-    memcpy(&v[3].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-    memcpy(&v[3].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-    ofs = ofs + (sizeof(uint16_t)*3);
-    memcpy(&v[4].x, ofs, sizeof(uint16_t));
-    memcpy(&v[4].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
-    memcpy(&v[4].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
-
-    // xOv(&v[0]);
-    // xOv(&v[1]);
-    // xOv(&v[2]);
-    // xOv(&v[3]);
-    // xOv(&v[4]);
-
-    const double a1 = gNa(&v[0], &v[3]);
-    const double a2 = gNa(&v[3], &v[2]);
-    const double a3 = gNa(&v[2], &v[1]);
-    const double a4 = gNa(&v[1], &v[4]);
-
-    //All normal angles a1-a4 must be under this value
-    const double min = 0.24; //0.20
-    
-    //Was it a straight hit?
-    if(a1 < min && a2 < min && a3 < min && a4 < min)
-    {
-        //Calculate and return value of address mined
-        const double a = (a1+a2+a3+a4);
-        if(a <= 0)
-            return 0; //not want zero address.
-        const double ra = a/4;
-        const double mn = 4.166666667; //(1/min);
-        const uint64_t rv = (uint64_t)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
-
-        //Illustrate the hit
-        if(s == 0)
-        {
-            setlocale(LC_NUMERIC, "");
-            printf("\x1B[33msubG\x1B[0m: %.8f - %.8f - %.8f - %.8f - %'.3f VFC < %.3f\n\n", a1, a2, a3, a4, toDB(rv), ra);
-        }
-
-        return rv;
-    }
-
-    if(s == 0)
-    {
-        //Print the occasional "close hit"
-        const double soft = 0.1;
-        if(a1 < min+soft && a2 < min+soft && a3 < min+soft && a4 < min+soft)
-            printf("\x1B[33mx\x1B[0m: %.8f - %.8f - %.8f - %.8f\n", a1, a2, a3, a4);
-    }
-
-    return 0;
-
-}
-
-///////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////
-/////////////////////////////
-///////////////
-////////
-///
-//
-//
-//
-/* ~ Util Functions
-*/
 
 char* getHome()
 {
@@ -568,6 +269,189 @@ void quickTruncate(const char* file, const size_t pos)
         close(f);
     }
 }
+
+
+///////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////
+/////////////////////////////
+///////////////
+////////
+///
+//
+//
+//
+/* ~ Mining
+*/
+
+//Vector3
+struct vec3
+{
+    uint16_t x,y,z;
+};
+typedef struct vec3 vec3;
+
+//Get normal angle
+inline static double gNa(const vec3* a, const vec3* b)
+{
+    const double dot = ((double)(a->x) * (double)(b->x)) + ((double)(a->y) * (double)(b->y)) + (double)((a->z) * (double)(b->z)); //dot product of both vectors
+    const double m1 = sqrt((double)((a->x) * (double)(a->x)) + (double)((a->y) * (double)(a->y)) + (double)((a->z) * (double)(a->z))); //magnitude
+    const double m2 = sqrt((double)((b->x) * (double)(b->x)) + (double)((b->y) * (double)(b->y)) + (double)((b->z) * (double)(b->z))); //magnitude
+
+    if((m1 == 0 && m2 == 0) || dot == 0)
+        return 1; //returns angle that is too wide, exclusion / (aka/equiv) ret0
+
+    return dot / (m1*m2); //Should never divide by 0
+}
+
+inline static double getMiningDifficulty()
+{
+    const time_t lt = time(0);
+    const struct tm* tmi = gmtime(&lt);
+    return (double)tmi->tm_hour * 0.01; //reciprocal // 24 / 100 = 0.24
+}
+
+//This is the algorthm to check if a genesis address is a valid "SubGenesis" address
+uint64_t isSubGenesisAddressMine(uint8_t *a)
+{
+    //Requesting the balance of a possible existing subG address
+
+    vec3 v[5]; //Vectors
+
+    char *ofs = a;
+    memcpy(&v[0].x, ofs, sizeof(uint16_t));
+    memcpy(&v[0].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[0].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[1].x, ofs, sizeof(uint16_t));
+    memcpy(&v[1].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[1].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[2].x, ofs, sizeof(uint16_t));
+    memcpy(&v[2].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[2].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[3].x, ofs, sizeof(uint16_t));
+    memcpy(&v[3].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[3].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[4].x, ofs, sizeof(uint16_t));
+    memcpy(&v[4].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[4].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    const double a1 = gNa(&v[0], &v[3]);
+    const double a2 = gNa(&v[3], &v[2]);
+    const double a3 = gNa(&v[2], &v[1]);
+    const double a4 = gNa(&v[1], &v[4]);
+
+    //All normal angles a1-a4 must be under this value
+    const double min = getMiningDifficulty();
+    
+    //Was it a straight hit?
+    if(a1 < min && a2 < min && a3 < min && a4 < min)
+    {
+        //Calculate and return value of address mined
+        const double a = (a1+a2+a3+a4);
+        if(a <= 0)
+            return 0; //not want zero address.
+        const double ra = a/4;
+        const double mn = 4.166666667; //(1/min);
+        const uint64_t rv = (uint64_t)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
+
+        //Illustrate the hit
+        setlocale(LC_NUMERIC, "");
+        printf("\x1B[33msubG\x1B[0m: %.8f - %.8f - %.8f - %.8f - %'.3f VFC < %.3f\n\n", a1, a2, a3, a4, toDB(rv), ra);
+
+        return rv;
+    }
+
+    //Print the occasional "close hit"
+    const double soft = 0.1;
+    if(a1 < min+soft && a2 < min+soft && a3 < min+soft && a4 < min+soft)
+        printf("\x1B[33mx\x1B[0m: %.8f - %.8f - %.8f - %.8f\n", a1, a2, a3, a4);
+
+    return 0;
+
+}
+
+//This is the algorthm to check if a genesis address is a valid "SubGenesis" address
+uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
+{
+    //Is this requesting the genesis balance
+    if(memcmp(a, genesis_pub, ECC_CURVE+1) == 0)
+    {
+        //Get the tax
+        struct stat st;
+        stat(CHAIN_FILE, &st);
+        uint64_t ift = 0;
+        if(st.st_size > 0)
+            ift = (uint64_t)st.st_size / 133;
+        else
+            return 0;
+        
+        ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
+        return ift;
+    }
+
+    //Requesting the balance of a possible existing subG address
+
+    vec3 v[5]; //Vectors
+
+    char *ofs = a;
+    memcpy(&v[0].x, ofs, sizeof(uint16_t));
+    memcpy(&v[0].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[0].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[1].x, ofs, sizeof(uint16_t));
+    memcpy(&v[1].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[1].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[2].x, ofs, sizeof(uint16_t));
+    memcpy(&v[2].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[2].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[3].x, ofs, sizeof(uint16_t));
+    memcpy(&v[3].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[3].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[4].x, ofs, sizeof(uint16_t));
+    memcpy(&v[4].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[4].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    const double a1 = gNa(&v[0], &v[3]);
+    const double a2 = gNa(&v[3], &v[2]);
+    const double a3 = gNa(&v[2], &v[1]);
+    const double a4 = gNa(&v[1], &v[4]);
+
+    //All normal angles a1-a4 must be under this value
+    const double min = fr == 0 ? getMiningDifficulty() : 0.24;
+    
+    //Was it a straight hit?
+    if(a1 < min && a2 < min && a3 < min && a4 < min)
+    {
+        //Calculate and return value of address mined
+        const double a = (a1+a2+a3+a4);
+        if(a <= 0)
+            return 0; //not want zero address.
+        const double ra = a/4;
+        const double mn = 4.166666667; //(1/min);
+        const uint64_t rv = (uint64_t)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
+
+        return rv;
+    }
+
+    return 0;
+
+}
+
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
@@ -1755,7 +1639,7 @@ uint64_t getBalanceLocal(addr* from)
         close(f);
     }
 
-    // int64_t rv = isSubGenesisAddress(from->key, 1);
+
     // FILE* f = fopen(CHAIN_FILE, "r");
     // if(f)
     // {
@@ -1819,15 +1703,7 @@ uint64_t getBalance(addr* from)
 //Calculate if an address has the value required to make a transaction of x amount.
 int hasbalance(const uint64_t uid, addr* from, mval amount)
 {
-    // int64_t rv = isSubGenesisAddressOld(from->key);
-    // if(rv != 0)
-    //     return 0; //Do not process transactions for old subG addresses
-    // rv = isSubGenesisAddressNew(from->key, 1);
-
-
-    int64_t rv = isSubGenesisAddress(from->key, 1);
-    if(rv != 0)
-        return 0; //Do not process transactions for old subG addresses
+    int64_t rv = isSubGenesisAddress(from->key, 0);
     int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
@@ -1861,9 +1737,6 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
     }
 
 
-    // int64_t rv = isSubGenesisAddress(from->key, 1);
-    // if(rv != 0)
-    //     return 0; //Do not process transactions for subG addresses
     // FILE* f = fopen(CHAIN_FILE, "r");
     // if(f)
     // {
@@ -2277,13 +2150,13 @@ void *miningThread(void *arg)
     nice(1); //Very high priority thread
     addr pub, priv;
     makAddrS(&pub, &priv);
-    mval r = isSubGenesisAddress(pub.key, 0);
+    mval r = isSubGenesisAddressMine(pub.key);
     uint64_t l = 0;
     time_t lt = time(0);
     while(1)
     {
         makAddrS(&pub, &priv);
-        r = isSubGenesisAddress(pub.key, 0);
+        r = isSubGenesisAddressMine(pub.key);
 
         if(r > 0)
         {
@@ -2456,7 +2329,7 @@ int main(int argc , char *argv[])
             printf("\033[H\033[J");
 
             nthreads = atoi(argv[2]);
-            printf("\x1B[33m%i Threads\x1B[0m launched..\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n", nthreads);
+            printf("\x1B[33m%i Threads\x1B[0m launched..\nMining Difficulty: \x1B[33m%.2f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n", nthreads, getMiningDifficulty());
 
             //Launch mining threads
             for(int i = 0; i < nthreads; i++)
@@ -2626,7 +2499,7 @@ int main(int argc , char *argv[])
             printf("\033[H\033[J");
 
             nthreads = get_nprocs();
-            printf("\x1B[33m%i CPU\x1B[0m Cores detected..\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n", nthreads);
+            printf("\x1B[33m%i CPU\x1B[0m Cores detected..\nMining Difficulty: \x1B[33m%.2f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n", nthreads, getMiningDifficulty());
 
             //Launch mining threads
             for(int i = 0; i < nthreads; i++)
@@ -2696,7 +2569,6 @@ int main(int argc , char *argv[])
         {
             remove("blocks.dat");
             system("wget -O.vfc/master_blocks.dat https://vfcash.uk/sync");
-            system("rm .vfc/blocks.dat");
             system("cp .vfc/master_blocks.dat .vfc/blocks.dat");
             printf("\x1B[33mResync from master complete.\x1B[0m\n\n");
             exit(0);
