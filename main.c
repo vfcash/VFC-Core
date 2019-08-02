@@ -302,7 +302,8 @@ uint getReplayRate()
     else if(tmi->tm_hour == 22)  return 30000;
     else if(tmi->tm_hour == 23)  return 10000;
     else if(tmi->tm_hour == 24)  return 10000;
-
+    
+    return 120000;
 }
 
 
