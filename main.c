@@ -89,7 +89,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.49.4";
+const char version[]="0.50";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -97,6 +97,7 @@ const char master_ip[] = "68.183.49.225";
 #define ERROR_NOFUNDS -1
 #define ERROR_SIGFAIL -2
 #define ERROR_UIDEXIST -3
+#define ERROR_WRITE -4
 
 //Node Settings
 #define MAX_TRANS_QUEUE 256             // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
@@ -183,6 +184,172 @@ double gNa(const vec3* a, const vec3* b)
     return dot / (m1*m2); //Should never divide by 0
 }
 
+// void xOv(vec3* a)
+// {
+//     const time_t lt = time(0);
+//     const struct tm* tmi = gmtime(&lt);
+
+//     struct stat st;
+//     stat(CHAIN_FILE, &st);
+
+//     const uint16_t c = tmi->tm_mday * sqrt(st.st_size);
+//     a->x ^= c;
+//     a->y ^= c;
+//     a->z ^= c;
+// }
+
+// //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
+// uint64_t isSubGenesisAddressNew(uint8_t *a, const uint s)
+// {
+//     //Is this requesting the genesis balance
+//     if(memcmp(a, genesis_pub, ECC_CURVE+1) == 0)
+//     {
+//         //Get the tax
+//         struct stat st;
+//         stat(CHAIN_FILE, &st);
+//         uint64_t ift = 0;
+//         if(st.st_size > 0)
+//             ift = (uint64_t)st.st_size / 133;
+//         else
+//             return 0;
+        
+//         ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
+//         return ift;
+//     }
+
+//     //Requesting the balance of a possible existing subG address
+
+//     vec3 v[5]; //Vectors
+
+//     char *ofs = a;
+//     memcpy(&v[0].x, ofs, sizeof(uint16_t));
+//     memcpy(&v[0].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+//     memcpy(&v[0].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+//     ofs = ofs + (sizeof(uint16_t)*3);
+//     memcpy(&v[1].x, ofs, sizeof(uint16_t));
+//     memcpy(&v[1].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+//     memcpy(&v[1].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+//     ofs = ofs + (sizeof(uint16_t)*3);
+//     memcpy(&v[2].x, ofs, sizeof(uint16_t));
+//     memcpy(&v[2].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+//     memcpy(&v[2].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+//     ofs = ofs + (sizeof(uint16_t)*3);
+//     memcpy(&v[3].x, ofs, sizeof(uint16_t));
+//     memcpy(&v[3].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+//     memcpy(&v[3].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+//     ofs = ofs + (sizeof(uint16_t)*3);
+//     memcpy(&v[4].x, ofs, sizeof(uint16_t));
+//     memcpy(&v[4].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+//     memcpy(&v[4].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+//     xOv(&v[0]);
+//     xOv(&v[1]);
+//     xOv(&v[2]);
+//     xOv(&v[3]);
+//     xOv(&v[4]);
+
+//     const double a1 = gNa(&v[0], &v[3]);
+//     const double a2 = gNa(&v[3], &v[2]);
+//     const double a3 = gNa(&v[2], &v[1]);
+//     const double a4 = gNa(&v[1], &v[4]);
+
+//     //All normal angles a1-a4 must be under this value
+//     const double min = 0.24; //0.20
+    
+//     //Was it a straight hit?
+//     if(a1 < min && a2 < min && a3 < min && a4 < min)
+//     {
+//         //Calculate and return value of address mined
+//         const double a = (a1+a2+a3+a4);
+//         if(a <= 0)
+//             return 0; //not want zero address.
+//         const double ra = a/4;
+//         const double mn = 4.166666667; //(1/min);
+//         const uint64_t rv = (uint64_t)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
+
+//         //Illustrate the hit
+//         if(s == 0)
+//         {
+//             setlocale(LC_NUMERIC, "");
+//             printf("\x1B[33msubG\x1B[0m: %.8f - %.8f - %.8f - %.8f - %'.3f VFC < %.3f\n\n", a1, a2, a3, a4, toDB(rv), ra);
+//         }
+
+//         return rv;
+//     }
+
+//     if(s == 0)
+//     {
+//         //Print the occasional "close hit"
+//         const double soft = 0.1;
+//         if(a1 < min+soft && a2 < min+soft && a3 < min+soft && a4 < min+soft)
+//             printf("\x1B[33mx\x1B[0m: %.8f - %.8f - %.8f - %.8f\n", a1, a2, a3, a4);
+//     }
+
+//     return 0;
+
+// }
+
+// //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
+// uint64_t isSubGenesisAddressOld(uint8_t *a)
+// {
+//     //Requesting the balance of a possible existing subG address
+
+//     vec3 v[5]; //Vectors
+
+//     char *ofs = a;
+//     memcpy(&v[0].x, ofs, sizeof(uint16_t));
+//     memcpy(&v[0].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+//     memcpy(&v[0].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+//     ofs = ofs + (sizeof(uint16_t)*3);
+//     memcpy(&v[1].x, ofs, sizeof(uint16_t));
+//     memcpy(&v[1].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+//     memcpy(&v[1].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+//     ofs = ofs + (sizeof(uint16_t)*3);
+//     memcpy(&v[2].x, ofs, sizeof(uint16_t));
+//     memcpy(&v[2].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+//     memcpy(&v[2].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+//     ofs = ofs + (sizeof(uint16_t)*3);
+//     memcpy(&v[3].x, ofs, sizeof(uint16_t));
+//     memcpy(&v[3].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+//     memcpy(&v[3].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+//     ofs = ofs + (sizeof(uint16_t)*3);
+//     memcpy(&v[4].x, ofs, sizeof(uint16_t));
+//     memcpy(&v[4].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+//     memcpy(&v[4].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+//     const double a1 = gNa(&v[0], &v[3]);
+//     const double a2 = gNa(&v[3], &v[2]);
+//     const double a3 = gNa(&v[2], &v[1]);
+//     const double a4 = gNa(&v[1], &v[4]);
+
+//     //All normal angles a1-a4 must be under this value
+//     const double min = 0.24; //0.20
+    
+//     //Was it a straight hit?
+//     if(a1 < min && a2 < min && a3 < min && a4 < min)
+//     {
+//         //Calculate and return value of address mined
+//         const double a = (a1+a2+a3+a4);
+//         if(a <= 0)
+//             return 0; //not want zero address.
+//         const double ra = a/4;
+//         const double mn = 4.166666667; //(1/min);
+//         const uint64_t rv = (uint64_t)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
+
+//         return rv;
+//     }
+
+//     return 0;
+// }
+
 //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
 uint64_t isSubGenesisAddress(uint8_t *a, const uint s)
 {
@@ -201,6 +368,11 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint s)
         ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
         return ift;
     }
+
+    // //Is old subG?
+    // const uint64_t or = isSubGenesisAddressOld(a);
+    // if(or > 0)
+    //     return or;
 
     //Requesting the balance of a possible existing subG address
 
@@ -230,6 +402,12 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint s)
     memcpy(&v[4].x, ofs, sizeof(uint16_t));
     memcpy(&v[4].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
     memcpy(&v[4].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    // xOv(&v[0]);
+    // xOv(&v[1]);
+    // xOv(&v[2]);
+    // xOv(&v[3]);
+    // xOv(&v[4]);
 
     const double a1 = gNa(&v[0], &v[3]);
     const double a2 = gNa(&v[3], &v[2]);
@@ -329,6 +507,66 @@ double floor(double i)
         return (int)i - 1;
     else
         return (int)i;
+}
+
+void forceWrite(const char* file, const void* data, const size_t data_len)
+{
+    FILE* f = fopen(file, "w");
+    if(f)
+    {
+        uint fc = 0;
+        while(fwrite(data, 1, data_len, f) < data_len)
+        {
+            fclose(f);
+            fopen(file, "w");
+            fc++;
+            if(fc > 333)
+            {
+                printf("\033[1m\x1B[31mERROR: fwrite() in forceWrite() has failed for '%s'.\x1B[0m\033[0m\n", file);
+                fclose(f);
+                return;
+            }
+            if(f == NULL)
+                continue;
+        }
+
+        fclose(f);
+    }
+}
+
+void forceRead(const char* file, void* data, const size_t data_len)
+{
+    FILE* f = fopen(file, "r");
+    if(f)
+    {
+        uint fc = 0;
+        while(fread(data, 1, data_len, f) < data_len)
+        {
+            fclose(f);
+            fopen(file, "r");
+            fc++;
+            if(fc > 333)
+            {
+                printf("\033[1m\x1B[31mERROR: fread() in forceRead() has failed for '%s'.\x1B[0m\033[0m\n", file);
+                fclose(f);
+                return;
+            }
+            if(f == NULL)
+                continue;
+        }
+
+        fclose(f);
+    }
+}
+
+void quickTruncate(const char* file, const size_t pos)
+{
+    int f = open(file, O_WRONLY);
+    if(f)
+    {
+        ftruncate(f, pos);
+        close(f);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -649,19 +887,14 @@ void resyncBlocks()
         csend(replay_allow, "r", 1);
 
     //The master resyncs off everyone
-#if MASTER_NODE == 1
-        peersBroadcast("r", 1);
-#endif
+// #if MASTER_NODE == 1
+//         peersBroadcast("r", 1);
+// #endif
 
     //Set the file memory
     struct in_addr ip_addr;
     ip_addr.s_addr = replay_allow;
-    FILE* f = fopen(".vfc/rp.mem", "w");
-    if(f)
-    {
-        fwrite(&replay_allow, sizeof(uint), 1, f);
-        fclose(f);
-    }
+    forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint));
 }
 
 uint sendMaster(const char* dat, const size_t len)
@@ -801,6 +1034,18 @@ uint ipo[MAX_TRANS_QUEUE];
 unsigned char replay[MAX_TRANS_QUEUE]; // 1 = not replay, 0 = replay
 time_t delta[MAX_TRANS_QUEUE];
 
+//size of queue
+uint gQueSize()
+{
+    uint size = 0;
+    for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
+    {
+        if(tq[i].amount != 0 && time(0) - delta[i] > 2)
+            size++;
+    }
+    return size;
+}
+
 //Add a transaction to the Queue
 uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char ir)
 {
@@ -850,6 +1095,10 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
         replay[freeindex] = ir;
         delta[freeindex] = time(0);
     }
+    // else
+    // {
+    //     printf("Warning: QUE FULL %u\n", gQueSize());
+    // }
 
     //Success
     return 1;
@@ -865,18 +1114,6 @@ int gQue()
                 return i;
     }
     return -1;
-}
-
-//size of queue
-uint gQueSize()
-{
-    uint size = 0;
-    for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
-    {
-        if(tq[i].amount != 0 && time(0) - delta[i] > 2)
-            size++;
-    }
-    return size;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1067,8 +1304,8 @@ void replayBlocks(const uint ip)
             uint fc = 0;
             while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
             {
-                //if(fc == 0)
-                //    printf("\033[1m\x1B[31mError: fread failed. Retrying... %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
+                if(fc == 0)
+                    printf("\033[1m\x1B[31mError: fread failed. Retrying... %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
 
                 fclose(f);
                 f = fopen(CHAIN_FILE, "r");
@@ -1084,8 +1321,8 @@ void replayBlocks(const uint ip)
                 if(f == NULL)
                     continue;
             }
-            // if(fc != 0)
-            //     printf("\033[1m\x1B[31mSuccess: fread succeded after %u retries. %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
+             if(fc != 0)
+                 printf("\033[1m\x1B[31mSuccess: fread succeded. %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
 
             //Generate Packet (pc)
             const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
@@ -1227,6 +1464,74 @@ void launchReplayThread(const uint32_t ip)
             pthread_mutex_unlock(&mutex1);
         }
     }
+}
+
+//repair chain
+void truncate_at_error(const char* file)
+{
+    int f = open(file, O_RDONLY);
+    if(f)
+    {
+        const size_t len = lseek(f, 0, SEEK_END);
+
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
+        {
+            close(f);
+
+            struct trans t;
+            time_t st = time(0);
+            for(size_t i = sizeof(struct trans)*((len/144)-33333); i < len; i += sizeof(struct trans))
+            {
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                if(time(0) > st)
+                {
+                    printf("head: %li / %li\n", i/144, len/144);
+                    st = time(0) + 9;
+                }
+
+                //Make original
+                struct trans to;
+                memset(&to, 0, sizeof(struct trans));
+                to.uid = t.uid;
+                memcpy(to.from.key, t.from.key, ECC_CURVE+1);
+                memcpy(to.to.key, t.to.key, ECC_CURVE+1);
+                to.amount = t.amount;
+
+                //Lets verify if this signature is valid
+                uint8_t thash[ECC_CURVE];
+                makHash(thash, &to);
+                if(ecdsa_verify(t.from.key, thash, t.owner.key) == 0)
+                {
+                    //Alright this trans is invalid
+
+                    char topub[MIN_LEN];
+                    memset(topub, 0, sizeof(topub));
+                    size_t len = MIN_LEN;
+                    b58enc(topub, &len, t.to.key, ECC_CURVE+1);
+
+                    char frompub[MIN_LEN];
+                    memset(frompub, 0, sizeof(frompub));
+                    len = MIN_LEN;
+                    b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
+
+                    setlocale(LC_NUMERIC, "");
+                    printf("%s > %s : %'.3f\n", frompub, topub, toDB(t.amount));
+
+                    quickTruncate(file, i);
+                    printf("Trunc at: %li\n", i);
+                    munmap(m, len);
+                    return;
+                }
+            }
+
+            munmap(m, len);
+        }
+
+        close(f);
+    }
+
 }
 
 //dump all trans
@@ -1446,9 +1751,41 @@ uint64_t getBalanceLocal(addr* from)
 
             munmap(m, len);
         }
-	
-	close(f);
+
+        close(f);
     }
+
+    // int64_t rv = isSubGenesisAddress(from->key, 1);
+    // FILE* f = fopen(CHAIN_FILE, "r");
+    // if(f)
+    // {
+    //     fseek(f, 0, SEEK_END);
+    //     const size_t len = ftell(f);
+
+    //     struct trans t;
+    //     for(size_t i = 0; i < len; i += sizeof(struct trans))
+    //     {
+    //         fseek(f, i, SEEK_SET);
+
+    //         struct trans t;
+    //         if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+    //         {
+    //             if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
+    //                 rv += t.amount;
+    //             if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+    //                 rv -= t.amount;
+    //         }
+    //         else
+    //         {
+    //             printf("There was a problem, blocks.dat looks corrupt.\n");
+    //             fclose(f);
+    //             return rv;
+    //         }
+    //     }
+
+    //     fclose(f);
+    // }
+
     if(rv < 0)
         return 0;
     return rv;
@@ -1461,18 +1798,8 @@ uint64_t getBalance(addr* from)
     balance_accumulator = 0;
     for(uint i = 0; i < MAX_PEERS; i++)
         peer_ba[i] = 0;
-    FILE* f = fopen(".vfc/bal.mem", "w");
-    if(f)
-    {
-        fwrite(&balance_accumulator, sizeof(uint64_t), 1, f);
-        fclose(f);
-    }
-    f = fopen(".vfc/balt.mem", "w");
-    if(f)
-    {
-        fwrite(&balance_accumulator, sizeof(uint64_t), 1, f);
-        fclose(f);
-    }
+    forceWrite(".vfc/bal.mem", &balance_accumulator, sizeof(uint64_t));
+    forceWrite(".vfc/balt.mem", &balance_accumulator, sizeof(uint64_t));
 
 #if MASTER_NODE == 0
     //Tell peers to fill our accumulator
@@ -1492,7 +1819,15 @@ uint64_t getBalance(addr* from)
 //Calculate if an address has the value required to make a transaction of x amount.
 int hasbalance(const uint64_t uid, addr* from, mval amount)
 {
+    // int64_t rv = isSubGenesisAddressOld(from->key);
+    // if(rv != 0)
+    //     return 0; //Do not process transactions for old subG addresses
+    // rv = isSubGenesisAddressNew(from->key, 1);
+
+
     int64_t rv = isSubGenesisAddress(from->key, 1);
+    if(rv != 0)
+        return 0; //Do not process transactions for old subG addresses
     int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
@@ -1521,140 +1856,58 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
 
             munmap(m, len);
         }
-	    
-	close(f);
+
+        close(f);
     }
+
+
+    // int64_t rv = isSubGenesisAddress(from->key, 1);
+    // if(rv != 0)
+    //     return 0; //Do not process transactions for subG addresses
+    // FILE* f = fopen(CHAIN_FILE, "r");
+    // if(f)
+    // {
+    //     fseek(f, 0, SEEK_END);
+    //     const size_t len = ftell(f);
+
+    //     struct trans t;
+    //     for(size_t i = 0; i < len; i += sizeof(struct trans))
+    //     {
+    //         fseek(f, i, SEEK_SET);
+
+    //         struct trans t;
+    //         if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+    //         {
+    //             if(t.uid == uid)
+    //             {
+    //                 fclose(f);
+    //                 return ERROR_UIDEXIST;
+    //             }
+    //             if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
+    //                 rv += t.amount;
+    //             if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+    //                 rv -= t.amount;
+    //         }
+    //         else
+    //         {
+    //             printf("There was a problem, blocks.dat looks corrupt.\n");
+    //             fclose(f);
+    //             return rv;
+    //         }
+    //     }
+
+    //     fclose(f);
+    // }
+
+
+
+
     if(rv >= amount)
         return 1;
     else
         return 0;
 }
 
-
-#if MASTER_NODE == 1
-//This is a quick hackup for a function that scans through the whole local chain, and removes duplicates
-//then saving the new chain to .vfc/cblocks.dat
-int chasbalance(const uint64_t uid, addr* from, mval amount)
-{
-    int64_t rv = isSubGenesisAddress(from->key, 1);
-    int f = open(".vfc/cblocks.dat", O_RDONLY);
-    if(f)
-    {
-        const size_t len = lseek(f, 0, SEEK_END);
-
-        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-        if(m != MAP_FAILED)
-        {
-            close(f);
-
-            struct trans t;
-            for(size_t i = 0; i < len; i += sizeof(struct trans))
-            {
-                if(t.uid == uid)
-                {
-                    munmap(m, len);
-                    return ERROR_UIDEXIST;
-                }
-                memcpy(&t, m+i, sizeof(struct trans));
-
-                if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
-                    rv += t.amount;
-                else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
-                    rv -= t.amount;
-            }
-
-            munmap(m, len);
-        }
-	    
-	close(f);
-    }
-    if(rv >= amount)
-        return 1;
-    else
-        return 0;
-}
-void newClean()
-{
-    uint8_t gpub[ECC_CURVE+1];
-    size_t len = ECC_CURVE+1;
-    b58tobin(gpub, &len, "foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ", 44);
-    struct trans t;
-    memset(&t, 0, sizeof(struct trans));
-    t.amount = 0xFFFFFFFF;
-    memcpy(&t.to.key, gpub, ECC_CURVE+1);
-    FILE* f = fopen(".vfc/cblocks.dat", "w");
-    if(f)
-    {
-        fwrite(&t, sizeof(struct trans), 1, f);
-        fclose(f);
-    }
-}
-void cleanChain()
-{
-    int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
-    {
-        const size_t len = lseek(f, 0, SEEK_END);
-
-        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-        if(m != MAP_FAILED)
-        {
-            close(f);
-
-            struct trans t;
-            for(size_t i = 0; i < len; i += sizeof(struct trans))
-            {
-                memcpy(&t, m+i, sizeof(struct trans));
-
-                //Create trans struct
-                struct trans nt;
-                memset(&nt, 0, sizeof(struct trans));
-                nt.uid = t.uid;
-                memcpy(nt.from.key, t.from.key, ECC_CURVE+1);
-                memcpy(nt.to.key, t.to.key, ECC_CURVE+1);
-                nt.amount = t.amount;
-
-                uint8_t thash[ECC_CURVE];
-                makHash(thash, &nt);
-                if(ecdsa_verify(nt.from.key, thash, t.owner.key) == 0)
-                {
-                    //printf("rejected: no verification\n");
-                    continue;
-                }
-
-                memcpy(nt.owner.key, t.owner.key, ECC_CURVE*2);
-                
-                const int hbr = chasbalance(t.uid, &t.from, t.amount);
-                if(hbr == 0)
-                {
-                    //printf("rejected: no balance\n");
-                    continue;
-                }
-                else if(hbr < 0)
-                {
-                    //printf("rejected: uid exists\n");
-                    continue;
-                }
-
-                //Ok let's write the transaction to chain
-                if(memcmp(t.from.key, t.to.key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
-                {
-                    FILE* f = fopen(".vfc/cblocks.dat", "a");
-                    if(f)
-                    {
-                        fwrite(&t, sizeof(struct trans), 1, f);
-                        fclose(f);
-                    }
-                }
-            }
-
-            munmap(m, len);
-        }
-	    
-	close(f);
-    }
-}
-#endif
 
 //Execute Transaction
 int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* owner)
@@ -1671,7 +1924,10 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     uint8_t thash[ECC_CURVE];
     makHash(thash, &t);
     if(ecdsa_verify(from->key, thash, owner->key) == 0)
+    {
+        //printf("\033[1m\x1B[31mERROR: verify failed.\x1B[0m\033[0m\n");
         return ERROR_SIGFAIL;
+    }
 
     //Add the sig now we know it's valid
     memcpy(t.owner.key, owner->key, ECC_CURVE*2);
@@ -1679,9 +1935,15 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     //Check this address has the required value for the transaction (and that UID is actually unique)
     const int hbr = hasbalance(uid, from, amount);
     if(hbr == 0)
+    {
+        //printf("\033[1m\x1B[31mERROR: no balance.\x1B[0m\033[0m\n");
         return ERROR_NOFUNDS;
+    }
     else if(hbr < 0)
+    {
+        //printf("\033[1m\x1B[31mERROR: uid exists.\x1B[0m\033[0m\n");
         return hbr; //it's an error code
+    }
 
     //Ok let's write the transaction to chain
     if(memcmp(from->key, to->key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
@@ -1689,10 +1951,55 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
         FILE* f = fopen(CHAIN_FILE, "a");
         if(f)
         {
-            fwrite(&t, sizeof(struct trans), 1, f);
+            size_t written = 0;
+
+            uint fc = 0;
+            while(written == 0)
+            {
+                written = fwrite(&t, 1, sizeof(struct trans), f);
+
+                fc++;
+                if(fc > 333)
+                {
+                    printf("\033[1m\x1B[31mERROR: fwrite() in process_trans() has failed.\x1B[0m\033[0m\n");
+                    fclose(f);
+                    return ERROR_WRITE;
+                }
+                
+                if(written == 0)
+                {
+                    fclose(f);
+                    f = fopen(CHAIN_FILE, "a");
+                    continue;
+                }
+                
+                //Did we corrupt the chain?
+                if(written < sizeof(struct trans))
+                {
+                    fclose(f);
+
+                    printf("\033[1m\x1B[31mERROR: fwrite() in process_trans() potential chain corruption.\x1B[0m\033[0m\n");
+
+                    //Revert the failed write
+                    struct stat st;
+                    stat(CHAIN_FILE, &st);
+                    quickTruncate(CHAIN_FILE, st.st_size - written);
+                }
+            }
+
             fclose(f);
         }
+        // else
+        // {
+        //     printf("\033[1m\x1B[31mERROR: fopen failed in process_trans()\x1B[0m\033[0m\n");
+        // }
+        
     }
+    // else
+    // {
+    //     printf("\033[1m\x1B[31mERROR: send to self\x1B[0m\033[0m\n");
+    // }
+    
 
     //Success
     return 1;
@@ -1730,12 +2037,7 @@ void makGenesis()
     memset(&t, 0, sizeof(struct trans));
     t.amount = 0xFFFFFFFF;
     memcpy(&t.to.key, gpub, ECC_CURVE+1);
-    FILE* f = fopen(CHAIN_FILE, "w");
-    if(f)
-    {
-        fwrite(&t, sizeof(struct trans), 1, f);
-        fclose(f);
-    }
+    forceWrite(CHAIN_FILE, &t, sizeof(struct trans));
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1931,8 +2233,8 @@ void *processThread(void *arg)
         {
             usleep(3333); //Little delay if queue is empty we dont want to thrash cycles
             continue;
-        }  
-        
+        }
+
         //Process the transaction
         const int r = process_trans(tq[i].uid, &tq[i].from, &tq[i].to, tq[i].amount, &tq[i].owner);
 
@@ -2314,7 +2616,7 @@ int main(int argc , char *argv[])
             struct stat st;
             stat(CHAIN_FILE, &st);
             if(st.st_size > 0)
-                printf("\x1B[33m%1.f\x1B[0m kb / \x1B[33m%u\x1B[0m Transactions\n", (double)st.st_size / 1000, (uint)st.st_size / 133);
+                printf("\x1B[33m%1.f\x1B[0m kb / \x1B[33m%u\x1B[0m Transactions\n", (double)st.st_size / 1000, (uint)st.st_size / 144);
             exit(0);
         }
 
@@ -2340,26 +2642,6 @@ int main(int argc , char *argv[])
             //only exits on sigterm
             exit(0);
         }
-
-#if MASTER_NODE == 1
-        //clean [undocumented functions, for full chain verification, rm/bad trans]
-        if(strcmp(argv[1], "newclean") == 0)
-        {
-            newClean();
-            printf("New clean chain ready .vfc/cblocks.dat\n");
-            exit(0);
-        }
-        if(strcmp(argv[1], "clean") == 0)
-        {
-            while(1)
-            {
-                cleanChain();
-                timestamp();
-                printf("chain cleaned to .vfc/cblocks.dat\n");
-            }
-            exit(0);
-        }
-#endif
 
         //sync
         if(strcmp(argv[1], "sync") == 0)
@@ -2387,19 +2669,10 @@ int main(int argc , char *argv[])
                 }
                 struct in_addr ip_addr;
                 ip_addr.s_addr = replay_allow;
-                FILE* f = fopen(".vfc/rp.mem", "w");
-                if(f)
-                {
-                    fwrite(&replay_allow, sizeof(uint), 1, f);
-                    fclose(f);
-                }
-                f = fopen(".vfc/rph.mem", "r");
-                if(f)
-                {
-                    if(fread(&replay_height, sizeof(uint), 1, f) != 1)
-                        printf("\033[1m\x1B[31mReplay Height Corrupted. Load Failed.\x1B[0m\033[0m\n");
-                    fclose(f);
-                }
+
+                forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint));
+                forceRead(".vfc/rph.mem", &replay_height, sizeof(uint));
+
                 if(replay_allow == 0)
                     printf("\x1B[33m%.1f\x1B[0m kb of \x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Synchronizing only from the Master.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
                 else
@@ -2408,6 +2681,13 @@ int main(int argc , char *argv[])
                 sleep(1);
             }
 
+            exit(0);
+        }
+
+        //truncate blocks file at first error transaction
+        if(strcmp(argv[1], "trunc") == 0)
+        {
+            truncate_at_error(CHAIN_FILE);
             exit(0);
         }
 
@@ -2427,12 +2707,7 @@ int main(int argc , char *argv[])
             setMasterNode();
             loadmem();
             resyncBlocks();
-            FILE* f = fopen(".vfc/rp.mem", "w");
-            if(f)
-            {
-                fwrite(&replay_allow, sizeof(uint), 1, f);
-                fclose(f);
-            }
+            forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint));
             printf("\x1B[33mResync Executed.\x1B[0m\n\n");
             exit(0);
         }
@@ -2489,20 +2764,8 @@ int main(int argc , char *argv[])
             uint64_t baln = 0;
             uint64_t balt = 0;
             sleep(3);
-            FILE* f = fopen(".vfc/bal.mem", "r");
-            if(f)
-            {
-                if(fread(&baln, sizeof(uint64_t), 1, f) != 1)
-                    printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
-                fclose(f);
-            }
-            f = fopen(".vfc/balt.mem", "r");
-            if(f)
-            {
-                if(fread(&balt, sizeof(uint64_t), 1, f) != 1)
-                    printf("\033[1m\x1B[31mbalt.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
-                fclose(f);
-            }
+            forceRead(".vfc/bal.mem", &baln, sizeof(uint64_t));
+            forceRead(".vfc/balt.mem", &balt, sizeof(uint64_t));
 
             uint64_t fbal = bal;
             if(balt > fbal)
@@ -2613,20 +2876,8 @@ int main(int argc , char *argv[])
 #if MASTER_NODE == 0
         sleep(3);
 #endif
-        FILE* f = fopen(".vfc/bal.mem", "r");
-        if(f)
-        {
-            if(fread(&baln, sizeof(uint64_t), 1, f) != 1)
-                printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
-            fclose(f);
-        }
-        f = fopen(".vfc/balt.mem", "r");
-        if(f)
-        {
-            if(fread(&balt, sizeof(uint64_t), 1, f) != 1)
-                printf("\033[1m\x1B[31mbalt.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
-            fclose(f);
-        }
+        forceRead(".vfc/bal.mem", &baln, sizeof(uint64_t));
+        forceRead(".vfc/balt.mem", &balt, sizeof(uint64_t));
 
         uint64_t fbal = bal;
         if(balt > fbal)
@@ -2702,7 +2953,7 @@ int main(int argc , char *argv[])
 
         //Generate Packet (pc)
         const uint origin = 0;
-        const size_t len = 1+sizeof(uint)+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+        size_t len = 1+sizeof(uint)+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
         char pc[MIN_LEN];
         pc[0] = 't';
         char* ofs = pc + 1;
@@ -2722,6 +2973,21 @@ int main(int argc , char *argv[])
         sendMaster(pc, len);
         peersBroadcast(pc, len);
 
+        //Send locally as a replay
+        len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+        pc[0] = 'p'; //This is a re*P*lay
+        ofs = pc + 1;
+        memcpy(ofs, &t.uid, sizeof(uint64_t));
+        ofs += sizeof(uint64_t);
+        memcpy(ofs, t.from.key, ECC_CURVE+1);
+        ofs += ECC_CURVE+1;
+        memcpy(ofs, t.to.key, ECC_CURVE+1);
+        ofs += ECC_CURVE+1;
+        memcpy(ofs, &t.amount, sizeof(mval));
+        ofs += sizeof(mval);
+        memcpy(ofs, t.owner.key, ECC_CURVE*2);
+        csend(inet_addr("127.0.0.1"), pc, len);
+
         //Log
         char howner[MIN_LEN];
         memset(howner, 0, sizeof(howner));
@@ -2733,7 +2999,11 @@ int main(int argc , char *argv[])
         printf("\x1B[33mTransaction Sent.\x1B[0m\n\n");
 
     //Get balance again..
+#if MASTER_NODE == 1
+    sleep(3);
+#else
     sleep(6);
+#endif
 
     const int64_t bal1 = getBalanceLocal(&t.from);
     setlocale(LC_NUMERIC, "");
@@ -2829,8 +3099,8 @@ int main(int argc , char *argv[])
             read_size = recvfrom(s, rb, RECV_BUFF_SIZE-1, 0, (struct sockaddr *)&client, &slen);
 
             //Are we the same node sending to itself, if so, ignore.
-            if(server.sin_addr.s_addr == client.sin_addr.s_addr) //I know, this is very rarily ever effective. If ever.
-                continue;
+            //if(server.sin_addr.s_addr == client.sin_addr.s_addr) //I know, this is very rarily ever effective. If ever.
+                //continue;
 
             //It's time to payout some rewards (if eligible).
 #if MASTER_NODE == 1
@@ -2939,9 +3209,9 @@ int main(int argc , char *argv[])
             else if(rb[0] == 'h' && read_size == sizeof(uint)+1)
             {
                 //`hk; Allows master to resync from any peer, any time, injection is just as fine.
-#if MASTER_NODE == 1
-                client.sin_addr.s_addr = replay_allow;
-#endif
+// #if MASTER_NODE == 1
+//                 client.sin_addr.s_addr = replay_allow;
+// #endif
 
                 //Check this is the replay peer
                 if(client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
@@ -2950,12 +3220,7 @@ int main(int argc , char *argv[])
                     memcpy(&trh, rb+1, sizeof(uint)); //Set the block height
                     if(trh > replay_height)
                         replay_height = trh;
-                    FILE* f = fopen(".vfc/rph.mem", "w");
-                    if(f)
-                    {
-                        fwrite(&replay_height, sizeof(uint), 1, f);
-                        fclose(f);
-                    }
+                    forceWrite(".vfc/rph.mem", &replay_height, sizeof(uint));
                 }
             }
 
@@ -2988,20 +3253,8 @@ int main(int argc , char *argv[])
                 {
                     //Load the current state (check if the client process reset the log)
                     uint64_t baln=0, balt=0;
-                    FILE* f = fopen(".vfc/bal.mem", "r");
-                    if(f)
-                    {
-                        if(fread(&baln, sizeof(uint64_t), 1, f) != 1)
-                            printf("\033[1m\x1B[31mbal.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
-                        fclose(f);
-                    }
-                    f = fopen(".vfc/balt.mem", "r");
-                    if(f)
-                    {
-                        if(fread(&balt, sizeof(uint64_t), 1, f) != 1)
-                            printf("\033[1m\x1B[31mbalt.mem Corrupted. Load Failed.\x1B[0m\033[0m\n");
-                        fclose(f);
-                    }
+                    forceRead(".vfc/bal.mem", &baln, sizeof(uint64_t));
+                    forceRead(".vfc/balt.mem", &balt, sizeof(uint64_t));
 
                     //Is it time to reset?
                     if(baln == 0)
@@ -3018,20 +3271,9 @@ int main(int argc , char *argv[])
                         balance_accumulator = bal;
 
                     //And write
-                    f = fopen(".vfc/bal.mem", "w");
-                    if(f)
-                    {
-                        fwrite(&balance_accumulator, sizeof(uint64_t), 1, f);
-                        fclose(f);
-                    }
-                    f = fopen(".vfc/balt.mem", "w");
-                    if(f)
-                    {
-                        const uint64_t tb = trueBalance();
-                        fwrite(&tb, sizeof(uint64_t), 1, f);
-                        fclose(f);
-                    }
-
+                    forceWrite(".vfc/bal.mem", &balance_accumulator, sizeof(uint64_t));
+                    const uint64_t tb = trueBalance();
+                    forceWrite(".vfc/balt.mem", &tb, sizeof(uint64_t));
                 }
             }
 
@@ -3039,12 +3281,12 @@ int main(int argc , char *argv[])
             else if(rb[0] == 'p' && read_size == replay_size)
             {
                 //`hk; Allows master to resync from any peer, any time, injection is just as fine.
-#if MASTER_NODE == 1
-                client.sin_addr.s_addr = replay_allow;
-#endif
+// #if MASTER_NODE == 1
+//                 client.sin_addr.s_addr = replay_allow;
+// #endif
 
                 //This replay has to be from the specific trusted node, or the master. If it's a trusted node, we know it's also a peer so. All good.
-                if(client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
+                if(client.sin_addr.s_addr == inet_addr("127.0.0.1") || client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
                 {
                     //Decode packet into a Transaction
                     struct trans t;
@@ -3110,13 +3352,7 @@ int main(int argc , char *argv[])
                 savemem();
                 
                 //Load new replay allow value
-                f = fopen(".vfc/rp.mem", "r");
-                if(f)
-                {
-                    if(fread(&replay_allow, sizeof(uint), 1, f) != 1)
-                        printf("\033[1m\x1B[31mReplay Allow IP Corrupted. Load Failed.\x1B[0m\033[0m\n");
-                    fclose(f);
-                }
+                forceRead(".vfc/rp.mem", &replay_allow, sizeof(uint));
 
                 //Next Loop
                 st0 = time(0)+3;
