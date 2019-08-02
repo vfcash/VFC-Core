@@ -270,6 +270,41 @@ void quickTruncate(const char* file, const size_t pos)
     }
 }
 
+uint getReplayRate()
+{
+    // This changes the delay in microseconds between each transaction sent during a block replay to a peer
+    // for example; 10,000 = 1,000 transactions a second, each transaction is 147 bytes, that a total of 1000*147 = 147,000 bytes a second (147kb a sec) per peer.
+    const time_t lt = time(0);
+    const struct tm* tmi = localtime(&lt);
+    
+    if(tmi->tm_hour == 0)        return 10000;
+    else if(tmi->tm_hour == 1)   return 10000;
+    else if(tmi->tm_hour == 2)   return 10000;
+    else if(tmi->tm_hour == 3)   return 10000;
+    else if(tmi->tm_hour == 4)   return 10000;
+    else if(tmi->tm_hour == 5)   return 10000;
+    else if(tmi->tm_hour == 6)   return 10000;
+    else if(tmi->tm_hour == 7)   return 10000;
+    else if(tmi->tm_hour == 8)   return 10000;
+    else if(tmi->tm_hour == 9)   return 30000;
+    else if(tmi->tm_hour == 10)  return 60000;
+    else if(tmi->tm_hour == 11)  return 120000;
+    else if(tmi->tm_hour == 12)  return 120000;
+    else if(tmi->tm_hour == 13)  return 120000;
+    else if(tmi->tm_hour == 14)  return 120000;
+    else if(tmi->tm_hour == 15)  return 120000;
+    else if(tmi->tm_hour == 16)  return 120000;
+    else if(tmi->tm_hour == 17)  return 120000;
+    else if(tmi->tm_hour == 18)  return 120000;
+    else if(tmi->tm_hour == 19)  return 120000;
+    else if(tmi->tm_hour == 20)  return 120000;
+    else if(tmi->tm_hour == 21)  return 60000;
+    else if(tmi->tm_hour == 22)  return 30000;
+    else if(tmi->tm_hour == 23)  return 10000;
+    else if(tmi->tm_hour == 24)  return 10000;
+
+}
+
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
@@ -1154,6 +1189,8 @@ void replayBlocks(const uint ip)
     struct in_addr ip_addr;
     ip_addr.s_addr = ip;
 
+    const uint replay_rate = getReplayRate();
+
     //Send block height
     struct stat st;
     stat(CHAIN_FILE, &st);
@@ -1228,7 +1265,7 @@ void replayBlocks(const uint ip)
             #if MASTER_NODE == 1
                 usleep(10000); //
             #else
-                usleep(120000); //
+                usleep(replay_rate); //
             #endif
         }
 
@@ -1282,7 +1319,7 @@ void replayBlocks(const uint ip)
             #if MASTER_NODE == 1
                 usleep(10000); //
             #else
-                usleep(120000); //
+                usleep(replay_rate); //
             #endif
             
         }
