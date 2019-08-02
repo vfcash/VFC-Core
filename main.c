@@ -63,7 +63,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <pwd.h>
-#include <sys/sysinfo.h> //Cpu cores
+#include <sys/sysinfo.h> //CPU cores
 #include <sys/stat.h> //mkdir
 #include <fcntl.h> //open
 #include <time.h> //time
@@ -1889,12 +1889,17 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
                 {
                     fclose(f);
 
-                    printf("\033[1m\x1B[31mERROR: fwrite() in process_trans() potential chain corruption.\x1B[0m\033[0m\n");
+                    printf("\033[1m\x1B[31mERROR: fwrite() in process_trans() reverted potential chain corruption.\x1B[0m\033[0m\n");
 
                     //Revert the failed write
                     struct stat st;
                     stat(CHAIN_FILE, &st);
                     quickTruncate(CHAIN_FILE, st.st_size - written);
+
+                    //Try again
+                    written = 0;
+                    f = fopen(CHAIN_FILE, "a");
+                    continue;
                 }
             }
 
