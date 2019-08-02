@@ -3113,7 +3113,7 @@ int main(int argc , char *argv[])
 #endif
 
             //Is this a [fresh trans / dead trans] ?
-            else if((rb[0] == 't' || rb[0] == 'd') && read_size == trans_size)
+            if((rb[0] == 't' || rb[0] == 'd') && read_size == trans_size)
             {
                 //Root origin peer address
                 uint origin = 0;
