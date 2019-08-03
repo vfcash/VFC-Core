@@ -277,16 +277,16 @@ uint getReplayRate()
     const time_t lt = time(0);
     const struct tm* tmi = localtime(&lt);
     
-    if(tmi->tm_hour == 0)        return 10000;
-    else if(tmi->tm_hour == 1)   return 10000;
-    else if(tmi->tm_hour == 2)   return 10000;
-    else if(tmi->tm_hour == 3)   return 10000;
-    else if(tmi->tm_hour == 4)   return 10000;
-    else if(tmi->tm_hour == 5)   return 10000;
-    else if(tmi->tm_hour == 6)   return 10000;
-    else if(tmi->tm_hour == 7)   return 10000;
-    else if(tmi->tm_hour == 8)   return 10000;
-    else if(tmi->tm_hour == 9)   return 30000;
+    if(tmi->tm_hour == 0)        return 40000;
+    else if(tmi->tm_hour == 1)   return 40000;
+    else if(tmi->tm_hour == 2)   return 40000;
+    else if(tmi->tm_hour == 3)   return 40000;
+    else if(tmi->tm_hour == 4)   return 40000;
+    else if(tmi->tm_hour == 5)   return 40000;
+    else if(tmi->tm_hour == 6)   return 40000;
+    else if(tmi->tm_hour == 7)   return 40000;
+    else if(tmi->tm_hour == 8)   return 40000;
+    else if(tmi->tm_hour == 9)   return 40000;
     else if(tmi->tm_hour == 10)  return 60000;
     else if(tmi->tm_hour == 11)  return 120000;
     else if(tmi->tm_hour == 12)  return 120000;
@@ -299,9 +299,9 @@ uint getReplayRate()
     else if(tmi->tm_hour == 19)  return 120000;
     else if(tmi->tm_hour == 20)  return 120000;
     else if(tmi->tm_hour == 21)  return 60000;
-    else if(tmi->tm_hour == 22)  return 30000;
-    else if(tmi->tm_hour == 23)  return 10000;
-    else if(tmi->tm_hour == 24)  return 10000;
+    else if(tmi->tm_hour == 22)  return 40000;
+    else if(tmi->tm_hour == 23)  return 40000;
+    else if(tmi->tm_hour == 24)  return 40000;
     
     return 120000;
 }
@@ -344,7 +344,10 @@ inline static double getMiningDifficulty()
 {
     const time_t lt = time(0);
     const struct tm* tmi = gmtime(&lt);
-    return (double)tmi->tm_hour * 0.01; //reciprocal // 24 / 100 = 0.24
+    double rv = (double)tmi->tm_hour * 0.01; //reciprocal // 24 / 100 = 0.24
+    if(rv == 0)
+        rv = 0.005;
+    return rv; 
 }
 
 //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
@@ -1264,7 +1267,7 @@ void replayBlocks(const uint ip)
 
             //333 = 3k, 211 byte packets / 618kb a second
             #if MASTER_NODE == 1
-                usleep(10000); //
+                usleep(40000); //
             #else
                 usleep(replay_rate); //
             #endif
@@ -1318,7 +1321,7 @@ void replayBlocks(const uint ip)
 
             //333 = 3k, 211 byte packets / 618kb a second
             #if MASTER_NODE == 1
-                usleep(10000); //
+                usleep(40000); //
             #else
                 usleep(replay_rate); //
             #endif
@@ -2193,13 +2196,13 @@ void *miningThread(void *arg)
     nice(1); //Very high priority thread
     addr pub, priv;
     makAddrS(&pub, &priv);
-    mval r = isSubGenesisAddressMine(pub.key);
+    mval r = isSubGenesisAddressMine(pub.key); //cast
     uint64_t l = 0;
     time_t lt = time(0);
     while(1)
     {
         makAddrS(&pub, &priv);
-        r = isSubGenesisAddressMine(pub.key);
+        r = isSubGenesisAddressMine(pub.key); //cast
 
         if(r > 0)
         {
@@ -2232,7 +2235,10 @@ void *miningThread(void *arg)
             }
 
             setlocale(LC_NUMERIC, "");
-            printf("HASH/s: %'lu - Time Taken: %lu seconds\n\n\n", (l*nthreads)/d, d);
+            time_t approx = (l*nthreads);
+            if(approx > 0)
+                approx /= d;
+            printf("HASH/s: %'lu - Time Taken: %lu seconds\n\n\n", approx, d);
             l=0;
             lt = time(0);
         }
