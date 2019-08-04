@@ -2402,11 +2402,7 @@ int main(int argc , char *argv[])
             printf("\033[H\033[J");
 
             nthreads = atoi(argv[2]);
-            const double diff = getMiningDifficulty();
-            if(diff < 0.01)
-                printf("\x1B[33m%i Threads\x1B[0m launched..\nMining Difficulty: \x1B[33m%.3f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, diff);
-            else
-                printf("\x1B[33m%i Threads\x1B[0m launched..\nMining Difficulty: \x1B[33m%.2f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, diff);
+            printf("\x1B[33m%i Threads\x1B[0m launched..\nMining Difficulty: \x1B[33m%.2f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
 
             //Launch mining threads
             for(int i = 0; i < nthreads; i++)
@@ -2598,11 +2594,7 @@ int main(int argc , char *argv[])
             printf("\033[H\033[J");
 
             nthreads = get_nprocs();
-            const double diff = getMiningDifficulty();
-            if(diff < 0.01)
-                printf("\x1B[33m%i CPU\x1B[0m Cores detected..\nMining Difficulty: \x1B[33m%.3f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, diff);
-            else
-                printf("\x1B[33m%i CPU\x1B[0m Cores detected..\nMining Difficulty: \x1B[33m%.2f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, diff);
+            printf("\x1B[33m%i CPU\x1B[0m Cores detected..\nMining Difficulty: \x1B[33m%.2f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
             
 
             //Launch mining threads
