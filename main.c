@@ -2190,6 +2190,7 @@ void *processThread(void *arg)
     }
 }
 
+uint64_t g_HSEC = 0;
 void *miningThread(void *arg)
 {
     chdir(getHome());
@@ -2199,11 +2200,28 @@ void *miningThread(void *arg)
     mval r = isSubGenesisAddressMine(pub.key); //cast
     uint64_t l = 0;
     time_t lt = time(0);
+    time_t st = time(0) + 16;
+    uint64_t stc = 0;
     while(1)
     {
+        //Gen a new random addr
         makAddrS(&pub, &priv);
         r = isSubGenesisAddressMine(pub.key); //cast
 
+        //Dump some rough h/s approximation
+        if(time(0) > st)
+        {
+            time_t approx = (stc*nthreads);
+            if(approx > 0)
+                approx /= 16;
+
+            g_HSEC = approx;
+
+            stc = 0;
+            st = time(0) + 16;
+        }
+
+        //Found subG?
         if(r > 0)
         {
             time_t d = time(0)-lt;
@@ -2244,6 +2262,7 @@ void *miningThread(void *arg)
         }
 
         l++;
+        stc++;
 
     }
 }
@@ -2380,9 +2399,9 @@ int main(int argc , char *argv[])
             nthreads = atoi(argv[2]);
             const double diff = getMiningDifficulty();
             if(diff < 0.01)
-                printf("\x1B[33m%i Threads\x1B[0m launched..\nMining Difficulty: \x1B[33m%.3f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n", nthreads, diff);
+                printf("\x1B[33m%i Threads\x1B[0m launched..\nMining Difficulty: \x1B[33m%.3f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, diff);
             else
-                printf("\x1B[33m%i Threads\x1B[0m launched..\nMining Difficulty: \x1B[33m%.2f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n", nthreads, diff);
+                printf("\x1B[33m%i Threads\x1B[0m launched..\nMining Difficulty: \x1B[33m%.2f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, diff);
 
             //Launch mining threads
             for(int i = 0; i < nthreads; i++)
@@ -2393,7 +2412,21 @@ int main(int argc , char *argv[])
             }
 
             //Loop with 3 sec console output delay
-            while(1){sleep(3);}
+            while(1)
+            {
+                sleep(16);
+
+                if(g_HSEC == 0)
+                    continue;
+
+                setlocale(LC_NUMERIC, "");
+                if(g_HSEC < 1000)
+                    printf("HASH/s: %'lu\n", g_HSEC);
+                else if(g_HSEC < 1000000)
+                    printf("kH/s: %.2f\n", (double)g_HSEC / 1000);
+                else if(g_HSEC < 1000000000)
+                    printf("mH/s: %.2f\n", (double)g_HSEC / 1000000);
+            }
             
             //only exits on sigterm
             exit(0);
@@ -2496,10 +2529,18 @@ int main(int argc , char *argv[])
             printf("\x1B[33mReturns client blocks.dat size / num transactions:\x1B[0m\n ./vfc heigh\n\n");
             printf("\x1B[33mReturns the circulating supply:\x1B[0m\n ./vfc circulating\n\n");
             printf("\x1B[33mReturns the mined supply:\x1B[0m\n ./vfc mined\n\n");
+            printf("\x1B[33mReturns the mining difficulty:\x1B[0m\n ./vfc difficulty\n\n");
             printf("\x1B[33mCheck's if supplied address is subG, if so returns value of subG address:\x1B[0m\n ./vfc issub <public key>\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./vfc scan\x1B[0m\n\n");
             
             printf("\x1B[33mTo get started running a dedicated node, execute ./vfc on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
+            exit(0);
+        }
+
+        //get mining difficulty
+        if(strcmp(argv[1], "difficulty") == 0)
+        {
+            printf("%.3f\n", getMiningDifficulty());
             exit(0);
         }
 
@@ -2554,9 +2595,9 @@ int main(int argc , char *argv[])
             nthreads = get_nprocs();
             const double diff = getMiningDifficulty();
             if(diff < 0.01)
-                printf("\x1B[33m%i CPU\x1B[0m Cores detected..\nMining Difficulty: \x1B[33m%.3f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n", nthreads, diff);
+                printf("\x1B[33m%i CPU\x1B[0m Cores detected..\nMining Difficulty: \x1B[33m%.3f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, diff);
             else
-                printf("\x1B[33m%i CPU\x1B[0m Cores detected..\nMining Difficulty: \x1B[33m%.2f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n", nthreads, diff);
+                printf("\x1B[33m%i CPU\x1B[0m Cores detected..\nMining Difficulty: \x1B[33m%.2f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, diff);
             
 
             //Launch mining threads
@@ -2568,7 +2609,21 @@ int main(int argc , char *argv[])
             }
 
             //Loop with 3 sec console output delay
-            while(1){sleep(3);}
+            while(1)
+            {
+                sleep(16);
+
+                if(g_HSEC == 0)
+                    continue;
+
+                setlocale(LC_NUMERIC, "");
+                if(g_HSEC < 1000)
+                    printf("HASH/s: %'lu\n", g_HSEC);
+                else if(g_HSEC < 1000000)
+                    printf("kH/s: %.2f\n", (double)g_HSEC / 1000);
+                else if(g_HSEC < 1000000000)
+                    printf("mH/s: %.2f\n", (double)g_HSEC / 1000000);
+            }
             
             //only exits on sigterm
             exit(0);
