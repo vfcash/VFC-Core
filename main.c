@@ -344,9 +344,7 @@ inline static double getMiningDifficulty()
 {
     const time_t lt = time(0);
     const struct tm* tmi = gmtime(&lt);
-    double rv = (double)tmi->tm_hour * 0.01; //reciprocal // 24 / 100 = 0.24
-    if(rv == 0)
-        rv = 0.005;
+    double rv = (double)(tmi->tm_hour+1) * 0.01; //reciprocal // 24 / 100 = 0.24
     return rv; 
 }
 
@@ -394,10 +392,10 @@ uint64_t isSubGenesisAddressMine(uint8_t *a)
     if(a1 < min && a2 < min && a3 < min && a4 < min)
     {
         //Calculate and return value of address mined
-        const double a = (a1+a2+a3+a4);
-        if(a <= 0)
+        const double at = (a1+a2+a3+a4);
+        if(at <= 0)
             return 0; //not want zero address.
-        const double ra = a/4;
+        const double ra = at/4;
         const double mn = 4.166666667; //(1/min);
         const uint64_t rv = (uint64_t)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
 
@@ -477,10 +475,10 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
     if(a1 < min && a2 < min && a3 < min && a4 < min)
     {
         //Calculate and return value of address mined
-        const double a = (a1+a2+a3+a4);
-        if(a <= 0)
+        const double at = (a1+a2+a3+a4);
+        if(at <= 0)
             return 0; //not want zero address.
-        const double ra = a/4;
+        const double ra = at/4;
         const double mn = 4.166666667; //(1/min);
         const uint64_t rv = (uint64_t)floor(( 1000 + ( 10000*(1-(ra*mn)) ) )+0.5);
 
@@ -2240,15 +2238,22 @@ void *miningThread(void *arg)
             printf("\n\x1B[33mFound Sub-Genesis Address: \x1B[0m\nPublic: %s\nPrivate: %s\n\x1B[0m", bpub, bpriv);
 
             //Send to rewards address
-            char cmd[1024];
-            sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
-            system(cmd);
+            pid_t fork_pid = fork();
+            if(fork_pid == 0)
+            {
+                char cmd[1024];
+                sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
+                system(cmd);
+                exit(0);
+            }
 
             //Dump to file
             FILE* f = fopen(".vfc/minted.priv", "a");
             if(f != NULL)
             {
+                flockfile(f); //lock
                 fprintf(f, "%s\n", bpriv);
+                funlockfile(f); //unlock
                 fclose(f);
             }
 
