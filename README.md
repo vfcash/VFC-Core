@@ -19,6 +19,8 @@ Join us on Telegram [@vfcash](https://t.me/vfcash)
 git clone https://github.com/vfcash/VFC-Core && cd VFC-Core
 chmod 0777 compile.sh
 ./compile.sh
+
+vfc master_resync
 ```
 Then use the `vfc help` command in the console for a full command list.
 
