@@ -2411,6 +2411,19 @@ int main(int argc , char *argv[])
     mid[6] = qRand(0, 255);
     mid[7] = qRand(0, 255);
 
+    //quick send
+    if(argc == 4)
+    {
+        if(strcmp(argv[1], "qsend") == 0)
+        {
+            char cmd[1024];
+            sprintf(cmd, "vfc%s %s %.3f%s", myrewardkey, argv[3], atof(argv[2]), myrewardkeyp);
+            system(cmd);
+            
+            exit(0);
+        }
+    }
+
     //Outgoings and Incomings
     if(argc == 3)
     {
@@ -2532,6 +2545,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mTo check sent transactions from an address use:\x1B[0m\n ./vfc out <address public key>\n\n");
             printf("\x1B[33mTo check received transactions from an address use:\x1B[0m\n ./vfc in <address public key>\n\n");
             printf("\x1B[33mTo make a transaction use:\x1B[0m\n ./vfc <sender public key> <reciever public key> <amount> <sender private key>\x1B[0m\n\n");
+            printf("\x1B[33mTo make a transaction from your rewards address use:\x1B[0m\n ./vfc qsend <amount> <receiver address>\x1B[0m\n\n");
             printf("\x1B[33mTo manually trigger blockchain resync use:\x1B[0m\n ./vfc resync\x1B[0m\n\n");
             printf("\x1B[33mTo manually trigger blockchain resync only from the master use:\x1B[0m\n ./vfc master_resync\x1B[0m\n\n");
             printf("\x1B[33mTo manually trigger blockchain sync use:\x1B[0m\n ./vfc sync\x1B[0m\n\n");
