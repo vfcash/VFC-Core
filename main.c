@@ -783,22 +783,21 @@ void resyncBlocks()
 #endif
 
     //allow replay from 3 random peers
-    uint si = qRand(1, num_peers-1); // start from random offset
     for(int i = 0; i < 3; i++)
     {
+        sleep(1);
         //Also Sync from a Random Node (Sync is called fairly often so eventually the random distribution across nodes will fair well)
         replay_allow[i] = 0;
         if(num_peers > 1)
         {
             //Look for a living peer
+            uint si = qRand(1, num_peers-1); // start from random offset
             do // find next living peer from offset
             {
                 const uint pd = time(0)-(peer_timeouts[si]-MAX_PEER_EXPIRE_SECONDS); //ping delta
                 if(pd <= PING_INTERVAL*4)
                     break;
                 si++;
-                if(si >= num_peers)
-                    si = qRand(1, num_peers-1); // reset from random offset;
             }
             while(si < num_peers);
 
