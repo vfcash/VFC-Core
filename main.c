@@ -128,7 +128,7 @@ const char master_ip[] = "68.183.49.225";
 #endif
 char mid[8];                        //Clients private identification code used in pings etc.
 ulong err = 0;                      //Global error count
-uint replay_allow[3] = {0,0,0};              //Is the local client allowing a replay at this time (0-1)
+uint replay_allow[3] = {0,0,0};     //IP address of peer allowed to send replay blocks
 uint replay_height = 0;             //Block Height of current peer authorized to receive a replay from
 uint64_t balance_accumulator = 0;   //For accumulating the highest network balance of a requested address
 uint nthreads = 0;                  //number of mining threads
@@ -785,7 +785,7 @@ void resyncBlocks()
     //allow replay from 3 random peers
     for(int i = 0; i < 3; i++)
     {
-        sleep(1);
+
         //Also Sync from a Random Node (Sync is called fairly often so eventually the random distribution across nodes will fair well)
         replay_allow[i] = 0;
         if(num_peers > 1)
@@ -814,8 +814,9 @@ void resyncBlocks()
         //Alright ask this peer to replay to us too
         if(num_peers > 1 && replay_allow[i] != 0)
             csend(replay_allow[i], "r", 1);
+  
     }
-
+    
     //The master resyncs off everyone
 // #if MASTER_NODE == 1
 //         peersBroadcast("r", 1);
@@ -2685,12 +2686,13 @@ int main(int argc , char *argv[])
                     ls = st.st_size;
                     tc = 0;
                 }
-                struct in_addr ip_addr1;
-                ip_addr1.s_addr = replay_allow[0];
-                struct in_addr ip_addr2;
-                ip_addr2.s_addr = replay_allow[1];
-                struct in_addr ip_addr3;
-                ip_addr3.s_addr = replay_allow[2];
+    
+                struct in_addr i1;
+                i1.s_addr = replay_allow[0];
+                struct in_addr i2;
+                i2.s_addr = replay_allow[1];
+                struct in_addr i3;
+                i3.s_addr = replay_allow[2];
 
                 forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*3);
                 forceRead(".vfc/rph.mem", &replay_height, sizeof(uint));
@@ -2698,7 +2700,11 @@ int main(int argc , char *argv[])
                 if(replay_allow[0] == 0)
                     printf("\x1B[33m%.1f\x1B[0m kb of \x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Synchronizing only from the Master.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
                 else
-                    printf("\x1B[33m%.1f\x1B[0m kb of \x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Authorized Peer: %s / %s / %s.\n", (double)st.st_size / 1000, (double)replay_height / 1000, inet_ntoa(ip_addr1), inet_ntoa(ip_addr2), inet_ntoa(ip_addr3));
+                {
+                    printf("\x1B[33m%.1f\x1B[0m kb of \x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Authorized Peer: %s / ", (double)st.st_size / 1000, (double)replay_height / 1000, inet_ntoa(i1));
+                    printf("%s / ", inet_ntoa(i2));
+                    printf("%s.\n", inet_ntoa(i3));
+                }
                 tc++;
                 sleep(1);
             }
