@@ -797,6 +797,8 @@ void resyncBlocks()
                 if(pd <= PING_INTERVAL*4)
                     break;
                 si++;
+                if(si >= num_peers)
+                    si = qRand(1, num_peers-1); // reset from random offset;
             }
             while(si < num_peers);
 
