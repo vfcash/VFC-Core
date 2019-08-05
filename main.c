@@ -342,9 +342,10 @@ inline static double gNa(const vec3* a, const vec3* b)
 
 inline static double getMiningDifficulty()
 {
-    const time_t lt = time(0);
-    const struct tm* tmi = gmtime(&lt);
-    return (double)(tmi->tm_hour+1) * 0.01; 
+    // const time_t lt = time(0);
+    // const struct tm* tmi = gmtime(&lt);
+    // return (double)(tmi->tm_hour+1) * 0.01; 
+    return 0.24;
 }
 
 inline static uint64_t diff2val(const double ra)
