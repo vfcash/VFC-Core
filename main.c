@@ -2091,11 +2091,62 @@ uint isNodeRunning()
 void *processThread(void *arg)
 {
     chdir(getHome());
+    while(1)
+    {
+        //See if there is a new transaction to process
+        const int i = gQue();
+        if(i == -1)
+        {
+            usleep(3333); //Little delay if queue is empty we dont want to thrash cycles
+            continue;
+        }
+
+        //Process the transaction
+        const int r = process_trans(tq[i].uid, &tq[i].from, &tq[i].to, tq[i].amount, &tq[i].owner);
+
+        //Good transaction!
+        if(r == 1 && replay[i] == 1)
+        {
+            //Track this client from origin
+            addPeer(ip[i]);
+            if(ipo[i] != 0)
+                addPeer(ipo[i]); //Track this client by attached origin
+
+            //Construct a non-repeatable transaction and tell our peers
+            const uint32_t origin = ip[i];
+            const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+            char pc[MIN_LEN];
+            pc[0] = 't';
+            char* ofs = pc + 1;
+            memcpy(ofs, &origin, sizeof(uint32_t));
+            ofs += sizeof(uint32_t);
+            memcpy(ofs, &tq[i].uid, sizeof(uint64_t));
+            ofs += sizeof(uint64_t);
+            memcpy(ofs, tq[i].from.key, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, tq[i].to.key, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, &tq[i].amount, sizeof(mval));
+            ofs += sizeof(mval);
+            memcpy(ofs, tq[i].owner.key, ECC_CURVE*2);
+            triBroadcast(pc, len);
+        }
+
+        //Alright this transaction is PROCESSED
+        tq[i].amount = 0; //Signifies transaction as invalid / completed / processed (basically done)
+    }
+}
+
+void *generalThread(void *arg)
+{
+    chdir(getHome());
     time_t nr = time(0);
     time_t pr = time(0);
     time_t aa = time(0);
     while(1)
     {
+        sleep(3);
+
         //Check which of the peers are still alive, those that are, update their timestamps
         if(time(0) > pr)
         {
@@ -2114,7 +2165,7 @@ void *processThread(void *arg)
             system(cmd);
             aa = time(0) + 3600; //every hour
         }
-        
+            
 //This code is only for the masternode to execute, in-order to distribute rewards fairly.
 #if MASTER_NODE == 1
         //Peers get a few chances to collect their reward
@@ -2158,48 +2209,6 @@ void *processThread(void *arg)
             
         }
 #endif
-
-        //See if there is a new transaction to process
-        const int i = gQue();
-        if(i == -1)
-        {
-            usleep(3333); //Little delay if queue is empty we dont want to thrash cycles
-            continue;
-        }
-
-        //Process the transaction
-        const int r = process_trans(tq[i].uid, &tq[i].from, &tq[i].to, tq[i].amount, &tq[i].owner);
-
-        //Good transaction!
-        if(r == 1 && replay[i] == 1)
-        {
-            //Track this client from origin
-            addPeer(ip[i]);
-            if(ipo[i] != 0)
-                addPeer(ipo[i]); //Track this client by attached origin
-
-            //Construct a non-repeatable transaction and tell our peers
-            const uint32_t origin = ip[i];
-            const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
-            char pc[MIN_LEN];
-            pc[0] = 't';
-            char* ofs = pc + 1;
-            memcpy(ofs, &origin, sizeof(uint32_t));
-            ofs += sizeof(uint32_t);
-            memcpy(ofs, &tq[i].uid, sizeof(uint64_t));
-            ofs += sizeof(uint64_t);
-            memcpy(ofs, tq[i].from.key, ECC_CURVE+1);
-            ofs += ECC_CURVE+1;
-            memcpy(ofs, tq[i].to.key, ECC_CURVE+1);
-            ofs += ECC_CURVE+1;
-            memcpy(ofs, &tq[i].amount, sizeof(mval));
-            ofs += sizeof(mval);
-            memcpy(ofs, tq[i].owner.key, ECC_CURVE*2);
-            triBroadcast(pc, len);
-        }
-
-        //Alright this transaction is PROCESSED
-        tq[i].amount = 0; //Signifies transaction as invalid / completed / processed (basically done)
     }
 }
 
@@ -3079,6 +3088,10 @@ int main(int argc , char *argv[])
     //Launch the Transaction Processing thread
     pthread_t tid;
     pthread_create(&tid, NULL, processThread, NULL);
+
+    //Launch the General Processing thread
+    pthread_t tid2;
+    pthread_create(&tid2, NULL, generalThread, NULL);
 	
     //Sync Blocks
     resyncBlocks();
