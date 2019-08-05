@@ -3112,7 +3112,7 @@ int main(int argc , char *argv[])
             }
 #endif
 
-            //Is this a [fresh trans / dead trans] ?
+            //peer has sent a live or dead transaction
             if((rb[0] == 't' || rb[0] == 'd') && read_size == trans_size)
             {
                 //Root origin peer address
@@ -3162,7 +3162,7 @@ int main(int argc , char *argv[])
                 reqs++;
             }
 
-            //Request to replay all my blocks? (resync)
+            //peer is requesting a block replay
             else if(rb[0] == 'r' && read_size == 1)
             {
                 //Is this peer even registered? if not, suspect foul play, not part of verified network.
@@ -3176,7 +3176,7 @@ int main(int argc , char *argv[])
                 }
             }
 
-            //Give up our user-agent
+            //peer is requesting your user agent
             else if(rb[0] == 'a' && rb[1] == 0x00 && read_size == 1)
             {
                 //Check this is the replay peer
@@ -3195,7 +3195,7 @@ int main(int argc , char *argv[])
                 }
             }
 
-            //Save user agent
+            //peer is sending it's user agent
             else if(rb[0] == 'a')
             {
                 //Check this is a peer
@@ -3207,7 +3207,7 @@ int main(int argc , char *argv[])
                 }
             }
 
-            //Replay peer is setting block height
+            //the replay peer is setting block height
             else if(rb[0] == 'h' && read_size == sizeof(uint)+1)
             {
                 //`hk; Allows master to resync from any peer, any time, injection is just as fine.
@@ -3226,7 +3226,7 @@ int main(int argc , char *argv[])
                 }
             }
 
-            //Requesting address balance?
+            //peer is requesting an address balance
             else if(rb[0] == '$' && read_size == ECC_CURVE+2)
             {
                 //Check this is the replay peer
@@ -3246,7 +3246,7 @@ int main(int argc , char *argv[])
                 }
             }
 
-            //Returned address balance
+            //peer is sending an address balance
             else if(rb[0] == 'n' && read_size == sizeof(uint64_t)+1)
             {
                 //Check this is the replay peer
@@ -3279,7 +3279,7 @@ int main(int argc , char *argv[])
                 }
             }
 
-            //Is this a replay block?
+            //peer is sending a replay block
             else if(rb[0] == 'p' && read_size == replay_size)
             {
                 //`hk; Allows master to resync from any peer, any time, injection is just as fine.
@@ -3287,7 +3287,7 @@ int main(int argc , char *argv[])
 //                 client.sin_addr.s_addr = replay_allow;
 // #endif
 
-                //This replay has to be from the specific trusted node, or the master. If it's a trusted node, we know it's also a peer so. All good.
+                //This replay has to be from a single peer and the master.
                 if(client.sin_addr.s_addr == inet_addr("127.0.0.1") || client.sin_addr.s_addr == replay_allow || isMasterNode(client.sin_addr.s_addr) == 1)
                 {
                     //Decode packet into a Transaction
@@ -3312,7 +3312,7 @@ int main(int argc , char *argv[])
                 }
             }
 
-            //Is some one looking for peers? We can tell them we exist, but that doesn't make them part of the network until they make a verified transaction
+            //Anon is IPv4 scanning for peers: tell Anon we exist but send our mid code, if Anon responds with our mid code we add Anon as a peer
             else if(rb[0] == '\t' && read_size == sizeof(mid))
             {
                 rb[0] = '\r';
@@ -3322,7 +3322,7 @@ int main(int argc , char *argv[])
                 //Increment Requests
                 reqs++;
             }
-            else if(rb[0] == '\r' && read_size == sizeof(mid))
+            else if(rb[0] == '\r' && read_size == sizeof(mid)) //Anon responded with our mid code, we add Anon as a peer
             {
                 if( rb[1] == mid[1] && //Only add as a peer if they responded with our private mid code
                     rb[2] == mid[2] &&
@@ -3339,7 +3339,7 @@ int main(int argc , char *argv[])
                 }
             }
 
-            //Is the master requesting your rewards address?
+            //master is requesting clients reward public key to make a payment
             else if(rb[0] == 'x' && read_size == 1)
             {
                 //Only the master can pay out rewards from the pre-mine
