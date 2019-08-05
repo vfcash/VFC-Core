@@ -139,6 +139,8 @@ uint thread_ip[MAX_THREADS_BUFF];   //IP's replayed to by threads (prevents laun
 uint threads = 0;                   //number of replay threads
 uint MAX_THREADS = 6;               //maximum number of replay threads
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1876,6 +1878,7 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     //Ok let's write the transaction to chain
     if(memcmp(from->key, to->key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
     {
+pthread_mutex_lock(&mutex3);
         FILE* f = fopen(CHAIN_FILE, "a");
         if(f)
         {
@@ -1922,16 +1925,9 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
 
             fclose(f);
         }
-        // else
-        // {
-        //     printf("\033[1m\x1B[31mERROR: fopen failed in process_trans()\x1B[0m\033[0m\n");
-        // }
+pthread_mutex_lock(&mutex3);
         
     }
-    // else
-    // {
-    //     printf("\033[1m\x1B[31mERROR: send to self\x1B[0m\033[0m\n");
-    // }
     
 
     //Success
@@ -2095,46 +2091,55 @@ void *processThread(void *arg)
     while(1)
     {
         //See if there is a new transaction to process
+        struct trans t;
+        uint32_t lip=0, lipo=0;
+        unsigned char lreplay = 0;
+
+    pthread_mutex_lock(&mutex2);
         const int i = gQue();
         if(i == -1)
         {
             usleep(3333); //Little delay if queue is empty we dont want to thrash cycles
             continue;
         }
+        lreplay = replay[i];
+        lip = ip[i];
+        lipo = ipo[i];
+        memcpy(&t, &tq[i], sizeof(struct trans));
+        tq[i].amount = 0; //Signifies transaction as invalid / completed / processed (done)
+    pthread_mutex_unlock(&mutex2);
 
         //Process the transaction
-        const int r = process_trans(tq[i].uid, &tq[i].from, &tq[i].to, tq[i].amount, &tq[i].owner);
+        const int r = process_trans(t.uid, &t.from, &t.to, t.amount, &t.owner);
 
         //Good transaction!
-        if(r == 1 && replay[i] == 1)
+        if(r == 1 && lreplay == 1)
         {
             //Track this client from origin
-            addPeer(ip[i]);
-            if(ipo[i] != 0)
-                addPeer(ipo[i]); //Track this client by attached origin
+            addPeer(lip);
+            if(lipo != 0)
+                addPeer(lipo); //Track this client by attached origin
 
             //Construct a non-repeatable transaction and tell our peers
-            const uint32_t origin = ip[i];
+            const uint32_t origin = lip;
             const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
             char pc[MIN_LEN];
             pc[0] = 't';
             char* ofs = pc + 1;
             memcpy(ofs, &origin, sizeof(uint32_t));
             ofs += sizeof(uint32_t);
-            memcpy(ofs, &tq[i].uid, sizeof(uint64_t));
+            memcpy(ofs, &t.uid, sizeof(uint64_t));
             ofs += sizeof(uint64_t);
-            memcpy(ofs, tq[i].from.key, ECC_CURVE+1);
+            memcpy(ofs, t.from.key, ECC_CURVE+1);
             ofs += ECC_CURVE+1;
-            memcpy(ofs, tq[i].to.key, ECC_CURVE+1);
+            memcpy(ofs, t.to.key, ECC_CURVE+1);
             ofs += ECC_CURVE+1;
-            memcpy(ofs, &tq[i].amount, sizeof(mval));
+            memcpy(ofs, &t.amount, sizeof(mval));
             ofs += sizeof(mval);
-            memcpy(ofs, tq[i].owner.key, ECC_CURVE*2);
+            memcpy(ofs, t.owner.key, ECC_CURVE*2);
             triBroadcast(pc, len);
         }
 
-        //Alright this transaction is PROCESSED
-        tq[i].amount = 0; //Signifies transaction as invalid / completed / processed (basically done)
     }
 }
 
@@ -2685,7 +2690,7 @@ int main(int argc , char *argv[])
             while(1)
             {
                 printf("\033[H\033[J");
-                if(tc >= 9)
+                if(tc >= 4)
                 {
                     tc = 0;
                     resyncBlocks(); //Sync from a new random peer if no data after x seconds
@@ -3087,8 +3092,13 @@ int main(int argc , char *argv[])
     printf("Current Directory: %s\n\n", cwd);
 
     //Launch the Transaction Processing thread
-    pthread_t tid;
-    pthread_create(&tid, NULL, processThread, NULL);
+    nthreads = get_nprocs();
+    for(int i = 0; i < nthreads; i++)
+    {
+        pthread_t tid;
+        if(pthread_create(&tid, NULL, processThread, NULL) != 0)
+            continue;
+    }
 
     //Launch the General Processing thread
     pthread_t tid2;
