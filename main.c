@@ -473,7 +473,8 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
     const double a4 = gNa(&v[1], &v[4]);
 
     //All normal angles a1-a4 must be under this value
-    const double min = fr == 0 ? getMiningDifficulty() : 0.24;
+    //const double min = fr == 0 ? getMiningDifficulty() : 0.24;
+    const double min = 0.24;
     
     //Was it a straight hit?
     if(a1 < min && a2 < min && a3 < min && a4 < min)
@@ -2252,8 +2253,8 @@ void *miningThread(void *arg)
             printf("\n\x1B[33mFound Sub-Genesis Address: \x1B[0m\nPublic: %s\nPrivate: %s\n\x1B[0m", bpub, bpriv);
 
             //Send to rewards address
-            if(r <= diff2val(getMiningDifficulty()))
-            {
+            // if(r <= diff2val(getMiningDifficulty()))
+            // {
                 pid_t fork_pid = fork();
                 if(fork_pid == 0)
                 {
@@ -2262,7 +2263,7 @@ void *miningThread(void *arg)
                     system(cmd);
                     exit(0);
                 }
-            }
+            // }
 
             //Dump to file
             FILE* f = fopen(".vfc/minted.priv", "a");
@@ -2270,10 +2271,10 @@ void *miningThread(void *arg)
             {
                 flockfile(f); //lock
 
-                if(r <= diff2val(getMiningDifficulty()))
+                // if(r <= diff2val(getMiningDifficulty()))
                     fprintf(f, "%s (%.3f)\n", bpriv, toDB(r));
-                else
-                    fprintf(f, "%s (%.3f) - Unclaimed\n", bpriv, toDB(r));
+                // else
+                //     fprintf(f, "%s (%.3f) - Unclaimed\n", bpriv, toDB(r));
 
                 funlockfile(f); //unlock
                 fclose(f);
