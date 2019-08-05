@@ -344,8 +344,7 @@ inline static double getMiningDifficulty()
 {
     const time_t lt = time(0);
     const struct tm* tmi = gmtime(&lt);
-    double rv = (double)(tmi->tm_hour+1) * 0.01; //reciprocal // 24 / 100 = 0.24
-    return rv; 
+    return (double)(tmi->tm_hour+1) * 0.01; 
 }
 
 //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
@@ -2678,7 +2677,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "master_resync") == 0)
         {
             remove("blocks.dat");
-            system("wget -O.vfc/master_blocks.dat https://vfcash.uk/sync");
+            system("wget -O.vfc/master_blocks.dat http://46.4.183.153/blocks.dat");
             system("cp .vfc/master_blocks.dat .vfc/blocks.dat");
             printf("\x1B[33mResync from master complete.\x1B[0m\n\n");
             exit(0);
