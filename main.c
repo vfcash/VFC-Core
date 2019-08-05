@@ -1114,7 +1114,7 @@ uint64_t getCirculatingSupply()
         ift = (uint64_t)st.st_size / 133;
     ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
 
-    uint64_t rv = ((4294967295 + ift) / 100) * 20; //Original genesis address value + tax
+    uint64_t rv = ((4294967295 + ift) / 100) * 20; // 20% of the original genesis address value + ift tax
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
@@ -1141,7 +1141,8 @@ uint64_t getCirculatingSupply()
                 if(f == NULL)
                     continue;
             }
-
+            
+            //All the paid out subG address values
             if(memcmp(t.from.key, genesis_pub, ECC_CURVE+1) != 0)
             {
                 const uint64_t w = isSubGenesisAddress(t.from.key, 1);
@@ -1150,6 +1151,11 @@ uint64_t getCirculatingSupply()
                     rv += w;
                 }
             }
+            else
+            {
+                rv += t.amount; //all of the transactions leaving the genesis key
+            }
+            
             
         }
 
