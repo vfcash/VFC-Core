@@ -347,6 +347,11 @@ inline static double getMiningDifficulty()
     return (double)(tmi->tm_hour+1) * 0.01; 
 }
 
+inline static uint64_t diff2val(const double ra)
+{
+    return (uint64_t)floor(( 1000 + ( 10000*(1-(ra*4.166666667)) ) )+0.5);
+}
+
 //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
 uint64_t isSubGenesisAddressMine(uint8_t *a)
 {
@@ -385,7 +390,7 @@ uint64_t isSubGenesisAddressMine(uint8_t *a)
     const double a4 = gNa(&v[1], &v[4]);
 
     //All normal angles a1-a4 must be under this value
-    const double min = getMiningDifficulty();
+    const double min = 0.24;
     
     //Was it a straight hit?
     if(a1 < min && a2 < min && a3 < min && a4 < min)
@@ -2237,13 +2242,16 @@ void *miningThread(void *arg)
             printf("\n\x1B[33mFound Sub-Genesis Address: \x1B[0m\nPublic: %s\nPrivate: %s\n\x1B[0m", bpub, bpriv);
 
             //Send to rewards address
-            pid_t fork_pid = fork();
-            if(fork_pid == 0)
+            if(r <= diff2val(getMiningDifficulty()))
             {
-                char cmd[1024];
-                sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
-                system(cmd);
-                exit(0);
+                pid_t fork_pid = fork();
+                if(fork_pid == 0)
+                {
+                    char cmd[1024];
+                    sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
+                    system(cmd);
+                    exit(0);
+                }
             }
 
             //Dump to file
@@ -2251,14 +2259,19 @@ void *miningThread(void *arg)
             if(f != NULL)
             {
                 flockfile(f); //lock
-                fprintf(f, "%s\n", bpriv);
+
+                if(r <= diff2val(getMiningDifficulty()))
+                    fprintf(f, "%s (%.3f)\n", bpriv, toDB(r));
+                else
+                    fprintf(f, "%s (%.3f) - Unclaimed\n", bpriv, toDB(r));
+
                 funlockfile(f); //unlock
                 fclose(f);
             }
 
             setlocale(LC_NUMERIC, "");
             time_t approx = (l*nthreads);
-            if(approx > 0)
+            if(approx > 0 && d > 0)
                 approx /= d;
             printf("HASH/s: %'lu - Time Taken: %lu seconds\n\n\n", approx, d);
             l=0;
