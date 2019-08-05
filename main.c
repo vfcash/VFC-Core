@@ -2568,12 +2568,12 @@ int main(int argc , char *argv[])
         //Updates installed client from official git
         if(strcmp(argv[1], "update") == 0)
         {
-            printf("Please run this command with sudo, aka sudo vfc update\n");
+            printf("Please run this command with sudo or sudo -s, aka sudo vfc update\n");
             system("rm -r VFC-Core");
             system("git clone https://github.com/vfcash/VFC-Core");
             chdir("VFC-Core");
-            system("sudo chmod 0777 compile.sh");
-            system("sudo ./compile.sh");
+            system("chmod 0777 compile.sh");
+            system("./compile.sh");
             exit(0);
         }
 
