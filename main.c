@@ -2195,12 +2195,26 @@ void *processThread(void *arg)
 void *generalThread(void *arg)
 {
     chdir(getHome());
+    time_t rs = time(0);
     time_t nr = time(0);
     time_t pr = time(0);
     time_t aa = time(0);
     while(1)
     {
         sleep(3);
+
+        //Save memory state
+        savemem();
+
+        //Load new replay allow value
+        forceRead(".vfc/rp.mem", &replay_allow, sizeof(uint)*6);
+
+        //Let's execute a Sync every 9 mins
+        if(time(0) > rs)
+        {
+            resyncBlocks();
+            rs = time(0) + 540;
+        }
 
         //Check which of the peers are still alive, those that are, update their timestamps
         if(time(0) > pr)
@@ -3206,7 +3220,6 @@ int main(int argc , char *argv[])
         //Never allow process to end
         uint reqs = 0;
         time_t st = time(0);
-        time_t st0 = time(0);
         time_t tt = time(0);
         int read_size;
         char rb[RECV_BUFF_SIZE];
@@ -3452,18 +3465,6 @@ int main(int argc , char *argv[])
                     csend(client.sin_addr.s_addr, myrewardkey, strlen(myrewardkey));
             }
 
-            //Check replay_allow value every three seconds
-            if(time(0) > st0)
-            {
-                //Save memory state
-                savemem();
-                
-                //Load new replay allow value
-                forceRead(".vfc/rp.mem", &replay_allow, sizeof(uint)*6);
-
-                //Next Loop
-                st0 = time(0)+3;
-            }
 
             //Log Requests per Second
             if(st < time(0))
@@ -3471,18 +3472,7 @@ int main(int argc , char *argv[])
                 //Log Metrics
                 printf("\x1B[33mSTAT: Req/s: %ld, Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, MAX_THREADS, err);
 
-                //Let's execute a Sync every 3*3 mins = 9 mins
-                if(rsi >= 3)
-                {
-                    //Reset loop
-                    rsi = 0;
-                    
-                    //Request a resync
-                    resyncBlocks();
-                }
-
                 //Prep next loop
-                rsi++;
                 reqs = 0;
                 tt = time(0);
                 st = time(0)+180;
