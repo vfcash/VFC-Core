@@ -89,7 +89,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.51";
+const char version[]="0.51.1";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -104,7 +104,7 @@ const char master_ip[] = "68.183.49.225";
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
 #define PING_INTERVAL 540               // How often top ping the peers to see if they are still alive
-#define REPLAY_SIZE 6144                // How many transactions to send a peer in one replay request
+#define REPLAY_SIZE 13888               // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scalling cannot exceed this.
 
 //Generic Buffer Sizes
@@ -289,18 +289,18 @@ uint getReplayRate()
     else if(tmi->tm_hour == 7)   return 10000;
     else if(tmi->tm_hour == 8)   return 10000;
     else if(tmi->tm_hour == 9)   return 10000;
-    else if(tmi->tm_hour == 10)  return 40000;
-    else if(tmi->tm_hour == 11)  return 40000;
-    else if(tmi->tm_hour == 12)  return 40000;
+    else if(tmi->tm_hour == 10)  return 30000;
+    else if(tmi->tm_hour == 11)  return 30000;
+    else if(tmi->tm_hour == 12)  return 30000;
     else if(tmi->tm_hour == 13)  return 40000;
     else if(tmi->tm_hour == 14)  return 40000;
     else if(tmi->tm_hour == 15)  return 40000;
     else if(tmi->tm_hour == 16)  return 40000;
-    else if(tmi->tm_hour == 17)  return 40000;
-    else if(tmi->tm_hour == 18)  return 40000;
-    else if(tmi->tm_hour == 19)  return 40000;
-    else if(tmi->tm_hour == 20)  return 40000;
-    else if(tmi->tm_hour == 21)  return 40000;
+    else if(tmi->tm_hour == 17)  return 30000;
+    else if(tmi->tm_hour == 18)  return 30000;
+    else if(tmi->tm_hour == 19)  return 30000;
+    else if(tmi->tm_hour == 20)  return 30000;
+    else if(tmi->tm_hour == 21)  return 20000;
     else if(tmi->tm_hour == 22)  return 10000;
     else if(tmi->tm_hour == 23)  return 10000;
     else if(tmi->tm_hour == 24)  return 10000;
@@ -3151,7 +3151,7 @@ int main(int argc , char *argv[])
     //Hijack CTRL+C
     signal(SIGINT, sigintHandler);
 
-    //is x86_64?
+    //is x86_64? only use mmap on x86_64
     struct utsname ud;
     uname(&ud);
     if(strcmp(ud.machine, "x86_64") != 0)
