@@ -2389,7 +2389,7 @@ int main(int argc , char *argv[])
     if(strcmp(ud.machine, "x86_64") != 0)
     {
         is8664 = 0;
-        printf("\033[1m\x1B[31mRunning without mmap() as system is not x86_64.\x1B[0m\033[0m");
+        printf("\033[1m\x1B[31mRunning without mmap() as system is not x86_64.\x1B[0m\033[0m\n\n");
     }
 
     //create vfc dir
