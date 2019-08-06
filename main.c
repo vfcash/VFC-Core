@@ -2710,11 +2710,11 @@ int main(int argc , char *argv[])
                 i2.s_addr = replay_allow[1];
                 struct in_addr i3;
                 i3.s_addr = replay_allow[2];
-                struct in_addr i3;
+                struct in_addr i4;
                 i4.s_addr = replay_allow[3];
-                struct in_addr i3;
+                struct in_addr i5;
                 i5.s_addr = replay_allow[4];
-                struct in_addr i3;
+                struct in_addr i6;
                 i6.s_addr = replay_allow[5];
 
                 forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*6);
