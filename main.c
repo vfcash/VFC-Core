@@ -1926,7 +1926,7 @@ pthread_mutex_lock(&mutex3);
 
             fclose(f);
         }
-pthread_mutex_lock(&mutex3);
+pthread_mutex_unlock(&mutex3);
         
     }
     
