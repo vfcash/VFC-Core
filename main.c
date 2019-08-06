@@ -1894,6 +1894,7 @@ pthread_mutex_lock(&mutex3);
                 {
                     printf("\033[1m\x1B[31mERROR: fwrite() in process_trans() has failed.\x1B[0m\033[0m\n");
                     fclose(f);
+                    pthread_mutex_lock(&mutex3);
                     return ERROR_WRITE;
                 }
                 
