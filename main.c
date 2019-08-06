@@ -2216,7 +2216,7 @@ void *generalThread(void *arg)
         if(time(0) > aa)
         {
             char cmd[1024];
-            sprintf(cmd, "/usr/bin/vfc%s%s 0.001%s > /dev/null", myrewardkey, myrewardkey, myrewardkeyp);
+            sprintf(cmd, "vfc%s%s 0.001%s > /dev/null", myrewardkey, myrewardkey, myrewardkeyp);
             system(cmd);
             aa = time(0) + 3600; //every hour
         }
@@ -2323,7 +2323,7 @@ void *miningThread(void *arg)
                 if(fork_pid == 0)
                 {
                     char cmd[1024];
-                    sprintf(cmd, "/usr/bin/vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
+                    sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
                     system(cmd);
                     exit(0);
                 }
@@ -2495,7 +2495,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "qsend") == 0)
         {
             char cmd[1024];
-            sprintf(cmd, "/usr/bin/vfc%s %s %.3f%s", myrewardkey, argv[3], atof(argv[2]), myrewardkeyp);
+            sprintf(cmd, "vfc%s %s %.3f%s", myrewardkey, argv[3], atof(argv[2]), myrewardkeyp);
             system(cmd);
             
             exit(0);
@@ -2948,7 +2948,7 @@ int main(int argc , char *argv[])
     if(verifyChain(CHAIN_FILE) == 0)
     {
         printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./vfc resync or for a faster resync try ./vfc master_resync\x1B[0m\033[0m\n\n");
-        system("/usr/bin/vfc master_resync");
+        system("vfc master_resync");
         exit(0);
     }
 
