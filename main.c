@@ -126,22 +126,22 @@ const char master_ip[] = "68.183.49.225";
     uint rewardindex = 0;
     uint rewardpaid = 1;
 #endif
-char mid[8];                        //Clients private identification code used in pings etc.
-ulong err = 0;                      //Global error count
+char mid[8];                         //Clients private identification code used in pings etc.
+ulong err = 0;                       //Global error count
 uint replay_allow[6] = {0,0,0,0,0,0};//IP address of peer allowed to send replay blocks
-uint replay_height = 0;             //Block Height of current peer authorized to receive a replay from
-uint64_t balance_accumulator = 0;   //For accumulating the highest network balance of a requested address
-uint nthreads = 0;                  //number of mining threads
-char myrewardkey[MIN_LEN];          //client reward addr public key
-char myrewardkeyp[MIN_LEN];         //client reward addr private key
-uint8_t genesis_pub[ECC_CURVE+1];   //genesis address public key
-uint thread_ip[MAX_THREADS_BUFF];   //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
-uint threads = 0;                   //number of replay threads
-uint MAX_THREADS = 6;               //maximum number of replay threads
+uint replay_height = 0;              //Block Height of current peer authorized to receive a replay from
+uint64_t balance_accumulator = 0;    //For accumulating the highest network balance of a requested address
+uint nthreads = 0;                   //number of mining threads
+char myrewardkey[MIN_LEN];           //client reward addr public key
+char myrewardkeyp[MIN_LEN];          //client reward addr private key
+uint8_t genesis_pub[ECC_CURVE+1];    //genesis address public key
+uint thread_ip[MAX_THREADS_BUFF];    //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
+uint threads = 0;                    //number of replay threads
+uint MAX_THREADS = 6;                //maximum number of replay threads
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
-
+uint is8664 = 1;
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
@@ -1695,63 +1695,69 @@ uint64_t getBalanceLocal(addr* from)
 {
     //Get local Balance
     int64_t rv = isSubGenesisAddress(from->key, 1);
-    int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
-    {
-        const size_t len = lseek(f, 0, SEEK_END);
 
-        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-        if(m != MAP_FAILED)
+    if(is8664 == 1) //mmap on x86_64
+    {
+        int f = open(CHAIN_FILE, O_RDONLY);
+        if(f)
         {
+            const size_t len = lseek(f, 0, SEEK_END);
+
+            unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+            if(m != MAP_FAILED)
+            {
+                close(f);
+
+                struct trans t;
+                for(size_t i = 0; i < len; i += sizeof(struct trans))
+                {
+                    memcpy(&t, m+i, sizeof(struct trans));
+
+                    if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
+                        rv += t.amount;
+                    else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                        rv -= t.amount;
+                }
+
+                munmap(m, len);
+            }
+
             close(f);
+        }
+    }
+    else //Other devices use a lower memory intensive version
+    {
+        FILE* f = fopen(CHAIN_FILE, "r");
+        if(f)
+        {
+            fseek(f, 0, SEEK_END);
+            const size_t len = ftell(f);
 
             struct trans t;
             for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
-                memcpy(&t, m+i, sizeof(struct trans));
+                fseek(f, i, SEEK_SET);
 
-                if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
-                    rv += t.amount;
-                else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
-                    rv -= t.amount;
+                struct trans t;
+                if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+                {
+                    if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
+                        rv += t.amount;
+                    if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                        rv -= t.amount;
+                }
+                else
+                {
+                    printf("There was a problem, blocks.dat looks corrupt.\n");
+                    fclose(f);
+                    return rv;
+                }
             }
 
-            munmap(m, len);
+            fclose(f);
         }
-
-        close(f);
     }
-
-
-    // FILE* f = fopen(CHAIN_FILE, "r");
-    // if(f)
-    // {
-    //     fseek(f, 0, SEEK_END);
-    //     const size_t len = ftell(f);
-
-    //     struct trans t;
-    //     for(size_t i = 0; i < len; i += sizeof(struct trans))
-    //     {
-    //         fseek(f, i, SEEK_SET);
-
-    //         struct trans t;
-    //         if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
-    //         {
-    //             if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
-    //                 rv += t.amount;
-    //             if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
-    //                 rv -= t.amount;
-    //         }
-    //         else
-    //         {
-    //             printf("There was a problem, blocks.dat looks corrupt.\n");
-    //             fclose(f);
-    //             return rv;
-    //         }
-    //     }
-
-    //     fclose(f);
-    // }
+    
 
     if(rv < 0)
         return 0;
@@ -1787,76 +1793,78 @@ uint64_t getBalance(addr* from)
 int hasbalance(const uint64_t uid, addr* from, mval amount)
 {
     int64_t rv = isSubGenesisAddress(from->key, 0);
-    int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
-    {
-        const size_t len = lseek(f, 0, SEEK_END);
 
-        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-        if(m != MAP_FAILED)
+    if(is8664 == 1) //mmap on x86_64
+    {
+        int f = open(CHAIN_FILE, O_RDONLY);
+        if(f)
         {
+            const size_t len = lseek(f, 0, SEEK_END);
+
+            unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+            if(m != MAP_FAILED)
+            {
+                close(f);
+
+                struct trans t;
+                for(size_t i = 0; i < len; i += sizeof(struct trans))
+                {
+                    if(t.uid == uid)
+                    {
+                        munmap(m, len);
+                        return ERROR_UIDEXIST;
+                    }
+                    memcpy(&t, m+i, sizeof(struct trans));
+
+                    if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
+                        rv += t.amount;
+                    else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                        rv -= t.amount;
+                }
+
+                munmap(m, len);
+            }
+
             close(f);
+        }
+    }
+    else //Other devices use a lower memory intensive version
+    {
+        FILE* f = fopen(CHAIN_FILE, "r");
+        if(f)
+        {
+            fseek(f, 0, SEEK_END);
+            const size_t len = ftell(f);
 
             struct trans t;
             for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
-                if(t.uid == uid)
-                {
-                    munmap(m, len);
-                    return ERROR_UIDEXIST;
-                }
-                memcpy(&t, m+i, sizeof(struct trans));
+                fseek(f, i, SEEK_SET);
 
-                if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
-                    rv += t.amount;
-                else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
-                    rv -= t.amount;
+                struct trans t;
+                if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+                {
+                    if(t.uid == uid)
+                    {
+                        fclose(f);
+                        return ERROR_UIDEXIST;
+                    }
+                    if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
+                        rv += t.amount;
+                    if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                        rv -= t.amount;
+                }
+                else
+                {
+                    printf("There was a problem, blocks.dat looks corrupt.\n");
+                    fclose(f);
+                    return rv;
+                }
             }
 
-            munmap(m, len);
+            fclose(f);
         }
-
-        close(f);
     }
-
-
-    // FILE* f = fopen(CHAIN_FILE, "r");
-    // if(f)
-    // {
-    //     fseek(f, 0, SEEK_END);
-    //     const size_t len = ftell(f);
-
-    //     struct trans t;
-    //     for(size_t i = 0; i < len; i += sizeof(struct trans))
-    //     {
-    //         fseek(f, i, SEEK_SET);
-
-    //         struct trans t;
-    //         if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
-    //         {
-    //             if(t.uid == uid)
-    //             {
-    //                 fclose(f);
-    //                 return ERROR_UIDEXIST;
-    //             }
-    //             if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
-    //                 rv += t.amount;
-    //             if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
-    //                 rv -= t.amount;
-    //         }
-    //         else
-    //         {
-    //             printf("There was a problem, blocks.dat looks corrupt.\n");
-    //             fclose(f);
-    //             return rv;
-    //         }
-    //     }
-
-    //     fclose(f);
-    // }
-
-
-
 
     if(rv >= amount)
         return 1;
@@ -2360,6 +2368,12 @@ int main(int argc , char *argv[])
         MAX_THREADS = 8*(nthreads-2);
     if(MAX_THREADS > 512)
         MAX_THREADS = 512;
+
+    //is x86_64?
+    struct utsname ud;
+    uname(&ud);
+    if(strcmp(ud.machine, "x86_64") != 0)
+        is8664 = 0;
 
     //create vfc dir
 #if RUN_AS_ROOT == 1
