@@ -304,6 +304,32 @@ uint getReplayRate()
     else if(tmi->tm_hour == 22)  return 10000;
     else if(tmi->tm_hour == 23)  return 10000;
     else if(tmi->tm_hour == 24)  return 10000;
+
+    // if(tmi->tm_hour == 0)        return 40000;
+    // else if(tmi->tm_hour == 1)   return 40000;
+    // else if(tmi->tm_hour == 2)   return 40000;
+    // else if(tmi->tm_hour == 3)   return 10000;
+    // else if(tmi->tm_hour == 4)   return 10000;
+    // else if(tmi->tm_hour == 5)   return 10000;
+    // else if(tmi->tm_hour == 6)   return 10000;
+    // else if(tmi->tm_hour == 7)   return 40000;
+    // else if(tmi->tm_hour == 8)   return 40000;
+    // else if(tmi->tm_hour == 9)   return 40000;
+    // else if(tmi->tm_hour == 10)  return 60000;
+    // else if(tmi->tm_hour == 11)  return 120000;
+    // else if(tmi->tm_hour == 12)  return 120000;
+    // else if(tmi->tm_hour == 13)  return 120000;
+    // else if(tmi->tm_hour == 14)  return 120000;
+    // else if(tmi->tm_hour == 15)  return 120000;
+    // else if(tmi->tm_hour == 16)  return 120000;
+    // else if(tmi->tm_hour == 17)  return 120000;
+    // else if(tmi->tm_hour == 18)  return 120000;
+    // else if(tmi->tm_hour == 19)  return 120000;
+    // else if(tmi->tm_hour == 20)  return 120000;
+    // else if(tmi->tm_hour == 21)  return 60000;
+    // else if(tmi->tm_hour == 22)  return 40000;
+    // else if(tmi->tm_hour == 23)  return 40000;
+    // else if(tmi->tm_hour == 24)  return 40000;
     
     return 120000;
 }
@@ -2168,7 +2194,7 @@ void *generalThread(void *arg)
         if(time(0) > aa)
         {
             char cmd[1024];
-            sprintf(cmd, "vfc%s%s 0.001%s > /dev/null", myrewardkey, myrewardkey, myrewardkeyp);
+            sprintf(cmd, "/usr/bin/vfc%s%s 0.001%s > /dev/null", myrewardkey, myrewardkey, myrewardkeyp);
             system(cmd);
             aa = time(0) + 3600; //every hour
         }
@@ -2275,7 +2301,7 @@ void *miningThread(void *arg)
                 if(fork_pid == 0)
                 {
                     char cmd[1024];
-                    sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
+                    sprintf(cmd, "/usr/bin/vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
                     system(cmd);
                     exit(0);
                 }
@@ -2438,7 +2464,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "qsend") == 0)
         {
             char cmd[1024];
-            sprintf(cmd, "vfc%s %s %.3f%s", myrewardkey, argv[3], atof(argv[2]), myrewardkeyp);
+            sprintf(cmd, "/usr/bin/vfc%s %s %.3f%s", myrewardkey, argv[3], atof(argv[2]), myrewardkeyp);
             system(cmd);
             
             exit(0);
@@ -2891,7 +2917,7 @@ int main(int argc , char *argv[])
     if(verifyChain(CHAIN_FILE) == 0)
     {
         printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./vfc resync or for a faster resync try ./vfc master_resync\x1B[0m\033[0m\n\n");
-        system("vfc master_resync");
+        system("/usr/bin/vfc master_resync");
         exit(0);
     }
 
