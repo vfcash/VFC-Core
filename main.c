@@ -3218,6 +3218,7 @@ int main(int argc , char *argv[])
             //Client Command
             memset(rb, 0, sizeof(rb));
             read_size = recvfrom(s, rb, RECV_BUFF_SIZE-1, 0, (struct sockaddr *)&client, &slen);
+            reqs++;
 
             //Are we the same node sending to itself, if so, ignore.
             //if(server.sin_addr.s_addr == client.sin_addr.s_addr) //I know, this is very rarily ever effective. If ever.
@@ -3276,9 +3277,6 @@ int main(int argc , char *argv[])
                     memcpy(ofs, t.owner.key, ECC_CURVE*2);
                     triBroadcast(pc, trans_size);
                 }
-                
-                //Increment Requests
-                reqs++;
             }
 
             //peer is requesting a block replay
@@ -3289,9 +3287,6 @@ int main(int argc , char *argv[])
                 {
                     //Launch replay
                     launchReplayThread(client.sin_addr.s_addr);
-                    
-                    //Increment Requests
-                    reqs++;
                 }
             }
 
@@ -3425,9 +3420,6 @@ int main(int argc , char *argv[])
 
                     //Alright process it, if it was a legitimate transaction we retain it in our chain.
                     aQue(&t, 0, 0, 0);
-                    
-                    //Increment Requests
-                    reqs++;
                 }
             }
 
@@ -3437,9 +3429,6 @@ int main(int argc , char *argv[])
                 rb[0] = '\r';
                 csend(client.sin_addr.s_addr, rb, read_size);
                 addPeer(client.sin_addr.s_addr); //I didn't want to have to do this, but it's not the end of the world.
-
-                //Increment Requests
-                reqs++;
             }
             else if(rb[0] == '\r' && read_size == sizeof(mid)) //Anon responded with our mid code, we add Anon as a peer
             {
@@ -3452,9 +3441,6 @@ int main(int argc , char *argv[])
                     rb[7] == mid[7] )
                 {
                     addPeer(client.sin_addr.s_addr);
-
-                    //Increment Requests
-                    reqs++;
                 }
             }
 
