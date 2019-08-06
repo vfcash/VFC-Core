@@ -2099,7 +2099,7 @@ void *processThread(void *arg)
         const int i = gQue();
         if(i == -1)
         {
-            usleep(3333); //Little delay if queue is empty we dont want to thrash cycles
+            pthread_mutex_unlock(&mutex2);
             continue;
         }
         lreplay = replay[i];
