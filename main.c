@@ -128,7 +128,7 @@ const char master_ip[] = "68.183.49.225";
 #endif
 char mid[8];                        //Clients private identification code used in pings etc.
 ulong err = 0;                      //Global error count
-uint replay_allow[3] = {0,0,0};     //IP address of peer allowed to send replay blocks
+uint replay_allow[6] = {0,0,0,0,0,0};//IP address of peer allowed to send replay blocks
 uint replay_height = 0;             //Block Height of current peer authorized to receive a replay from
 uint64_t balance_accumulator = 0;   //For accumulating the highest network balance of a requested address
 uint nthreads = 0;                  //number of mining threads
@@ -279,31 +279,31 @@ uint getReplayRate()
     const time_t lt = time(0);
     const struct tm* tmi = localtime(&lt);
     
-    if(tmi->tm_hour == 0)        return 40000;
-    else if(tmi->tm_hour == 1)   return 40000;
-    else if(tmi->tm_hour == 2)   return 40000;
-    else if(tmi->tm_hour == 3)   return 40000;
-    else if(tmi->tm_hour == 4)   return 40000;
-    else if(tmi->tm_hour == 5)   return 40000;
-    else if(tmi->tm_hour == 6)   return 40000;
-    else if(tmi->tm_hour == 7)   return 40000;
-    else if(tmi->tm_hour == 8)   return 40000;
-    else if(tmi->tm_hour == 9)   return 40000;
-    else if(tmi->tm_hour == 10)  return 60000;
-    else if(tmi->tm_hour == 11)  return 120000;
-    else if(tmi->tm_hour == 12)  return 120000;
-    else if(tmi->tm_hour == 13)  return 120000;
-    else if(tmi->tm_hour == 14)  return 120000;
-    else if(tmi->tm_hour == 15)  return 120000;
-    else if(tmi->tm_hour == 16)  return 120000;
-    else if(tmi->tm_hour == 17)  return 120000;
-    else if(tmi->tm_hour == 18)  return 120000;
-    else if(tmi->tm_hour == 19)  return 120000;
-    else if(tmi->tm_hour == 20)  return 120000;
-    else if(tmi->tm_hour == 21)  return 60000;
-    else if(tmi->tm_hour == 22)  return 40000;
-    else if(tmi->tm_hour == 23)  return 40000;
-    else if(tmi->tm_hour == 24)  return 40000;
+    if(tmi->tm_hour == 0)        return 10000;
+    else if(tmi->tm_hour == 1)   return 10000;
+    else if(tmi->tm_hour == 2)   return 10000;
+    else if(tmi->tm_hour == 3)   return 10000;
+    else if(tmi->tm_hour == 4)   return 10000;
+    else if(tmi->tm_hour == 5)   return 10000;
+    else if(tmi->tm_hour == 6)   return 10000;
+    else if(tmi->tm_hour == 7)   return 10000;
+    else if(tmi->tm_hour == 8)   return 10000;
+    else if(tmi->tm_hour == 9)   return 10000;
+    else if(tmi->tm_hour == 10)  return 40000;
+    else if(tmi->tm_hour == 11)  return 40000;
+    else if(tmi->tm_hour == 12)  return 40000;
+    else if(tmi->tm_hour == 13)  return 40000;
+    else if(tmi->tm_hour == 14)  return 40000;
+    else if(tmi->tm_hour == 15)  return 40000;
+    else if(tmi->tm_hour == 16)  return 40000;
+    else if(tmi->tm_hour == 17)  return 40000;
+    else if(tmi->tm_hour == 18)  return 40000;
+    else if(tmi->tm_hour == 19)  return 40000;
+    else if(tmi->tm_hour == 20)  return 40000;
+    else if(tmi->tm_hour == 21)  return 40000;
+    else if(tmi->tm_hour == 22)  return 10000;
+    else if(tmi->tm_hour == 23)  return 10000;
+    else if(tmi->tm_hour == 24)  return 10000;
     
     return 120000;
 }
@@ -786,8 +786,8 @@ void resyncBlocks()
     csend(peers[0], "r", 1);
 #endif
 
-    //allow replay from 3 random peers
-    for(int i = 0; i < 3; i++)
+    //allow replay from 6 random peers
+    for(int i = 0; i < 6; i++)
     {
 
         //Also Sync from a Random Node (Sync is called fairly often so eventually the random distribution across nodes will fair well)
@@ -827,7 +827,7 @@ void resyncBlocks()
 // #endif
 
     //Set the file memory
-    forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*3);
+    forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*6);
 }
 
 uint sendMaster(const char* dat, const size_t len)
@@ -2710,8 +2710,14 @@ int main(int argc , char *argv[])
                 i2.s_addr = replay_allow[1];
                 struct in_addr i3;
                 i3.s_addr = replay_allow[2];
+                struct in_addr i3;
+                i4.s_addr = replay_allow[3];
+                struct in_addr i3;
+                i5.s_addr = replay_allow[4];
+                struct in_addr i3;
+                i6.s_addr = replay_allow[5];
 
-                forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*3);
+                forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*6);
                 forceRead(".vfc/rph.mem", &replay_height, sizeof(uint));
 
                 if(replay_allow[0] == 0)
@@ -2720,7 +2726,10 @@ int main(int argc , char *argv[])
                 {
                     printf("\x1B[33m%.1f\x1B[0m kb of \x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Authorized Peer: %s / ", (double)st.st_size / 1000, (double)replay_height / 1000, inet_ntoa(i1));
                     printf("%s / ", inet_ntoa(i2));
-                    printf("%s.\n", inet_ntoa(i3));
+                    printf("%s / ", inet_ntoa(i3));
+                    printf("%s / ", inet_ntoa(i4));
+                    printf("%s / ", inet_ntoa(i5));
+                    printf("%s.\n", inet_ntoa(i6));
                 }
                 tc++;
                 sleep(1);
@@ -2753,7 +2762,7 @@ int main(int argc , char *argv[])
             setMasterNode();
             loadmem();
             resyncBlocks();
-            forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*3);
+            forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*6);
             printf("\x1B[33mResync Executed.\x1B[0m\n\n");
             exit(0);
         }
@@ -3269,7 +3278,7 @@ int main(int argc , char *argv[])
 // #endif
 
                 //Check this is the replay peer
-                if(client.sin_addr.s_addr == replay_allow[0] || client.sin_addr.s_addr == replay_allow[1] || client.sin_addr.s_addr == replay_allow[2] || isMasterNode(client.sin_addr.s_addr) == 1)
+                if(client.sin_addr.s_addr == replay_allow[0] || client.sin_addr.s_addr == replay_allow[1] || client.sin_addr.s_addr == replay_allow[2] || client.sin_addr.s_addr == replay_allow[3] || client.sin_addr.s_addr == replay_allow[4] || client.sin_addr.s_addr == replay_allow[5] || isMasterNode(client.sin_addr.s_addr) == 1)
                 {
                     uint32_t trh = 0;
                     memcpy(&trh, rb+1, sizeof(uint)); //Set the block height
@@ -3341,7 +3350,7 @@ int main(int argc , char *argv[])
 // #endif
 
                 //This replay has to be from a single peer and the master.
-                if(client.sin_addr.s_addr == inet_addr("127.0.0.1") || client.sin_addr.s_addr == replay_allow[0] || client.sin_addr.s_addr == replay_allow[1] || client.sin_addr.s_addr == replay_allow[2] || isMasterNode(client.sin_addr.s_addr) == 1)
+                if(client.sin_addr.s_addr == inet_addr("127.0.0.1") || client.sin_addr.s_addr == replay_allow[0] || client.sin_addr.s_addr == replay_allow[1] || client.sin_addr.s_addr == replay_allow[2] || client.sin_addr.s_addr == replay_allow[3] || client.sin_addr.s_addr == replay_allow[4] || client.sin_addr.s_addr == replay_allow[5] || isMasterNode(client.sin_addr.s_addr) == 1)
                 {
                     //Decode packet into a Transaction
                     struct trans t;
@@ -3407,7 +3416,7 @@ int main(int argc , char *argv[])
                 savemem();
                 
                 //Load new replay allow value
-                forceRead(".vfc/rp.mem", &replay_allow, sizeof(uint)*3);
+                forceRead(".vfc/rp.mem", &replay_allow, sizeof(uint)*6);
 
                 //Next Loop
                 st0 = time(0)+3;
