@@ -1739,19 +1739,26 @@ uint64_t getBalanceLocal(addr* from)
                 fseek(f, i, SEEK_SET);
 
                 struct trans t;
-                if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+                uint fc = 0;
+                while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
                 {
-                    if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
-                        rv += t.amount;
-                    if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
-                        rv -= t.amount;
-                }
-                else
-                {
-                    printf("There was a problem, blocks.dat looks corrupt.\n");
                     fclose(f);
-                    return rv;
+                    f = fopen(CHAIN_FILE, "r");
+                    fc++;
+                    if(fc > 333)
+                    {
+                        printf("\033[1m\x1B[31mERROR: fread() in getBalanceLocal() has failed.\x1B[0m\033[0m\n");
+                        fclose(f);
+                        return 0;
+                    }
+                    if(f == NULL)
+                        continue;
                 }
+
+                if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
+                    rv += t.amount;
+                if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                    rv -= t.amount;
             }
 
             fclose(f);
@@ -1842,24 +1849,31 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
                 fseek(f, i, SEEK_SET);
 
                 struct trans t;
-                if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
+                uint fc = 0;
+                while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
                 {
-                    if(t.uid == uid)
-                    {
-                        fclose(f);
-                        return ERROR_UIDEXIST;
-                    }
-                    if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
-                        rv += t.amount;
-                    if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
-                        rv -= t.amount;
-                }
-                else
-                {
-                    printf("There was a problem, blocks.dat looks corrupt.\n");
                     fclose(f);
-                    return rv;
+                    f = fopen(CHAIN_FILE, "r");
+                    fc++;
+                    if(fc > 333)
+                    {
+                        printf("\033[1m\x1B[31mERROR: fread() in getBalanceLocal() has failed.\x1B[0m\033[0m\n");
+                        fclose(f);
+                        return 0;
+                    }
+                    if(f == NULL)
+                        continue;
                 }
+
+                if(t.uid == uid)
+                {
+                    fclose(f);
+                    return ERROR_UIDEXIST;
+                }
+                if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
+                    rv += t.amount;
+                if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                    rv -= t.amount;
             }
 
             fclose(f);
@@ -2373,7 +2387,10 @@ int main(int argc , char *argv[])
     struct utsname ud;
     uname(&ud);
     if(strcmp(ud.machine, "x86_64") != 0)
+    {
         is8664 = 0;
+        printf("\033[1m\x1B[31mRunning without mmap() as system is not x86_64.\x1B[0m\033[0m");
+    }
 
     //create vfc dir
 #if RUN_AS_ROOT == 1
