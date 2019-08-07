@@ -104,7 +104,7 @@ const char master_ip[] = "68.183.49.225";
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
 #define PING_INTERVAL 540               // How often top ping the peers to see if they are still alive
-#define REPLAY_SIZE 13888               // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
+#define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scalling cannot exceed this.
 
 //Generic Buffer Sizes
