@@ -1148,7 +1148,7 @@ uint64_t getCirculatingSupply()
         ift = (uint64_t)st.st_size / 133;
     ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
 
-    uint64_t rv = ((4294967295 + ift) / 100) * 20; // 20% of the original genesis address value + ift tax
+    uint64_t rv = (ift / 100) * 20; // 20% of the ift tax
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
