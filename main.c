@@ -1069,13 +1069,13 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
 int gQue()
 {
     const uint mi = qRand(0, MAX_TRANS_QUEUE-1);
-    for(uint i = mi; i < MAX_TRANS_QUEUE; i++)
+    for(uint i = mi; i > 0; i--) //Check backwards first, que is stacked left to right
     {
         if(tq[i].amount != 0)
             if(time(0) - delta[i] > 2 || replay[i] == 1) //Only process transactions more than 3 second old [replays are instant]
                 return i;
     }
-    for(uint i = mi; i > 0; i--)
+    for(uint i = mi; i < MAX_TRANS_QUEUE; i++) ///check into the distance
     {
         if(tq[i].amount != 0)
             if(time(0) - delta[i] > 2 || replay[i] == 1) //Only process transactions more than 3 second old [replays are instant]
