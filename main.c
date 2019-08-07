@@ -1271,9 +1271,6 @@ void replayBlocks(const uint ip)
             uint fc = 0;
             while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
             {
-                if(fc == 0)
-                    printf("\033[1m\x1B[31mError: fread failed. Retrying... %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
-
                 fclose(f);
                 f = fopen(CHAIN_FILE, "r");
                 
@@ -1288,8 +1285,6 @@ void replayBlocks(const uint ip)
                 if(f == NULL)
                     continue;
             }
-             if(fc != 0)
-                 printf("\033[1m\x1B[31mSuccess: fread succeded. %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
 
             //Generate Packet (pc)
             const size_t len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
