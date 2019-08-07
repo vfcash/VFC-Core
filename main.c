@@ -1068,7 +1068,14 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
 //pop the first living transaction index off the Queue
 int gQue()
 {
-    for(uint i = qRand(0, MAX_TRANS_QUEUE-1); i < MAX_TRANS_QUEUE; i++)
+    const uint mi = qRand(0, MAX_TRANS_QUEUE-1);
+    for(uint i = mi; i < MAX_TRANS_QUEUE; i++)
+    {
+        if(tq[i].amount != 0)
+            if(time(0) - delta[i] > 2 || replay[i] == 1) //Only process transactions more than 3 second old [replays are instant]
+                return i;
+    }
+    for(uint i = mi; i > 0; i--)
     {
         if(tq[i].amount != 0)
             if(time(0) - delta[i] > 2 || replay[i] == 1) //Only process transactions more than 3 second old [replays are instant]
