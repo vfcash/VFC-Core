@@ -226,6 +226,7 @@ void forceWrite(const char* file, const void* data, const size_t data_len)
             if(fc > 333)
             {
                 printf("\033[1m\x1B[31mERROR: fwrite() in forceWrite() has failed for '%s'.\x1B[0m\033[0m\n", file);
+                err++;
                 fclose(f);
                 return;
             }
@@ -251,6 +252,7 @@ void forceRead(const char* file, void* data, const size_t data_len)
             if(fc > 333)
             {
                 printf("\033[1m\x1B[31mERROR: fread() in forceRead() has failed for '%s'.\x1B[0m\033[0m\n", file);
+                err++;
                 fclose(f);
                 return;
             }
@@ -1066,7 +1068,7 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
 //pop the first living transaction index off the Queue
 int gQue()
 {
-    for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
+    for(uint i = qRand(0, MAX_TRANS_QUEUE-1); i < MAX_TRANS_QUEUE; i++)
     {
         if(tq[i].amount != 0)
             if(time(0) - delta[i] > 2 || replay[i] == 1) //Only process transactions more than 3 second old [replays are instant]
@@ -1113,6 +1115,7 @@ uint64_t getMinedSupply()
                 if(fc > 333)
                 {
                     printf("\033[1m\x1B[31mERROR: fread() in getMinedSupply() has failed.\x1B[0m\033[0m\n");
+                    err++;
                     fclose(f);
                     return 0;
                 }
@@ -1169,6 +1172,7 @@ uint64_t getCirculatingSupply()
                 if(fc > 333)
                 {
                     printf("\033[1m\x1B[31mERROR: fread() in getCirculatingSupply() has failed.\x1B[0m\033[0m\n");
+                    err++;
                     fclose(f);
                     return 0;
                 }
@@ -1278,6 +1282,7 @@ void replayBlocks(const uint ip)
                 if(fc > 333)
                 {
                     printf("\033[1m\x1B[31mERROR: fread() in replayBlocks() #1 has failed for peer %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
+                    err++;
                     fclose(f);
                     return;
                 }
@@ -1333,6 +1338,7 @@ void replayBlocks(const uint ip)
                 if(fc > 333)
                 {
                     printf("\033[1m\x1B[31mERROR: fread() in replayBlocks() #2 has failed for peer %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
+                    err++;
                     fclose(f);
                     return;
                 }
@@ -1743,6 +1749,7 @@ uint64_t getBalanceLocal(addr* from)
                     if(fc > 333)
                     {
                         printf("\033[1m\x1B[31mERROR: fread() in getBalanceLocal() has failed.\x1B[0m\033[0m\n");
+                        err++;
                         fclose(f);
                         return 0;
                     }
@@ -1853,6 +1860,7 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
                     if(fc > 333)
                     {
                         printf("\033[1m\x1B[31mERROR: fread() in getBalanceLocal() has failed.\x1B[0m\033[0m\n");
+                        err++;
                         fclose(f);
                         return 0;
                     }
@@ -1936,6 +1944,7 @@ pthread_mutex_lock(&mutex3);
                 if(fc > 333)
                 {
                     printf("\033[1m\x1B[31mERROR: fwrite() in process_trans() has failed.\x1B[0m\033[0m\n");
+                    err++;
                     fclose(f);
                     pthread_mutex_lock(&mutex3);
                     return ERROR_WRITE;
@@ -2063,7 +2072,10 @@ void loadmem()
     if(f)
     {
         if(fread(peers, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
+        {
             printf("\033[1m\x1B[31mPeers Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
+            err++;
+        }
         fclose(f);
     }
     num_peers = countPeers();
@@ -2072,7 +2084,10 @@ void loadmem()
     if(f)
     {
         if(fread(peer_tcount, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
+        {
             printf("\033[1m\x1B[31mPeers1 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
+            err++;
+        }
         fclose(f);
     }
 
@@ -2080,7 +2095,10 @@ void loadmem()
     if(f)
     {
         if(fread(peer_timeouts, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
+        {
             printf("\033[1m\x1B[31mPeers2 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
+            err++;
+        }
         fclose(f);
     }
 
@@ -2088,7 +2106,10 @@ void loadmem()
     if(f)
     {
         if(fread(peer_ua, 64, MAX_PEERS, f) != MAX_PEERS)
+        {
             printf("\033[1m\x1B[31mPeers3 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
+            err++;
+        }
         fclose(f);
     }
 }
