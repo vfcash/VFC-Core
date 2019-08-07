@@ -36,7 +36,7 @@ Each address is limited to one transaction every three seconds, once a transacti
 
 # Share your blocks.dat
 ```
-apt install --assume-yes nginx
+apt install nginx
 ln -s .vfc/blocks.dat /var/www/html/blocks.dat
 ```
 Now visiting your server IP address from a web-browser will share your blocks.dat file.
