@@ -3113,6 +3113,7 @@ int main(int argc , char *argv[])
         sendMaster(pc, len);
         peersBroadcast(pc, len);
 
+#if MASTER_NODE == 1
         //Send locally as a replay
         len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
         pc[0] = 'p'; //This is a re*P*lay
@@ -3127,6 +3128,7 @@ int main(int argc , char *argv[])
         ofs += sizeof(mval);
         memcpy(ofs, t.owner.key, ECC_CURVE*2);
         csend(inet_addr("127.0.0.1"), pc, len);
+#endif
 
         //Log
         char howner[MIN_LEN];
