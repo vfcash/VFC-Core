@@ -141,6 +141,7 @@ uint MAX_THREADS = 6;                //maximum number of replay threads
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex4 = PTHREAD_MUTEX_INITIALIZER;
 uint is8664 = 1;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -264,12 +265,24 @@ void forceRead(const char* file, void* data, const size_t data_len)
     }
 }
 
-void quickTruncate(const char* file, const size_t pos)
+void forceTruncate(const char* file, const size_t pos)
 {
     int f = open(file, O_WRONLY);
     if(f)
     {
-        ftruncate(f, pos);
+        uint c = 0;
+        while(ftruncate(f, pos) == -1)
+        {
+            c++;
+            if(c > 333)
+            {
+                printf("\033[1m\x1B[31mERROR: truncate() in forceTruncate() has failed for '%s'.\x1B[0m\033[0m\n", file);
+                err++;
+                close(f);
+                return;
+            }
+        }
+
         close(f);
     }
 }
@@ -891,7 +904,7 @@ void RewardPeer(const uint ip, const char* pubkey)
         return;
 
     //Base amount
-    double amount = 1.000;
+    double amount = 3.000;
 
     //Wrong / not latest version? Low reward
     if(strstr(peer_ua[rewardindex], version) == NULL)
@@ -1442,7 +1455,7 @@ void launchReplayThread(const uint32_t ip)
 }
 
 //repair chain
-void truncate_at_error(const char* file)
+void truncate_at_error(const char* file, const uint num)
 {
     int f = open(file, O_RDONLY);
     if(f)
@@ -1456,7 +1469,7 @@ void truncate_at_error(const char* file)
 
             struct trans t;
             time_t st = time(0);
-            for(size_t i = sizeof(struct trans)*((len/144)-33333); i < len; i += sizeof(struct trans))
+            for(size_t i = sizeof(struct trans)*((len/144)-num); i < len; i += sizeof(struct trans))
             {
                 memcpy(&t, m+i, sizeof(struct trans));
 
@@ -1494,7 +1507,7 @@ void truncate_at_error(const char* file)
                     setlocale(LC_NUMERIC, "");
                     printf("%s > %s : %'.3f\n", frompub, topub, toDB(t.amount));
 
-                    quickTruncate(file, i);
+                    forceTruncate(file, i);
                     printf("Trunc at: %li\n", i);
                     munmap(m, len);
                     return;
@@ -1643,6 +1656,7 @@ void printIns(addr* a)
                 size_t len = MIN_LEN;
                 b58enc(pub, &len, t.from.key, ECC_CURVE+1);
                 setlocale(LC_NUMERIC, "");
+                //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
                 printf("%s > %'.3f\n", pub, toDB(t.amount));
             }
             
@@ -1689,6 +1703,7 @@ void printOuts(addr* a)
                 size_t len = MIN_LEN;
                 b58enc(pub, &len, t.to.key, ECC_CURVE+1);
                 setlocale(LC_NUMERIC, "");
+                //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
                 printf("%s > %'.3f\n", pub, toDB(t.amount));
             }
             
@@ -1828,6 +1843,12 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
                     if(t.uid == uid)
                     {
                         munmap(m, len);
+                        // if(amount == 333)
+                        // {
+                        //     printf("hasbalance(): UID exists failed\n");
+                        //     printf("%lu = %lu\n", t.uid, uid);
+                        //     printf("%u = %u\n", t.amount, amount);
+                        // }
                         return ERROR_UIDEXIST;
                     }
                     memcpy(&t, m+i, sizeof(struct trans));
@@ -1896,6 +1917,102 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
         return 0;
 }
 
+//Is transaction unique
+int isUnique(const uint64_t uid)
+{
+    if(is8664 == 1) //mmap on x86_64
+    {
+        int f = open(CHAIN_FILE, O_RDONLY);
+        if(f)
+        {
+            const size_t len = lseek(f, 0, SEEK_END);
+
+            unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+            if(m != MAP_FAILED)
+            {
+                close(f);
+
+                uint64_t tuid = 0;
+                for(size_t i = 0; i < len; i += sizeof(struct trans))
+                {
+                    memcpy(&tuid, m+i, sizeof(uint64_t));
+                    if(tuid == uid)
+                        return 0;
+                }
+
+                munmap(m, len);
+            }
+
+            close(f);
+        }
+    }
+    else //Other devices use a lower memory intensive version
+    {
+        FILE* f = fopen(CHAIN_FILE, "r");
+        if(f)
+        {
+            fseek(f, 0, SEEK_END);
+            const size_t len = ftell(f);
+
+            uint64_t tuid = 0;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
+            {
+                fseek(f, i, SEEK_SET);
+
+                uint64_t tuid = 0;
+                uint fc = 0;
+                while(fread(&tuid, 1, sizeof(uint64_t), f) != sizeof(uint64_t))
+                {
+                    fclose(f);
+                    f = fopen(CHAIN_FILE, "r");
+                    fc++;
+                    if(fc > 333)
+                    {
+                        printf("\033[1m\x1B[31mERROR: fread() in getBalanceLocal() has failed.\x1B[0m\033[0m\n");
+                        err++;
+                        fclose(f);
+                        return 0;
+                    }
+                    if(f == NULL)
+                        continue;
+                }
+
+                if(tuid == uid)
+                    return 0;
+            }
+
+            fclose(f);
+        }
+    }
+
+    return 1;
+}
+
+
+//rExi check, last line of defense to prevent race conditions
+//I cannot explain why the mutex seems to fail at times without
+//this final check.
+uint64_t uidlist[MIN_LEN];
+time_t uidtimes[MIN_LEN];
+uint rExi(uint64_t uid)
+{
+    int free = -1;
+    for(uint i = 0; i < MIN_LEN; i++)
+    {
+        if(uidlist[i] == uid)
+            return 1;
+        else if(time(0) > uidtimes[i] || uidtimes[i] == 0)
+            free = i;
+    }
+
+    if(free != -1)
+    {
+        uidlist[free] = uid;
+        uidtimes[free] = time(0) + 1;
+    }
+
+    return 0;
+}
 
 //Execute Transaction
 int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* owner)
@@ -1919,7 +2036,7 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
 
     //Add the sig now we know it's valid
     memcpy(t.owner.key, owner->key, ECC_CURVE*2);
-    
+
     //Check this address has the required value for the transaction (and that UID is actually unique)
     const int hbr = hasbalance(uid, from, amount);
     if(hbr == 0)
@@ -1933,61 +2050,74 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
         return hbr; //it's an error code
     }
 
-    //Ok let's write the transaction to chain
+
+pthread_mutex_lock(&mutex3);
+
+    //This check after the balance check as we need to verify transactions to self have the balance before confirming 'valid transaction'
+    //which will cause the peers to index them, we don't want botnets loading into VFC. and making sure they have control of balance is
+    //the best way to reduce this impact.
     if(memcmp(from->key, to->key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
     {
-pthread_mutex_lock(&mutex3);
-        FILE* f = fopen(CHAIN_FILE, "a");
-        if(f)
+
+        //You know what, the mutex is not preventing race conditions, thats why we have the temporary 1 second expirary rExi / UID check in a limited size buffer.
+        if(rExi(uid) == 0)
         {
-            size_t written = 0;
-
-            uint fc = 0;
-            while(written == 0)
+            FILE* f = fopen(CHAIN_FILE, "a");
+            if(f)
             {
-                written = fwrite(&t, 1, sizeof(struct trans), f);
+                size_t written = 0;
 
-                fc++;
-                if(fc > 333)
+                uint fc = 0;
+                while(written == 0)
                 {
-                    printf("\033[1m\x1B[31mERROR: fwrite() in process_trans() has failed.\x1B[0m\033[0m\n");
-                    err++;
-                    fclose(f);
-                    pthread_mutex_lock(&mutex3);
-                    return ERROR_WRITE;
-                }
-                
-                if(written == 0)
-                {
-                    fclose(f);
-                    f = fopen(CHAIN_FILE, "a");
-                    continue;
-                }
-                
-                //Did we corrupt the chain?
-                if(written < sizeof(struct trans))
-                {
-                    fclose(f);
+                    written = fwrite(&t, 1, sizeof(struct trans), f);
 
-                    printf("\033[1m\x1B[31mERROR: fwrite() in process_trans() reverted potential chain corruption.\x1B[0m\033[0m\n");
+                    if(amount == 3)
+                        printf("Special Written: %lu\n", uid);
 
-                    //Revert the failed write
-                    struct stat st;
-                    stat(CHAIN_FILE, &st);
-                    quickTruncate(CHAIN_FILE, st.st_size - written);
+                    fc++;
+                    if(fc > 333)
+                    {
+                        printf("\033[1m\x1B[31mERROR: fwrite() in process_trans() has failed.\x1B[0m\033[0m\n");
+                        err++;
+                        fclose(f);
+                        pthread_mutex_lock(&mutex3);
+                        return ERROR_WRITE;
+                    }
+                    
+                    if(written == 0)
+                    {
+                        fclose(f);
+                        f = fopen(CHAIN_FILE, "a");
+                        continue;
+                    }
+                    
+                    //Did we corrupt the chain?
+                    if(written < sizeof(struct trans))
+                    {
+                        fclose(f);
 
-                    //Try again
-                    written = 0;
-                    f = fopen(CHAIN_FILE, "a");
-                    continue;
+                        printf("\033[1m\x1B[31mERROR: fwrite() in process_trans() reverted potential chain corruption.\x1B[0m\033[0m\n");
+
+                        //Revert the failed write
+                        struct stat st;
+                        stat(CHAIN_FILE, &st);
+                        forceTruncate(CHAIN_FILE, st.st_size - written);
+
+                        //Try again
+                        written = 0;
+                        f = fopen(CHAIN_FILE, "a");
+                        continue;
+                    }
                 }
+
+                fclose(f);
             }
-
-            fclose(f);
         }
-pthread_mutex_unlock(&mutex3);
-        
+
     }
+
+pthread_mutex_unlock(&mutex3);
     
 
     //Success
@@ -2396,8 +2526,144 @@ void *miningThread(void *arg)
     }
 }
 
+
+
+
+
+// #if MASTER_NODE == 1
+// //This is a quick hackup for a function that scans through the whole local chain, and removes duplicates
+// //then saving the new chain to .vfc/cblocks.dat
+// int chb(const uint64_t uid, addr* from, mval amount)
+// {
+//     int64_t rv = isSubGenesisAddress(from->key, 1);
+//     int f = open(".vfc/cblocks.dat", O_RDONLY);
+//     if(f)
+//     {
+//         const size_t len = lseek(f, 0, SEEK_END);
+
+//         unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+//         if(m != MAP_FAILED)
+//         {
+//             close(f);
+
+//             struct trans t;
+//             for(size_t i = 0; i < len; i += sizeof(struct trans))
+//             {
+//                 if(t.uid == uid)
+//                 {
+//                     munmap(m, len);
+//                     return ERROR_UIDEXIST;
+//                 }
+//                 memcpy(&t, m+i, sizeof(struct trans));
+
+//                 if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
+//                     rv += t.amount;
+//                 else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+//                     rv -= t.amount;
+//             }
+
+//             munmap(m, len);
+//         }
+
+//         close(f);
+//     }
+//     if(rv >= amount)
+//         return 1;
+//     else
+//         return 0;
+// }
+// void newClean()
+// {
+//     uint8_t gpub[ECC_CURVE+1];
+//     size_t len = ECC_CURVE+1;
+//     b58tobin(gpub, &len, "foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ", 44);
+//     struct trans t;
+//     memset(&t, 0, sizeof(struct trans));
+//     t.amount = 0xFFFFFFFF;
+//     memcpy(&t.to.key, gpub, ECC_CURVE+1);
+//     FILE* f = fopen(".vfc/cblocks.dat", "w");
+//     if(f)
+//     {
+//         fwrite(&t, sizeof(struct trans), 1, f);
+//         fclose(f);
+//     }
+// }
+// void cleanChain()
+// {
+//     int f = open(CHAIN_FILE, O_RDONLY);
+//     if(f)
+//     {
+//         const size_t len = lseek(f, 0, SEEK_END);
+
+//         unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+//         if(m != MAP_FAILED)
+//         {
+//             close(f);
+
+//             struct trans t;
+//             for(size_t i = 0; i < len; i += sizeof(struct trans))
+//             {
+//                 memcpy(&t, m+i, sizeof(struct trans));
+
+//                 //Create trans struct
+//                 struct trans nt;
+//                 memset(&nt, 0, sizeof(struct trans));
+//                 nt.uid = t.uid;
+//                 memcpy(nt.from.key, t.from.key, ECC_CURVE+1);
+//                 memcpy(nt.to.key, t.to.key, ECC_CURVE+1);
+//                 nt.amount = t.amount;
+
+//                 uint8_t thash[ECC_CURVE];
+//                 makHash(thash, &nt);
+//                 if(ecdsa_verify(nt.from.key, thash, t.owner.key) == 0)
+//                 {
+//                     //printf("rejected: no verification\n");
+//                     continue;
+//                 }
+
+//                 memcpy(nt.owner.key, t.owner.key, ECC_CURVE*2);
+                
+//                 const int hbr = chb(t.uid, &t.from, t.amount);
+//                 if(hbr == 0)
+//                 {
+//                     printf("rejected: no balance\n");
+//                     continue;
+//                 }
+//                 else if(hbr < 0)
+//                 {
+//                     printf("rejected: uid exists\n");
+//                     continue;
+//                 }
+
+//                 //Ok let's write the transaction to chain
+//                 if(memcmp(t.from.key, t.to.key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
+//                 {
+//                     FILE* f = fopen(".vfc/cblocks.dat", "a");
+//                     if(f)
+//                     {
+//                         fwrite(&t, sizeof(struct trans), 1, f);
+//                         fclose(f);
+//                     }
+//                 }
+//             }
+
+//             munmap(m, len);
+//         }
+
+//         close(f);
+//     }
+// }
+// #endif
+
+
+
 int main(int argc , char *argv[])
 {
+    // chdir(getHome());
+    // newClean();
+    // cleanChain();
+    // exit(0);
+
     //Suppress Sigpipe
     signal(SIGPIPE, SIG_IGN);
 
@@ -2411,6 +2677,9 @@ int main(int argc , char *argv[])
     memset(&ipo, 0, sizeof(uint)*MAX_TRANS_QUEUE);
     memset(&replay, 0, sizeof(unsigned char)*MAX_TRANS_QUEUE);
     memset(&delta, 0, sizeof(time_t)*MAX_TRANS_QUEUE);
+
+    memset(&uidlist, 0, sizeof(uint64_t)*MIN_LEN);
+    memset(&uidtimes, 0, sizeof(time_t)*MIN_LEN);
     // < Peer arrays do not need initilisation >
 
     //Workout size of server for replay scaling
@@ -2592,6 +2861,13 @@ int main(int argc , char *argv[])
 
             printf("\n\x1B[33mPublic Key Generated\x1B[0m\n\nPublic: %s\n\n\x1B[0m", bpub);
             
+            exit(0);
+        }
+
+        //truncate blocks file at first invalid transaction found
+        if(strcmp(argv[1], "trunc") == 0)
+        {
+            truncate_at_error(CHAIN_FILE, atoi(argv[2]));
             exit(0);
         }
 
@@ -2820,13 +3096,6 @@ int main(int argc , char *argv[])
                 sleep(1);
             }
 
-            exit(0);
-        }
-
-        //truncate blocks file at first error transaction
-        if(strcmp(argv[1], "trunc") == 0)
-        {
-            truncate_at_error(CHAIN_FILE);
             exit(0);
         }
 
@@ -3150,7 +3419,7 @@ int main(int argc , char *argv[])
     const int64_t bal1 = getBalanceLocal(&t.from);
     setlocale(LC_NUMERIC, "");
     if(bal0-bal1 <= 0)
-        printf("\033[1m\x1B[31mTransaction Failed. (If you have not got the full blockchain, it may have succeeded)\x1B[0m\033[0m\n\n");
+        printf("\033[1m\x1B[31mTransaction Sent, but unable to verify it's success. Refer to sent transactions for confirmation.\x1B[0m\033[0m\n\n");
     else
         printf("\x1B[33mVFC Sent: \x1B[0m%'.3f VFC\n\n", toDB(bal0-bal1));
 
@@ -3172,6 +3441,10 @@ int main(int argc , char *argv[])
         printf("\033[1m\x1B[31mThe VFC node is already running.\x1B[0m\033[0m\n\n");
         exit(0);
     }
+
+    //Check for broken blocks
+    printf("Quick Scan: Checking blocks.dat for invalid transactions...\n");
+    truncate_at_error(CHAIN_FILE, 33333);
 
     //Hijack CTRL+C
     signal(SIGINT, sigintHandler);
