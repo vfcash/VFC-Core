@@ -89,7 +89,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.51.1";
+const char version[]="0.52";
 const uint16_t gport = 8787;
 const char master_ip[] = "68.183.49.225";
 
@@ -101,6 +101,7 @@ const char master_ip[] = "68.183.49.225";
 
 //Node Settings
 #define MAX_TRANS_QUEUE 4096            // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
+#define MAX_REXI_SIZE 1024              // Maximum size of rExi (this should be atlest ~MAX_TRANS_QUEUE/3)
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
 #define PING_INTERVAL 540               // How often top ping the peers to see if they are still alive
@@ -1992,12 +1993,12 @@ int isUnique(const uint64_t uid)
 //rExi check, last line of defense to prevent race conditions
 //I cannot explain why the mutex seems to fail at times without
 //this final check.
-uint64_t uidlist[MIN_LEN];
-time_t uidtimes[MIN_LEN];
+uint64_t uidlist[MAX_REXI_SIZE];
+time_t uidtimes[MAX_REXI_SIZE];
 uint rExi(uint64_t uid)
 {
     int free = -1;
-    for(uint i = 0; i < MIN_LEN; i++)
+    for(uint i = 0; i < MAX_REXI_SIZE; i++)
     {
         if(uidlist[i] == uid)
             return 1;
