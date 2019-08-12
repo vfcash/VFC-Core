@@ -2073,8 +2073,8 @@ pthread_mutex_lock(&mutex3);
                 {
                     written = fwrite(&t, 1, sizeof(struct trans), f);
 
-                    if(amount == 3)
-                        printf("Special Written: %lu\n", uid);
+                    // if(amount == 3)
+                    //     printf("Special Written: %lu\n", uid);
 
                     fc++;
                     if(fc > 333)
