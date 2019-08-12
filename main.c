@@ -100,6 +100,7 @@ const char master_ip[] = "68.183.49.225";
 #define ERROR_WRITE -4
 
 //Node Settings
+#define MAX_SITES 11111101              // Maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes.
 #define MAX_TRANS_QUEUE 4096            // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
 #define MAX_REXI_SIZE 1024              // Maximum size of rExi (this should be atlest ~MAX_TRANS_QUEUE/3)
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
@@ -350,6 +351,107 @@ uint getReplayRate()
     return 120000;
 }
 
+///////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////
+/////////////////////////////
+///////////////
+////////
+///
+//
+//
+//
+/*
+.
+.
+.
+.
+. ~ Unique Capping Code
+.
+.   Adequate and fast unique store implementation forked from
+.   https://github.com/USTOR-C/USTOR-64/blob/master/ustor.c
+.   James William Fletcher
+.
+.   It's light weight, thread-safe, but not mission-critical,
+.   there will be collisions from time to time.
+.
+*/
+
+struct site //8 bytes, no padding.
+{
+    unsigned short uid_high;
+    unsigned short uid_low;
+    uint expire_epoch;
+};
+
+//Our buckets
+struct site *sites;
+
+void init_sites()
+{
+    sites = malloc(MAX_SITES * sizeof(struct site));
+    if(sites == NULL)
+    {
+        perror("Failed to allocate memory for the Unique Store.\n");
+        exit(0);
+    }
+
+    for(int i = 0; i < MAX_SITES; ++i)
+    {
+        sites[i].uid_high = 0;
+        sites[i].uid_low = 0;
+        sites[i].expire_epoch = 0;
+    }
+}
+
+//Check against all uid in memory for a match
+int has_uid(const uint64_t uid) //Pub
+{
+    //Find site index
+    const uint site_index = uid % MAX_SITES;
+
+    //Reset if expire_epoch dictates this site bucket is expired 
+    if(time(0) >= sites[site_index].expire_epoch) //Threaded race conditions are not an issue here.
+    {
+        sites[site_index].uid_low = 0;
+        sites[site_index].uid_high = 0;
+        sites[site_index].expire_epoch = 0;
+    }
+
+    //Check the ranges
+    unsigned short idfar = (uid % (sizeof(unsigned short)-1))+1;
+    if(idfar >= sites[site_index].uid_low && idfar <= sites[site_index].uid_high)
+        return 1; //it's blocked
+
+    //no uid
+    return 0;
+}
+
+//Set's idfa,
+void add_uid(const uint64_t uid, const uint expire_seconds) //Pub
+{
+    //Find site index
+    const uint site_index = uid % MAX_SITES;
+
+    //Reset if expire_epoch dictates this site bucket is expired 
+    if(time(0) >= sites[site_index].expire_epoch)
+    {
+        sites[site_index].uid_low = 0;
+        sites[site_index].uid_high = 0;
+        sites[site_index].expire_epoch = time(0)+expire_seconds;
+    }
+
+    //Set the ranges
+    unsigned short idfar = (uid % (sizeof(unsigned short)-1))+1;
+    if(idfar < sites[site_index].uid_low || sites[site_index].uid_low == 0)
+    {
+        sites[site_index].uid_low = idfar;
+    }
+    if(idfar > sites[site_index].uid_high || sites[site_index].uid_high == 0)
+    {
+        sites[site_index].uid_high = idfar;
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
@@ -863,7 +965,7 @@ void resyncBlocks()
   
     }
     
-    //The master resyncs off everyone
+    //`hk The master resyncs off everyone
 // #if MASTER_NODE == 1
 //         peersBroadcast("r", 1);
 // #endif
@@ -2018,6 +2120,11 @@ uint rExi(uint64_t uid)
 //Execute Transaction
 int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* owner)
 {
+    //Do a quick unique check [realtime uid cache]
+    if(has_uid(uid) == 1)
+        return 0;
+    add_uid(uid, 86400); //block uid for 24 hours
+
     //Create trans struct
     struct trans t;
     memset(&t, 0, sizeof(struct trans));
@@ -2038,6 +2145,7 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     //Add the sig now we know it's valid
     memcpy(t.owner.key, owner->key, ECC_CURVE*2);
 
+
     //Check this address has the required value for the transaction (and that UID is actually unique)
     const int hbr = hasbalance(uid, from, amount);
     if(hbr == 0)
@@ -2052,13 +2160,13 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     }
 
 
-pthread_mutex_lock(&mutex3);
-
     //This check after the balance check as we need to verify transactions to self have the balance before confirming 'valid transaction'
     //which will cause the peers to index them, we don't want botnets loading into VFC. and making sure they have control of balance is
     //the best way to reduce this impact.
     if(memcmp(from->key, to->key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
     {
+
+pthread_mutex_lock(&mutex3);
 
         //You know what, the mutex is not preventing race conditions, thats why we have the temporary 1 second expirary rExi / UID check in a limited size buffer.
         if(rExi(uid) == 0)
@@ -2116,9 +2224,9 @@ pthread_mutex_lock(&mutex3);
             }
         }
 
-    }
-
 pthread_mutex_unlock(&mutex3);
+
+    }
     
 
     //Success
@@ -2298,7 +2406,7 @@ void *processThread(void *arg)
         uint32_t lip=0, lipo=0;
         unsigned char lreplay = 0;
 
-    pthread_mutex_lock(&mutex2);
+pthread_mutex_lock(&mutex2);
         const int i = gQue();
         if(i == -1)
         {
@@ -2310,7 +2418,7 @@ void *processThread(void *arg)
         lipo = ipo[i];
         memcpy(&t, &tq[i], sizeof(struct trans));
         tq[i].amount = 0; //Signifies transaction as invalid / completed / processed (done)
-    pthread_mutex_unlock(&mutex2);
+pthread_mutex_unlock(&mutex2);
 
         //Process the transaction
         const int r = process_trans(t.uid, &t.from, &t.to, t.amount, &t.owner);
@@ -2348,6 +2456,7 @@ void *processThread(void *arg)
 
 void *generalThread(void *arg)
 {
+    nice(3);
     chdir(getHome());
     time_t rs = time(0);
     time_t nr = time(0);
@@ -2484,18 +2593,15 @@ void *miningThread(void *arg)
             //To console
             printf("\n\x1B[33mFound Sub-Genesis Address: \x1B[0m\nPublic: %s\nPrivate: %s\n\x1B[0m", bpub, bpriv);
 
-            //Send to rewards address
-            // if(r <= diff2val(getMiningDifficulty()))
-            // {
-                pid_t fork_pid = fork();
-                if(fork_pid == 0)
-                {
-                    char cmd[1024];
-                    sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
-                    system(cmd);
-                    exit(0);
-                }
-            // }
+            //Autoclaim
+            pid_t fork_pid = fork();
+            if(fork_pid == 0)
+            {
+                char cmd[1024];
+                sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
+                system(cmd);
+                exit(0);
+            }
 
             //Dump to file
             FILE* f = fopen(".vfc/minted.priv", "a");
@@ -2503,10 +2609,7 @@ void *miningThread(void *arg)
             {
                 flockfile(f); //lock
 
-                // if(r <= diff2val(getMiningDifficulty()))
-                    fprintf(f, "%s (%.3f)\n", bpriv, toDB(r));
-                // else
-                //     fprintf(f, "%s (%.3f) - Unclaimed\n", bpriv, toDB(r));
+                fprintf(f, "%s (%.3f)\n", bpriv, toDB(r));
 
                 funlockfile(f); //unlock
                 fclose(f);
@@ -2682,6 +2785,9 @@ int main(int argc , char *argv[])
     memset(&uidlist, 0, sizeof(uint64_t)*MIN_LEN);
     memset(&uidtimes, 0, sizeof(time_t)*MIN_LEN);
     // < Peer arrays do not need initilisation >
+
+    //Init UID hashmap
+    init_sites();
 
     //Workout size of server for replay scaling
     nthreads = get_nprocs();
@@ -3638,7 +3744,7 @@ int main(int argc , char *argv[])
             {
                 //`hk; Allows master to resync from any peer, any time, injection is just as fine.
 // #if MASTER_NODE == 1
-//                 client.sin_addr.s_addr = replay_allow;
+//                 client.sin_addr.s_addr = replay_allow[0];
 // #endif
 
                 //Check this is the replay peer
@@ -3710,7 +3816,7 @@ int main(int argc , char *argv[])
             {
                 //`hk; Allows master to resync from any peer, any time, injection is just as fine.
 // #if MASTER_NODE == 1
-//                 client.sin_addr.s_addr = replay_allow;
+//                 client.sin_addr.s_addr = replay_allow[0];
 // #endif
 
                 //This replay has to be from a single peer and the master.
