@@ -289,6 +289,32 @@ void forceTruncate(const char* file, const size_t pos)
     }
 }
 
+//https://stackoverflow.com/questions/14293095/is-there-a-library-function-to-determine-if-an-ip-address-ipv4-and-ipv6-is-pri
+int isPrivateAddress(const uint32_t iip)
+{
+    const uint32_t ip = ntohl(iip); ///Convert from network to host byte order
+
+    uint8_t b1=0, b2, b3, b4;
+    b1 = (uint8_t)(ip >> 24);
+    b2 = (uint8_t)((ip >> 16) & 0x0ff);
+    b3 = (uint8_t)((ip >> 8) & 0x0ff);
+    b4 = (uint8_t)(ip & 0x0ff);
+
+    // 10.x.y.z
+    if (b1 == 10)
+        return 1;
+
+    // 172.16.0.0 - 172.31.255.255
+    if ((b1 == 172) && (b2 >= 16) && (b2 <= 31))
+        return 1;
+
+    // 192.168.0.0 - 192.168.255.255
+    if ((b1 == 192) && (b2 == 168))
+        return 1;
+
+    return 0;
+}
+
 uint getReplayRate()
 {
     // This changes the delay in microseconds between each transaction sent during a block replay to a peer
@@ -821,6 +847,9 @@ void scanPeers()
     time_t s = 0;
     for(uint i = 0; i < 4294967294; ++i)
     {
+        if(isPrivateAddress(i) == 1)
+            continue;
+
         if(time(0) > s)
         {
             setlocale(LC_NUMERIC, "");
@@ -1049,6 +1078,10 @@ uint addPeer(const uint ip)
 {
     //Never add local host
     if(ip == inet_addr("127.0.0.1")) //inet_addr("127.0.0.1") //0x0100007F
+        return 0;
+
+    //Or local network address
+    if(isPrivateAddress(ip) == 1)
         return 0;
 
     //Is already in peers?
