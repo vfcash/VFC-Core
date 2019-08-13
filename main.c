@@ -2699,30 +2699,28 @@ void cleanChain()
             close(f);
 
             struct trans t;
-            for(size_t i = 0; i < len; i += sizeof(struct trans))
+            for(size_t i = 1; i < len; i += sizeof(struct trans))
             {
+                //Copy transaction
                 memcpy(&t, m+i, sizeof(struct trans));
 
-                //Create trans struct
+                //Verify
                 struct trans nt;
                 memset(&nt, 0, sizeof(struct trans));
                 nt.uid = t.uid;
                 memcpy(nt.from.key, t.from.key, ECC_CURVE+1);
                 memcpy(nt.to.key, t.to.key, ECC_CURVE+1);
                 nt.amount = t.amount;
-
                 uint8_t thash[ECC_CURVE];
                 makHash(thash, &nt);
                 if(ecdsa_verify(nt.from.key, thash, t.owner.key) == 0)
                 {
-                    //printf("rejected: no verification\n");
+                    printf("%lu: no verification\n", t.uid);
                     continue;
                 }
-
-                memcpy(nt.owner.key, t.owner.key, ECC_CURVE*2);
-                
-                
                 //
+                
+                //Check has balance and is unique
                 int hbr = 0;
                 int64_t rv = isSubGenesisAddress(t.from.key, 1);
                 struct trans tn;
@@ -2740,23 +2738,24 @@ void cleanChain()
                     else if(memcmp(&tn.from.key, &t.from.key, ECC_CURVE+1) == 0)
                         rv -= tn.amount;
                 }
-                if(rv >= t.amount)
-                    hbr = 1;
-                else
-                    hbr = 0;
-                //
-
-
+                if(hbr != ERROR_UIDEXIST)
+                {
+                    if(rv >= t.amount)
+                        hbr = 1;
+                    else
+                        hbr = 0;
+                }
                 if(hbr == 0)
                 {
-                    printf("rejected: no balance\n");
+                    printf("%lu: no balance\n", t.uid);
                     continue;
                 }
                 else if(hbr < 0)
                 {
-                    printf("rejected: uid exists\n");
+                    printf("%lu uid exists\n", t.uid);
                     continue;
                 }
+                //
 
                 //Ok let's write the transaction to chain
                 if(memcmp(t.from.key, t.to.key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
