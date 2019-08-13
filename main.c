@@ -2698,7 +2698,7 @@ void cleanChain()
             close(f);
 
             struct trans t;
-            for(size_t i = 1; i < len; i += sizeof(struct trans))
+            for(size_t i = sizeof(struct trans); i < len; i += sizeof(struct trans))
             {
                 //Copy transaction
                 memcpy(&t, m+i, sizeof(struct trans));
@@ -2722,20 +2722,37 @@ void cleanChain()
                 //Check has balance and is unique
                 int hbr = 0;
                 int64_t rv = isSubGenesisAddress(t.from.key, 1);
-                struct trans tn;
-                for(size_t i = 0; i < len; i += sizeof(struct trans))
+                f = open(".vfc/cblocks.dat", O_RDONLY);
+                if(f)
                 {
-                    if(tn.uid == t.uid)
-                    {
-                        hbr = ERROR_UIDEXIST;
-                        break;
-                    }
-                    memcpy(&tn, m+i, sizeof(struct trans));
+                    const size_t len = lseek(f, 0, SEEK_END);
 
-                    if(memcmp(&tn.to.key, &t.from.key, ECC_CURVE+1) == 0)
-                        rv += tn.amount;
-                    else if(memcmp(&tn.from.key, &t.from.key, ECC_CURVE+1) == 0)
-                        rv -= tn.amount;
+                    unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+                    if(m != MAP_FAILED)
+                    {
+                        close(f);
+
+                        struct trans tn;
+                        for(size_t i = 0; i < len; i += sizeof(struct trans))
+                        {
+                            if(tn.uid == t.uid)
+                            {
+                                hbr = ERROR_UIDEXIST;
+                                munmap(m, len);
+                                break;
+                            }
+                            memcpy(&tn, m+i, sizeof(struct trans));
+
+                            if(memcmp(&tn.to.key, &t.from.key, ECC_CURVE+1) == 0)
+                                rv += tn.amount;
+                            else if(memcmp(&tn.from.key, &t.from.key, ECC_CURVE+1) == 0)
+                                rv -= tn.amount;
+                        }
+
+                        munmap(m, len);
+                    }
+
+                    close(f);
                 }
                 if(hbr != ERROR_UIDEXIST)
                 {
