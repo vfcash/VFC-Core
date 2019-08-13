@@ -2666,7 +2666,7 @@ void *miningThread(void *arg)
 
 
 
-#if MASTER_NODE == 1
+
 //This is a quick hackup for a function that scans through the whole local chain, and removes duplicates
 //then saving the new chain to .vfc/cblocks.dat
 void newClean()
@@ -2791,7 +2791,6 @@ void cleanChain()
         close(f);
     }
 }
-#endif
 
 
 
