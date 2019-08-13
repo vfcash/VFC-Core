@@ -2156,7 +2156,7 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     //Do a quick unique check [realtime uid cache]
     if(has_uid(uid) == 1)
         return 0;
-    add_uid(uid, 86400); //block uid for 24 hours
+    add_uid(uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
 
     //Create trans struct
     struct trans t;
@@ -2201,7 +2201,7 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
 
 pthread_mutex_lock(&mutex3);
 
-        //You know what, the mutex is not preventing race conditions, thats why we have the temporary 1 second expirary rExi / UID check in a limited size buffer.
+        //The mutex is not preventing race conditions, thats why we have the temporary 1 second expirary rExi / UID check in a limited size buffer. [has_uid()/add_uid() further protects from this condition]
         if(rExi(uid) == 0)
         {
             FILE* f = fopen(CHAIN_FILE, "a");
@@ -2667,140 +2667,124 @@ void *miningThread(void *arg)
 
 
 
-// #if MASTER_NODE == 1
-// //This is a quick hackup for a function that scans through the whole local chain, and removes duplicates
-// //then saving the new chain to .vfc/cblocks.dat
-// int chb(const uint64_t uid, addr* from, mval amount)
-// {
-//     int64_t rv = isSubGenesisAddress(from->key, 1);
-//     int f = open(".vfc/cblocks.dat", O_RDONLY);
-//     if(f)
-//     {
-//         const size_t len = lseek(f, 0, SEEK_END);
+#if MASTER_NODE == 1
+//This is a quick hackup for a function that scans through the whole local chain, and removes duplicates
+//then saving the new chain to .vfc/cblocks.dat
+void newClean()
+{
+    uint8_t gpub[ECC_CURVE+1];
+    size_t len = ECC_CURVE+1;
+    b58tobin(gpub, &len, "foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ", 44);
+    struct trans t;
+    memset(&t, 0, sizeof(struct trans));
+    t.amount = 0xFFFFFFFF;
+    memcpy(&t.to.key, gpub, ECC_CURVE+1);
+    FILE* f = fopen(".vfc/cblocks.dat", "w");
+    if(f)
+    {
+        fwrite(&t, sizeof(struct trans), 1, f);
+        fclose(f);
+    }
+}
+void cleanChain()
+{
+    int f = open(CHAIN_FILE, O_RDONLY);
+    if(f)
+    {
+        const size_t len = lseek(f, 0, SEEK_END);
 
-//         unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-//         if(m != MAP_FAILED)
-//         {
-//             close(f);
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
+        {
+            close(f);
 
-//             struct trans t;
-//             for(size_t i = 0; i < len; i += sizeof(struct trans))
-//             {
-//                 if(t.uid == uid)
-//                 {
-//                     munmap(m, len);
-//                     return ERROR_UIDEXIST;
-//                 }
-//                 memcpy(&t, m+i, sizeof(struct trans));
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
+            {
+                memcpy(&t, m+i, sizeof(struct trans));
 
-//                 if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
-//                     rv += t.amount;
-//                 else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
-//                     rv -= t.amount;
-//             }
+                //Create trans struct
+                struct trans nt;
+                memset(&nt, 0, sizeof(struct trans));
+                nt.uid = t.uid;
+                memcpy(nt.from.key, t.from.key, ECC_CURVE+1);
+                memcpy(nt.to.key, t.to.key, ECC_CURVE+1);
+                nt.amount = t.amount;
 
-//             munmap(m, len);
-//         }
+                uint8_t thash[ECC_CURVE];
+                makHash(thash, &nt);
+                if(ecdsa_verify(nt.from.key, thash, t.owner.key) == 0)
+                {
+                    //printf("rejected: no verification\n");
+                    continue;
+                }
 
-//         close(f);
-//     }
-//     if(rv >= amount)
-//         return 1;
-//     else
-//         return 0;
-// }
-// void newClean()
-// {
-//     uint8_t gpub[ECC_CURVE+1];
-//     size_t len = ECC_CURVE+1;
-//     b58tobin(gpub, &len, "foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ", 44);
-//     struct trans t;
-//     memset(&t, 0, sizeof(struct trans));
-//     t.amount = 0xFFFFFFFF;
-//     memcpy(&t.to.key, gpub, ECC_CURVE+1);
-//     FILE* f = fopen(".vfc/cblocks.dat", "w");
-//     if(f)
-//     {
-//         fwrite(&t, sizeof(struct trans), 1, f);
-//         fclose(f);
-//     }
-// }
-// void cleanChain()
-// {
-//     int f = open(CHAIN_FILE, O_RDONLY);
-//     if(f)
-//     {
-//         const size_t len = lseek(f, 0, SEEK_END);
-
-//         unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-//         if(m != MAP_FAILED)
-//         {
-//             close(f);
-
-//             struct trans t;
-//             for(size_t i = 0; i < len; i += sizeof(struct trans))
-//             {
-//                 memcpy(&t, m+i, sizeof(struct trans));
-
-//                 //Create trans struct
-//                 struct trans nt;
-//                 memset(&nt, 0, sizeof(struct trans));
-//                 nt.uid = t.uid;
-//                 memcpy(nt.from.key, t.from.key, ECC_CURVE+1);
-//                 memcpy(nt.to.key, t.to.key, ECC_CURVE+1);
-//                 nt.amount = t.amount;
-
-//                 uint8_t thash[ECC_CURVE];
-//                 makHash(thash, &nt);
-//                 if(ecdsa_verify(nt.from.key, thash, t.owner.key) == 0)
-//                 {
-//                     //printf("rejected: no verification\n");
-//                     continue;
-//                 }
-
-//                 memcpy(nt.owner.key, t.owner.key, ECC_CURVE*2);
+                memcpy(nt.owner.key, t.owner.key, ECC_CURVE*2);
                 
-//                 const int hbr = chb(t.uid, &t.from, t.amount);
-//                 if(hbr == 0)
-//                 {
-//                     printf("rejected: no balance\n");
-//                     continue;
-//                 }
-//                 else if(hbr < 0)
-//                 {
-//                     printf("rejected: uid exists\n");
-//                     continue;
-//                 }
+                
+                //
+                int hbr = 0;
+                int64_t rv = isSubGenesisAddress(t.from.key, 1);
+                struct trans tn;
+                for(size_t i = 0; i < len; i += sizeof(struct trans))
+                {
+                    if(tn.uid == t.uid)
+                    {
+                        hbr = ERROR_UIDEXIST;
+                        break;
+                    }
+                    memcpy(&tn, m+i, sizeof(struct trans));
 
-//                 //Ok let's write the transaction to chain
-//                 if(memcmp(t.from.key, t.to.key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
-//                 {
-//                     FILE* f = fopen(".vfc/cblocks.dat", "a");
-//                     if(f)
-//                     {
-//                         fwrite(&t, sizeof(struct trans), 1, f);
-//                         fclose(f);
-//                     }
-//                 }
-//             }
+                    if(memcmp(&tn.to.key, &t.from.key, ECC_CURVE+1) == 0)
+                        rv += tn.amount;
+                    else if(memcmp(&tn.from.key, &t.from.key, ECC_CURVE+1) == 0)
+                        rv -= tn.amount;
+                }
+                if(rv >= t.amount)
+                    hbr = 1;
+                else
+                    hbr = 0;
+                //
 
-//             munmap(m, len);
-//         }
 
-//         close(f);
-//     }
-// }
-// #endif
+                if(hbr == 0)
+                {
+                    printf("rejected: no balance\n");
+                    continue;
+                }
+                else if(hbr < 0)
+                {
+                    printf("rejected: uid exists\n");
+                    continue;
+                }
+
+                //Ok let's write the transaction to chain
+                if(memcmp(t.from.key, t.to.key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
+                {
+                    FILE* f = fopen(".vfc/cblocks.dat", "a");
+                    if(f)
+                    {
+                        fwrite(&t, sizeof(struct trans), 1, f);
+                        fclose(f);
+                    }
+                }
+            }
+
+            munmap(m, len);
+        }
+
+        close(f);
+    }
+}
+#endif
+
+
+
 
 
 
 int main(int argc , char *argv[])
 {
-    // chdir(getHome());
-    // newClean();
-    // cleanChain();
-    // exit(0);
-
     //Suppress Sigpipe
     signal(SIGPIPE, SIG_IGN);
 
@@ -3087,6 +3071,8 @@ int main(int argc , char *argv[])
             printf("\x1B[33mReturns the mining difficulty:\x1B[0m\n ./vfc difficulty\n\n");
             printf("\x1B[33mCheck's if supplied address is subG, if so returns value of subG address:\x1B[0m\n ./vfc issub <public key>\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./vfc scan\x1B[0m\n\n");
+            printf("\x1B[33mScan blocks.dat for invalid transactions and truncate at first invalid transaction:\x1B[0m\n ./vfc trunc <offset x transactions>\n\n");
+            printf("\x1B[33mScan blocks.dat for invalid transactions and generated a cleaned version in the same directory called cblocks.dat:\x1B[0m\n ./vfc clean\n\n");
             
             printf("\x1B[33mTo get started running a dedicated node, execute ./vfc on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
             exit(0);
@@ -3296,6 +3282,14 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "clearbad") == 0)
         {
             remove(BADCHAIN_FILE);
+            exit(0);
+        }
+
+        //Create a cleaned chain
+        if(strcmp(argv[1], "clean") == 0)
+        {
+            newClean();
+            cleanChain();
             exit(0);
         }
 
