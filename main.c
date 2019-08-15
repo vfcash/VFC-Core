@@ -201,7 +201,7 @@ void timestamp()
 
 uint isalonu(char c)
 {
-    if(c >= 48 && c <= 57 || c >= 65 && c <= 90 || c >= 97 && c <= 122)
+    if((c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122))
         return 1;
     return 0;
 }
@@ -466,6 +466,10 @@ void add_uid(const uint64_t uid, const uint expire_seconds) //Pub
         sites[site_index].expire_epoch = time(0)+expire_seconds;
     }
 
+    //Collison?
+    if(sites[site_index].uid_low != 0)
+        printf("UID Collision: %u\n", site_index);
+
     //Set the ranges
     unsigned short idfar = (uid % (sizeof(unsigned short)-1))+1;
     if(idfar < sites[site_index].uid_low || sites[site_index].uid_low == 0)
@@ -531,7 +535,7 @@ uint64_t isSubGenesisAddressMine(uint8_t *a)
 
     vec3 v[5]; //Vectors
 
-    char *ofs = a;
+    uint8_t *ofs = a;
     memcpy(&v[0].x, ofs, sizeof(uint16_t));
     memcpy(&v[0].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
     memcpy(&v[0].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
@@ -614,7 +618,7 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
 
     vec3 v[5]; //Vectors
 
-    char *ofs = a;
+    uint8_t *ofs = a;
     memcpy(&v[0].x, ofs, sizeof(uint16_t));
     memcpy(&v[0].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
     memcpy(&v[0].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
@@ -1556,6 +1560,7 @@ void *replayBlocksThread(void *arg)
         if(thread_ip[i] == ip)
             thread_ip[i] = 0;
     pthread_mutex_unlock(&mutex1);
+    return 0;
 }
 
 
@@ -2134,16 +2139,16 @@ uint rExi(uint64_t uid)
     int free = -1;
     for(uint i = 0; i < MAX_REXI_SIZE; i++)
     {
-        if(uidlist[i] == uid)
+        if(uidlist[i] == uid && uidtimes[i] > time(0)) //It's blocked for three seconds otherwise.
             return 1;
-        else if(time(0) > uidtimes[i] || uidtimes[i] == 0)
+        else if(time(0) > uidtimes[i]-2 || uidtimes[i] == 0) //But we expire after 1 second if in high demand
             free = i;
     }
 
     if(free != -1)
     {
         uidlist[free] = uid;
-        uidtimes[free] = time(0) + 1;
+        uidtimes[free] = time(0) + 3; //We block for three seconds
     }
 
     return 0;
@@ -2484,6 +2489,7 @@ pthread_mutex_unlock(&mutex2);
         }
 
     }
+    return 0;
 }
 
 void *generalThread(void *arg)
@@ -2574,6 +2580,8 @@ void *generalThread(void *arg)
         }
 #endif
     }
+
+    return 0;
 }
 
 uint64_t g_HSEC = 0;
@@ -3456,11 +3464,11 @@ int main(int argc , char *argv[])
     //Force console to clear.
     printf("\033[H\033[J");
 
-        if(isNodeRunning() == 0)
-        {
-            printf("\033[1m\x1B[31mPlease make sure you are running the full node and that you have synchronized to the latest blockchain before making a transaction.\x1B[0m\033[0m\n\n");
-            exit(0);
-        }
+        // if(isNodeRunning() == 0)
+        // {
+        //     printf("\033[1m\x1B[31mPlease make sure you are running the full node and that you have synchronized to the latest blockchain before making a transaction.\x1B[0m\033[0m\n\n");
+        //     exit(0);
+        // }
 
         //Recover data from parameters
         uint8_t from[ECC_CURVE+1];
@@ -3497,7 +3505,7 @@ int main(int argc , char *argv[])
         time_t ltime = time(NULL);
         char suid[MIN_LEN];
         snprintf(suid, sizeof(suid), "%s/%s", asctime(localtime(&ltime)), argv[1]); //timestamp + base58 from public key
-        t.uid = crc64(0, suid, strlen(suid));
+        t.uid = crc64(0, (unsigned char*)suid, strlen(suid));
 
         //Sign the block
         uint8_t thash[ECC_CURVE];
