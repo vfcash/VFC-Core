@@ -3251,7 +3251,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "master_resync") == 0)
         {
             remove("blocks.dat");
-            system("wget -O.vfc/master_blocks.dat http://46.4.183.153/blocks.dat");
+            system("wget -O.vfc/master_blocks.dat https://vfcash.uk/sync");
             system("cp .vfc/master_blocks.dat .vfc/blocks.dat");
             printf("\x1B[33mResync from master complete.\x1B[0m\n\n");
             exit(0);
