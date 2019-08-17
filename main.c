@@ -91,7 +91,7 @@
 //Client Configuration
 const char version[]="0.52";
 const uint16_t gport = 8787;
-const char master_ip[] = "68.183.49.225";
+const char master_ip[] = "198.204.248.26";
 
 //Error Codes
 #define ERROR_NOFUNDS -1
