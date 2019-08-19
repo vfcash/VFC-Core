@@ -2350,11 +2350,6 @@ void makAddrSeed(addr* pub, addr* priv, const uint64_t* seed) //Seeded [array of
     
 }
 
-void makAddrS(addr* pub, addr* priv) //Silent for miner
-{
-    ecc_make_key(pub->key, priv->key);
-}
-
 void makAddr(addr* pub, addr* priv) //Loud
 {
     //Make key pair
@@ -2670,7 +2665,7 @@ void *miningThread(void *arg)
     chdir(getHome());
     nice(1); //Very high priority thread
     addr pub, priv;
-    makAddrS(&pub, &priv);
+    ecc_make_key(pub.key, priv.key);
     mval r = isSubGenesisAddressMine(pub.key); //cast
     uint64_t l = 0;
     time_t lt = time(0);
@@ -2679,7 +2674,7 @@ void *miningThread(void *arg)
     while(1)
     {
         //Gen a new random addr
-        makAddrS(&pub, &priv);
+        ecc_make_key(pub.key, priv.key);
         r = isSubGenesisAddressMine(pub.key); //cast
 
         //Dump some rough h/s approximation
