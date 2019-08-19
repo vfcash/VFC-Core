@@ -651,9 +651,9 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
     const double a4 = gNa(&v[1], &v[4]);
 
     //All normal angles a1-a4 must be under this value
-    //const double min = fr == 0 ? getMiningDifficulty() : 0.24;
+    const double min = fr == 0 ? getMiningDifficulty() : 0.24;
     //const double min = 0.24;
-    const double min = getMiningDifficulty();
+    //const double min = getMiningDifficulty();
     
     //Was it a straight hit?
     if(a1 < min && a2 < min && a3 < min && a4 < min)
@@ -1959,7 +1959,7 @@ void printOuts(addr* a)
 uint64_t getBalanceLocal(addr* from)
 {
     //Get local Balance
-    int64_t rv = isSubGenesisAddress(from->key, 1);
+    int64_t rv = isSubGenesisAddress(from->key, 0);
 
     if(is8664 == 1) //mmap on x86_64
     {
