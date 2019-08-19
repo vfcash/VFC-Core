@@ -1098,6 +1098,30 @@ int ecc_make_key(uint8_t p_publicKey[ECC_BYTES+1], uint8_t p_privateKey[ECC_BYTE
     return 1;
 }
 
+int ecc_make_key_seed(uint8_t p_publicKey[ECC_BYTES+1], uint8_t p_privateKey[ECC_BYTES], const uint64_t* seed)
+{
+    uint64_t l_private[NUM_ECC_DIGITS];
+    memcpy(l_private, seed, NUM_ECC_DIGITS);
+    EccPoint l_public;
+    
+    if(vli_isZero(l_private))
+    {
+        return 0;
+    }
+
+    if(vli_cmp(curve_n, l_private) != 1)
+    {
+        vli_sub(l_private, l_private, curve_n);
+    }
+
+    EccPoint_mult(&l_public, &curve_G, l_private, NULL);
+    
+    ecc_native2bytes(p_privateKey, l_private);
+    ecc_native2bytes(p_publicKey + 1, l_public.x);
+    p_publicKey[0] = 2 + (l_public.y[0] & 0x01);
+    return 1;
+}
+
 int ecc_get_pubkey(uint8_t p_publicKey[ECC_BYTES+1], const uint8_t p_privateKey[ECC_BYTES])
 {
     uint64_t l_private[NUM_ECC_DIGITS];

@@ -33,6 +33,7 @@ Outputs:
 Returns 1 if the key pair was generated successfully, 0 if an error occurred.
 */
 int ecc_make_key(uint8_t p_publicKey[ECC_BYTES+1], uint8_t p_privateKey[ECC_BYTES]);
+int ecc_make_key_seed(uint8_t p_publicKey[ECC_BYTES+1], uint8_t p_privateKey[ECC_BYTES], const uint64_t* seed);
 int ecc_get_pubkey(uint8_t p_publicKey[ECC_BYTES+1], const uint8_t p_privateKey[ECC_BYTES]);
 
 /* ecdh_shared_secret() function.

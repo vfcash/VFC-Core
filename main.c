@@ -2330,12 +2330,17 @@ pthread_mutex_unlock(&mutex3);
     return 1;
 }
 
-void makAddrS(addr* pub, addr* priv)
+void makAddrSeed(addr* pub, addr* priv, const uint64_t* seed) //Seeded [array of four uint64_t's]
+{
+    ecc_make_key_seed(pub->key, priv->key, seed);
+}
+
+void makAddrS(addr* pub, addr* priv) //Silent
 {
     ecc_make_key(pub->key, priv->key);
 }
 
-void makAddr(addr* pub, addr* priv)
+void makAddr(addr* pub, addr* priv) //Loud
 {
     //Make key pair
     ecc_make_key(pub->key, priv->key);
@@ -3085,6 +3090,19 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "trunc") == 0)
         {
             truncate_at_error(CHAIN_FILE, atoi(argv[2]));
+            exit(0);
+        }
+
+        //Gen new address
+        if(strcmp(argv[1], "new") == 0) //requires 32 caracters
+        {
+            addr pub, priv;
+            uint64_t sp[4];
+            memcpy(&sp[0], argv[2], sizeof(uint64_t));
+            memcpy(&sp[1], argv[2]+sizeof(uint64_t), sizeof(uint64_t));
+            memcpy(&sp[2], argv[2]+sizeof(uint64_t)+sizeof(uint64_t), sizeof(uint64_t));
+            memcpy(&sp[3], argv[2]+sizeof(uint64_t)+sizeof(uint64_t)+sizeof(uint64_t), sizeof(uint64_t));
+            makAddrSeed(&pub, &priv, sp);
             exit(0);
         }
 
