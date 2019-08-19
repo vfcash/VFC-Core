@@ -1047,12 +1047,15 @@ void networkDifficulty()
     for(uint i = 0; i < MAX_PEERS; i++)
     {
         const uint p = getPeer(i);
-        if(isPeerAlive(p) == 1)
+        if(p != -1)
         {
-            if(peer_da[p] >= 0.03 && peer_da[p] <= 0.24)
+            if(isPeerAlive(p) == 1)
             {
-                network_difficulty += peer_da[p];
-                divisor++;
+                if(peer_da[p] >= 0.03 && peer_da[p] <= 0.24)
+                {
+                    network_difficulty += peer_da[p];
+                    divisor++;
+                }
             }
         }
     }
