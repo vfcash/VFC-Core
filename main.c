@@ -3202,8 +3202,8 @@ int main(int argc , char *argv[])
             printf("\x1B[33mTo manually trigger blockchain resync use:\x1B[0m\n ./vfc resync\x1B[0m\n\n");
             printf("\x1B[33mTo manually trigger blockchain resync only from the master use:\x1B[0m\n ./vfc master_resync\x1B[0m\n\n");
             printf("\x1B[33mTo manually trigger blockchain sync use:\x1B[0m\n ./vfc sync\x1B[0m\n\n");
-            printf("\x1B[33mCPU mining of VFC:\x1B[0m\n ./vfc mine <num-threads>\n\n");
-            printf("\x1B[33mTo create a new Address, Public / Private Key-Pair:\x1B[0m\n ./vfc new\x1B[0m\n\n");
+            printf("\x1B[33mCPU mining of VFC:\x1B[0m\n ./vfc mine <optional-num-threads>\n\n");
+            printf("\x1B[33mTo create a new Address, Public / Private Key-Pair:\x1B[0m\n ./vfc new <optional-seed>\x1B[0m\n\n");
             printf("\x1B[33mGet Public Key from Private Key:\x1B[0m\n ./vfc getpub <private key>\x1B[0m\n\n");
             printf("\x1B[33mTo manually add a peer use:\x1B[0m\n ./vfc addpeer <peer ip-address>\n\n");
             printf("\x1B[33mList all locally indexed peers and info:\x1B[0m\n ./vfc peers\n\n");
