@@ -1759,6 +1759,66 @@ void dumpbadtrans()
     }
 }
 
+
+void printtrans(uint fromR, uint toR)
+{
+    FILE* f = fopen(CHAIN_FILE, "r");
+    if(f)
+    {
+        fseek(f, 0, SEEK_END);
+        const size_t len = ftell(f);
+
+        struct trans t;
+        for(size_t i = fromR * sizeof(struct trans); i < len; i += sizeof(struct trans))
+        {
+            fseek(f, i, SEEK_SET);
+
+            uint fc = 0;
+            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
+            {
+                fclose(f);
+                f = fopen(CHAIN_FILE, "r");
+                fc++;
+                if(fc > 333)
+                {
+                    printf("\033[1m\x1B[31mERROR: fread() in printIns() has failed.\x1B[0m\033[0m\n");
+                    fclose(f);
+                    return;
+                }
+                if(f == NULL)
+                    continue;
+            }
+
+            char from[MIN_LEN];
+            memset(from, 0, sizeof(from));
+            size_t len = MIN_LEN;
+            b58enc(from, &len, t.from.key, ECC_CURVE+1);
+
+            char to[MIN_LEN];
+            memset(to, 0, sizeof(from));
+            size_t len2 = MIN_LEN;
+            b58enc(to, &len2, t.to.key, ECC_CURVE+1);
+
+            char sig[MIN_LEN];
+            memset(sig, 0, sizeof(sig));
+            size_t len3 = MIN_LEN;
+            b58enc(sig, &len3, t.owner.key, ECC_CURVE*2);
+
+            setlocale(LC_NUMERIC, "");
+            //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
+            printf("%d,%lu,%s,%s,%s,%.3f\n",(int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
+
+            if(i >= toR * sizeof(struct trans))
+            {
+                break;
+            }
+        }
+
+        fclose(f);
+    }
+}
+
+
 //print received transactions
 void printIns(addr* a)
 {
@@ -2943,6 +3003,17 @@ int main(int argc , char *argv[])
             
             exit(0);
         }
+
+ 	if(strstr(argv[1], "printtrans") != NULL)
+        {
+            uint from;
+            sscanf(argv[2], "%I32u", &from);
+
+            uint to;
+            sscanf(argv[3], "%I32u", &to);
+            printtrans(from, to);
+            exit(0);
+        }
     }
 
     //Outgoings and Incomings
@@ -3083,6 +3154,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mTo manually add a peer use:\x1B[0m\n ./vfc addpeer <peer ip-address>\n\n");
             printf("\x1B[33mList all locally indexed peers and info:\x1B[0m\n ./vfc peers\n\n");
             printf("\x1B[33mDump all transactions in the blockchain:\x1B[0m\n ./vfc dump\n\n");
+            printf("\x1B[33mPrint some transactions[start,end] in the blockchain:\x1B[0m\n ./vfc printtrans 1000 1010\n\n");
             printf("\x1B[33mDump all double spend transactions detected from other peers:\x1B[0m\n ./vfc dumpbad\n\n");
             printf("\x1B[33mClear all double spend transactions detected from other peers:\x1B[0m\n ./vfc clearbad\n\n");
             printf("\x1B[33mReturns your Public Key stored in ~/.vfc/public.key for reward collections:\x1B[0m\n ./vfc reward\n\n");
