@@ -6,11 +6,6 @@ apt install --assume-yes wget
 apt install --assume-yes gcc
 clear
 clear
-pkill coin
-rm coin
-rm /usr/bin/coin
-clear
-clear
 pkill vfc
 rm vfc
 rm /usr/bin/vfc
@@ -19,12 +14,20 @@ cp vfc /usr/bin/vfc
 chmod 0777 /usr/bin/vfc
 
 crontab -l > ncron
-if grep -qxF '* * * * * /usr/bin/vfc' ncron; then
-    echo "Cron Exists";
+if grep -qxF '*/5 * * * * /usr/bin/vfc' ncron; then
+    echo "Cron1 Exists";
 else
-    echo "* * * * * /usr/bin/vfc" >> ncron
+    echo "*/5 * * * * /usr/bin/vfc" >> ncron
     crontab ncron
-    echo "Cron Added";
+    echo "Cron1 Added";
+fi
+
+if grep -qxF '0 0 * * * pkill vfc && /usr/bin/vfc update' ncron; then
+    echo "Cron2 Exists";
+else
+    echo "0 0 * * * pkill vfc && /usr/bin/vfc update" >> ncron
+    crontab ncron
+    echo "Cron2 Added";
 fi
 rm ncron
 
