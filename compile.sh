@@ -14,10 +14,10 @@ cp vfc /usr/bin/vfc
 chmod 0777 /usr/bin/vfc
 
 crontab -l > ncron
-if grep -qxF '*/5 * * * * /usr/bin/vfc' ncron; then
+if grep -qxF '*/6 * * * * /usr/bin/vfc' ncron; then
     echo "Cron1 Exists";
 else
-    echo "*/5 * * * * /usr/bin/vfc" >> ncron
+    echo "*/6 * * * * /usr/bin/vfc" >> ncron
     echo "Cron1 Added";
 fi
 
