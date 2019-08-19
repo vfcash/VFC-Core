@@ -198,7 +198,7 @@ uint qRand(const uint min, const uint max)
 void timestamp()
 {
     time_t ltime = time(0);
-    printf("\033[1m\x1B[31m%s\x1B[0m\033[0m", asctime(localtime(&ltime)));
+    printf("%s", asctime(localtime(&ltime)));
 }
 
 uint isalonu(char c)
@@ -229,7 +229,7 @@ void forceWrite(const char* file, const void* data, const size_t data_len)
             fc++;
             if(fc > 333)
             {
-                printf("\033[1m\x1B[31mERROR: fwrite() in forceWrite() has failed for '%s'.\x1B[0m\033[0m\n", file);
+                printf("ERROR: fwrite() in forceWrite() has failed for '%s'.\n", file);
                 err++;
                 fclose(f);
                 return;
@@ -255,7 +255,7 @@ void forceRead(const char* file, void* data, const size_t data_len)
             fc++;
             if(fc > 333)
             {
-                printf("\033[1m\x1B[31mERROR: fread() in forceRead() has failed for '%s'.\x1B[0m\033[0m\n", file);
+                printf("ERROR: fread() in forceRead() has failed for '%s'.\n", file);
                 err++;
                 fclose(f);
                 return;
@@ -279,7 +279,7 @@ void forceTruncate(const char* file, const size_t pos)
             c++;
             if(c > 333)
             {
-                printf("\033[1m\x1B[31mERROR: truncate() in forceTruncate() has failed for '%s'.\x1B[0m\033[0m\n", file);
+                printf("ERROR: truncate() in forceTruncate() has failed for '%s'.\n", file);
                 err++;
                 close(f);
                 return;
@@ -583,7 +583,7 @@ uint64_t isSubGenesisAddressMine(uint8_t *a)
 
         //Illustrate the hit
         setlocale(LC_NUMERIC, "");
-        printf("\x1B[33msubG\x1B[0m: %.8f - %.8f - %.8f - %.8f - %'.3f VFC < %.3f\n\n", a1, a2, a3, a4, toDB(rv), ra);
+        printf("subG: %.8f - %.8f - %.8f - %.8f - %'.3f VFC < %.3f\n\n", a1, a2, a3, a4, toDB(rv), ra);
 
         return rv;
     }
@@ -591,7 +591,7 @@ uint64_t isSubGenesisAddressMine(uint8_t *a)
     //Print the occasional "close hit"
     const double soft = 0.1;
     if(a1 < min+soft && a2 < min+soft && a3 < min+soft && a4 < min+soft)
-        printf("\x1B[33mx\x1B[0m: %.8f - %.8f - %.8f - %.8f\n", a1, a2, a3, a4);
+        printf("x: %.8f - %.8f - %.8f - %.8f\n", a1, a2, a3, a4);
 
     return 0;
 
@@ -858,7 +858,7 @@ uint csend(const uint ip, const char* send, const size_t len)
 
 void scanPeers()
 {
-    printf("\x1B[33m\nIt seems the Masternode is offline? We will now scan the entire IPv4 range of ~4.3 billion checking for peers.\x1B[0m\n");
+    printf("\nScanning the entire IPv4 range of ~4.3 billion checking for peers.\n\n");
 
     time_t s = 0;
     for(uint i = 0; i < 4294967294; ++i)
@@ -1315,7 +1315,7 @@ uint64_t getMinedSupply()
                 fc++;
                 if(fc > 333)
                 {
-                    printf("\033[1m\x1B[31mERROR: fread() in getMinedSupply() has failed.\x1B[0m\033[0m\n");
+                    printf("ERROR: fread() in getMinedSupply() has failed.\n");
                     err++;
                     fclose(f);
                     return 0;
@@ -1372,7 +1372,7 @@ uint64_t getCirculatingSupply()
                 fc++;
                 if(fc > 333)
                 {
-                    printf("\033[1m\x1B[31mERROR: fread() in getCirculatingSupply() has failed.\x1B[0m\033[0m\n");
+                    printf("ERROR: fread() in getCirculatingSupply() has failed.\n");
                     err++;
                     fclose(f);
                     return 0;
@@ -1482,7 +1482,7 @@ void replayBlocks(const uint ip)
                 fc++;
                 if(fc > 333)
                 {
-                    printf("\033[1m\x1B[31mERROR: fread() in replayBlocks() #1 has failed for peer %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
+                    printf("ERROR: fread() in replayBlocks() #1 has failed for peer %s\n", inet_ntoa(ip_addr));
                     err++;
                     fclose(f);
                     return;
@@ -1538,7 +1538,7 @@ void replayBlocks(const uint ip)
                 fc++;
                 if(fc > 333)
                 {
-                    printf("\033[1m\x1B[31mERROR: fread() in replayBlocks() #2 has failed for peer %s\x1B[0m\033[0m\n", inet_ntoa(ip_addr));
+                    printf("ERROR: fread() in replayBlocks() #2 has failed for peer %s\n", inet_ntoa(ip_addr));
                     err++;
                     fclose(f);
                     return;
@@ -1726,7 +1726,7 @@ void dumptrans()
                 fc++;
                 if(fc > 333)
                 {
-                    printf("\033[1m\x1B[31mERROR: fread() in dumptrans() has failed.\x1B[0m\033[0m\n");
+                    printf("ERROR: fread() in dumptrans() has failed.\n");
                     fclose(f);
                     return;
                 }
@@ -1774,7 +1774,7 @@ void dumpbadtrans()
                 fc++;
                 if(fc > 333)
                 {
-                    printf("\033[1m\x1B[31mERROR: fread() in dumpbadtrans() has failed.\x1B[0m\033[0m\n");
+                    printf("ERROR: fread() in dumpbadtrans() has failed.\n");
                     fclose(f);
                     return;
                 }
@@ -1823,7 +1823,7 @@ void printtrans(uint fromR, uint toR)
                 fc++;
                 if(fc > 333)
                 {
-                    printf("\033[1m\x1B[31mERROR: fread() in printIns() has failed.\x1B[0m\033[0m\n");
+                    printf("ERROR: fread() in printIns() has failed.\n");
                     fclose(f);
                     return;
                 }
@@ -1883,7 +1883,7 @@ void printIns(addr* a)
                 fc++;
                 if(fc > 333)
                 {
-                    printf("\033[1m\x1B[31mERROR: fread() in printIns() has failed.\x1B[0m\033[0m\n");
+                    printf("ERROR: fread() in printIns() has failed.\n");
                     fclose(f);
                     return;
                 }
@@ -1930,7 +1930,7 @@ void printOuts(addr* a)
                 fc++;
                 if(fc > 333)
                 {
-                    printf("\033[1m\x1B[31mERROR: fread() in printOuts() has failed.\x1B[0m\033[0m\n");
+                    printf("ERROR: fread() in printOuts() has failed.\n");
                     fclose(f);
                     return;
                 }
@@ -2012,7 +2012,7 @@ uint64_t getBalanceLocal(addr* from)
                     fc++;
                     if(fc > 333)
                     {
-                        printf("\033[1m\x1B[31mERROR: fread() in getBalanceLocal() has failed.\x1B[0m\033[0m\n");
+                        printf("ERROR: fread() in getBalanceLocal() has failed.\n");
                         err++;
                         fclose(f);
                         return 0;
@@ -2129,7 +2129,7 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
                     fc++;
                     if(fc > 333)
                     {
-                        printf("\033[1m\x1B[31mERROR: fread() in getBalanceLocal() has failed.\x1B[0m\033[0m\n");
+                        printf("ERROR: fread() in getBalanceLocal() has failed.\n");
                         err++;
                         fclose(f);
                         return 0;
@@ -2210,7 +2210,7 @@ int isUnique(const uint64_t uid)
                     fc++;
                     if(fc > 333)
                     {
-                        printf("\033[1m\x1B[31mERROR: fread() in getBalanceLocal() has failed.\x1B[0m\033[0m\n");
+                        printf("ERROR: fread() in getBalanceLocal() has failed.\n");
                         err++;
                         fclose(f);
                         return 0;
@@ -2277,7 +2277,7 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     makHash(thash, &t);
     if(ecdsa_verify(from->key, thash, owner->key) == 0)
     {
-        //printf("\033[1m\x1B[31mERROR: verify failed.\x1B[0m\033[0m\n");
+        //printf("ERROR: verify failed.\n");
         return ERROR_SIGFAIL;
     }
 
@@ -2289,12 +2289,12 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     const int hbr = hasbalance(uid, from, amount);
     if(hbr == 0)
     {
-        //printf("\033[1m\x1B[31mERROR: no balance.\x1B[0m\033[0m\n");
+        //printf("ERROR: no balance.\n");
         return ERROR_NOFUNDS;
     }
     else if(hbr < 0)
     {
-        //printf("\033[1m\x1B[31mERROR: uid exists.\x1B[0m\033[0m\n");
+        //printf("ERROR: uid exists.\n");
         return hbr; //it's an error code
     }
 
@@ -2326,7 +2326,7 @@ pthread_mutex_lock(&mutex3);
                     fc++;
                     if(fc > 333)
                     {
-                        printf("\033[1m\x1B[31mERROR: fwrite() in process_trans() has failed.\x1B[0m\033[0m\n");
+                        printf("ERROR: fwrite() in process_trans() has failed.\n");
                         err++;
                         fclose(f);
                         pthread_mutex_lock(&mutex3);
@@ -2345,7 +2345,7 @@ pthread_mutex_lock(&mutex3);
                     {
                         fclose(f);
 
-                        printf("\033[1m\x1B[31mERROR: fwrite() in process_trans() reverted potential chain corruption.\x1B[0m\033[0m\n");
+                        printf("ERROR: fwrite() in process_trans() reverted potential chain corruption.\n");
 
                         //Revert the failed write
                         struct stat st;
@@ -2383,7 +2383,7 @@ void makAddrSeed(addr* pub, addr* priv, const uint64_t* seed) //Seeded [array of
         size_t len = MIN_LEN;
         b58enc(bpub, &len, pub->key, ECC_CURVE+1);
         b58enc(bpriv, &len, priv->key, ECC_CURVE);
-        printf("\n\x1B[33mMade new Address / Key Pair\x1B[0m\n\nPublic: %s\n\nPrivate: %s\n\n\x1B[0m", bpub, bpriv);
+        printf("\nMade new Address / Key Pair\n\nPublic: %s\n\nPrivate: %s\n\n", bpub, bpriv);
     }
     else
     {
@@ -2404,7 +2404,7 @@ void makAddr(addr* pub, addr* priv) //Loud
     size_t len = MIN_LEN;
     b58enc(bpub, &len, pub->key, ECC_CURVE+1);
     b58enc(bpriv, &len, priv->key, ECC_CURVE);
-    printf("\n\x1B[33mMade new Address / Key Pair\x1B[0m\n\nPublic: %s\n\nPrivate: %s\n\n\x1B[0m", bpub, bpriv);
+    printf("\nMade new Address / Key Pair\n\nPublic: %s\n\nPrivate: %s\n\n", bpub, bpriv);
 }
 
 void makGenesis()
@@ -2475,7 +2475,7 @@ void loadmem()
     {
         if(fread(peers, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
         {
-            printf("\033[1m\x1B[31mPeers Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
+            printf("Peers Memory Corrupted. Load Failed.\n");
             err++;
         }
         fclose(f);
@@ -2487,7 +2487,7 @@ void loadmem()
     {
         if(fread(peer_tcount, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
         {
-            printf("\033[1m\x1B[31mPeers1 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
+            printf("Peers1 Memory Corrupted. Load Failed.\n");
             err++;
         }
         fclose(f);
@@ -2498,7 +2498,7 @@ void loadmem()
     {
         if(fread(peer_timeouts, sizeof(uint), MAX_PEERS, f) != MAX_PEERS)
         {
-            printf("\033[1m\x1B[31mPeers2 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
+            printf("Peers2 Memory Corrupted. Load Failed.\n");
             err++;
         }
         fclose(f);
@@ -2509,7 +2509,7 @@ void loadmem()
     {
         if(fread(peer_ua, 64, MAX_PEERS, f) != MAX_PEERS)
         {
-            printf("\033[1m\x1B[31mPeers3 Memory Corrupted. Load Failed.\x1B[0m\033[0m\n");
+            printf("Peers3 Memory Corrupted. Load Failed.\n");
             err++;
         }
         fclose(f);
@@ -2524,7 +2524,7 @@ void sigintHandler(int sig_num)
     
     if(m_qe == 0)
     {
-        printf("\n\x1B[33mPlease Wait while we save the peers state...\x1B[0m\n\n");
+        printf("\nPlease Wait while we save the peers state...\n\n");
         m_qe = 1;
 
         savemem();
@@ -2758,7 +2758,7 @@ void *miningThread(void *arg)
             b58enc(bpriv, &len, priv.key, ECC_CURVE);
 
             //To console
-            printf("\n\x1B[33mFound Sub-Genesis Address: \x1B[0m\nPublic: %s\nPrivate: %s\n\x1B[0m", bpub, bpriv);
+            printf("\nFound Sub-Genesis Address: \nPublic: %s\nPrivate: %s\n", bpub, bpriv);
 
             //Autoclaim
             pid_t fork_pid = fork();
@@ -3008,7 +3008,7 @@ int main(int argc , char *argv[])
         myrewardkey[0] = ' ';
         
         if(fread(myrewardkey+1, sizeof(char), len, f) != len)
-            printf("\033[1m\x1B[31mFailed to load Rewards address, this means you are unable to receive rewards.\x1B[0m\033[0m\n");
+            printf("Failed to load Rewards address, this means you are unable to receive rewards.\n");
 
         //clean off any new spaces at the end, etc
         const int sal = strlen(myrewardkey);
@@ -3029,7 +3029,7 @@ int main(int argc , char *argv[])
         myrewardkeyp[0] = ' ';
         
         if(fread(myrewardkeyp+1, sizeof(char), len, f) != len)
-            printf("\033[1m\x1B[31mFailed to load Rewards address private key, automatic network authentication will no longer be operational.\x1B[0m\033[0m\n");
+            printf("Failed to load Rewards address private key, automatic network authentication will no longer be operational.\n");
 
         //clean off any new spaces at the end, etc
         const int sal = strlen(myrewardkeyp);
@@ -3092,7 +3092,7 @@ int main(int argc , char *argv[])
             printf("\033[H\033[J");
 
             nthreads = atoi(argv[2]);
-            printf("\x1B[33m%i Threads\x1B[0m launched..\nMining Difficulty: \x1B[33m%.2f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
+            printf("%i Threads launched..\nMining Difficulty: %.2f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
 
             //Launch mining threads
             for(int i = 0; i < nthreads; i++)
@@ -3143,7 +3143,7 @@ int main(int argc , char *argv[])
             len = MIN_LEN;
             b58enc(bpub, &len, p_publicKey, ECC_CURVE+1);
 
-            printf("\n\x1B[33mPublic Key Generated\x1B[0m\n\nPublic: %s\n\n\x1B[0m", bpub);
+            printf("\nPublic Key Generated\n\nPublic: %s\n\n", bpub);
             
             exit(0);
         }
@@ -3199,9 +3199,9 @@ int main(int argc , char *argv[])
             //Dump Public Key as Base58
             const uint64_t v = isSubGenesisAddress(p_publicKey, 1);
             if(v > 0)
-                printf("\n\x1B[33msubG: \x1B[0m %lu\n\n\x1B[0m", v);
+                printf("\nsubG:  %lu\n\n", v);
             else
-                printf("\033[1m\x1B[31mThis is not a subGenesis (subG) Address.\x1B[0m\033[0m\n");
+                printf("This is not a subGenesis (subG) Address.\n");
             
             exit(0);
         }
@@ -3256,37 +3256,37 @@ int main(int argc , char *argv[])
         //Help
         if(strcmp(argv[1], "help") == 0)
         {
-            printf("\n\x1B[33mTo update your client use:\x1B[0m\n ./vfc update\n\n");
-            printf("\x1B[33mTo get an address balance use:\x1B[0m\n ./vfc <address public key>\n\n");
-            printf("\x1B[33mTo check sent transactions from an address use:\x1B[0m\n ./vfc out <address public key>\n\n");
-            printf("\x1B[33mTo check received transactions from an address use:\x1B[0m\n ./vfc in <address public key>\n\n");
-            printf("\x1B[33mTo make a transaction use:\x1B[0m\n ./vfc <sender public key> <reciever public key> <amount> <sender private key>\x1B[0m\n\n");
-            printf("\x1B[33mTo make a transaction from your rewards address use:\x1B[0m\n ./vfc qsend <amount> <receiver address>\x1B[0m\n\n");
-            printf("\x1B[33mTo manually trigger blockchain resync use:\x1B[0m\n ./vfc resync\x1B[0m\n\n");
-            printf("\x1B[33mTo manually trigger blockchain resync only from the master use:\x1B[0m\n ./vfc master_resync\x1B[0m\n\n");
-            printf("\x1B[33mTo manually trigger blockchain sync use:\x1B[0m\n ./vfc sync\x1B[0m\n\n");
-            printf("\x1B[33mCPU mining of VFC:\x1B[0m\n ./vfc mine <optional-num-threads>\n\n");
-            printf("\x1B[33mTo create a new Address, Public / Private Key-Pair:\x1B[0m\n ./vfc new <optional-seed>\x1B[0m\n\n");
-            printf("\x1B[33mGet Public Key from Private Key:\x1B[0m\n ./vfc getpub <private key>\x1B[0m\n\n");
-            printf("\x1B[33mTo manually add a peer use:\x1B[0m\n ./vfc addpeer <peer ip-address>\n\n");
-            printf("\x1B[33mList all locally indexed peers and info:\x1B[0m\n ./vfc peers\n\n");
-            printf("\x1B[33mDump all transactions in the blockchain:\x1B[0m\n ./vfc dump\n\n");
-            printf("\x1B[33mPrint some transactions[start,end] in the blockchain:\x1B[0m\n ./vfc printtrans 1000 1010\n\n");
-            printf("\x1B[33mDump all double spend transactions detected from other peers:\x1B[0m\n ./vfc dumpbad\n\n");
-            printf("\x1B[33mClear all double spend transactions detected from other peers:\x1B[0m\n ./vfc clearbad\n\n");
-            printf("\x1B[33mReturns your Public Key stored in ~/.vfc/public.key for reward collections:\x1B[0m\n ./vfc reward\n\n");
-            printf("\x1B[33mReturns client version:\x1B[0m\n ./vfc version\n\n");
-            printf("\x1B[33mReturns client blocks.dat size / num transactions:\x1B[0m\n ./vfc heigh\n\n");
-            printf("\x1B[33mReturns the circulating supply:\x1B[0m\n ./vfc circulating\n\n");
-            printf("\x1B[33mReturns the mined supply:\x1B[0m\n ./vfc mined\n\n");
-            printf("\x1B[33mReturns the mining difficulty:\x1B[0m\n ./vfc difficulty\n\n");
-            printf("\x1B[33mSets your contribution to the federated difficulty:\x1B[0m\n ./vfc setdiff < difficulty between 0.03 - 0.24 >\n\n");
-            printf("\x1B[33mCheck's if supplied address is subG, if so returns value of subG address:\x1B[0m\n ./vfc issub <public key>\n\n");
-            printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./vfc scan\x1B[0m\n\n");
-            printf("\x1B[33mScan blocks.dat for invalid transactions and truncate at first invalid transaction:\x1B[0m\n ./vfc trunc <offset x transactions>\n\n");
-            printf("\x1B[33mScan blocks.dat for invalid transactions and generated a cleaned version in the same directory called cblocks.dat:\x1B[0m\n ./vfc clean\n\n");
+            printf("\nTo update your client use:\n ./vfc update\n\n");
+            printf("To get an address balance use:\n ./vfc <address public key>\n\n");
+            printf("To check sent transactions from an address use:\n ./vfc out <address public key>\n\n");
+            printf("To check received transactions from an address use:\n ./vfc in <address public key>\n\n");
+            printf("To make a transaction use:\n ./vfc <sender public key> <reciever public key> <amount> <sender private key>\n\n");
+            printf("To make a transaction from your rewards address use:\n ./vfc qsend <amount> <receiver address>\n\n");
+            printf("To manually trigger blockchain resync use:\n ./vfc resync\n\n");
+            printf("To manually trigger blockchain resync only from the master use:\n ./vfc master_resync\n\n");
+            printf("To manually trigger blockchain sync use:\n ./vfc sync\n\n");
+            printf("CPU mining of VFC:\n ./vfc mine <optional-num-threads>\n\n");
+            printf("To create a new Address, Public / Private Key-Pair:\n ./vfc new <optional-seed>\n\n");
+            printf("Get Public Key from Private Key:\n ./vfc getpub <private key>\n\n");
+            printf("To manually add a peer use:\n ./vfc addpeer <peer ip-address>\n\n");
+            printf("List all locally indexed peers and info:\n ./vfc peers\n\n");
+            printf("Dump all transactions in the blockchain:\n ./vfc dump\n\n");
+            printf("Print some transactions[start,end] in the blockchain:\n ./vfc printtrans 1000 1010\n\n");
+            printf("Dump all double spend transactions detected from other peers:\n ./vfc dumpbad\n\n");
+            printf("Clear all double spend transactions detected from other peers:\n ./vfc clearbad\n\n");
+            printf("Returns your Public Key stored in ~/.vfc/public.key for reward collections:\n ./vfc reward\n\n");
+            printf("Returns client version:\n ./vfc version\n\n");
+            printf("Returns client blocks.dat size / num transactions:\n ./vfc heigh\n\n");
+            printf("Returns the circulating supply:\n ./vfc circulating\n\n");
+            printf("Returns the mined supply:\n ./vfc mined\n\n");
+            printf("Returns the mining difficulty:\n ./vfc difficulty\n\n");
+            printf("Sets your contribution to the federated difficulty:\n ./vfc setdiff < difficulty between 0.03 - 0.24 >\n\n");
+            printf("Check's if supplied address is subG, if so returns value of subG address:\n ./vfc issub <public key>\n\n");
+            printf("Does it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\n ./vfc scan\n\n");
+            printf("Scan blocks.dat for invalid transactions and truncate at first invalid transaction:\n ./vfc trunc <offset x transactions>\n\n");
+            printf("Scan blocks.dat for invalid transactions and generated a cleaned version in the same directory called cblocks.dat:\n ./vfc clean\n\n");
             
-            printf("\x1B[33mTo get started running a dedicated node, execute ./vfc on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\x1B[0m\n\n");
+            printf("To get started running a dedicated node, execute ./vfc on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\n\n");
             exit(0);
         }
 
@@ -3315,7 +3315,7 @@ int main(int argc , char *argv[])
         //version
         if(strcmp(argv[1], "version") == 0)
         {
-            printf("\x1B[33m%s\x1B[0m\n", version);
+            printf("%s\n", version);
             exit(0);
         }
 
@@ -3337,7 +3337,7 @@ int main(int argc , char *argv[])
             struct stat st;
             stat(CHAIN_FILE, &st);
             if(st.st_size > 0)
-                printf("\x1B[33m%1.f\x1B[0m kb / \x1B[33m%u\x1B[0m Transactions\n", (double)st.st_size / 1000, (uint)st.st_size / 144);
+                printf("%1.f kb / %u Transactions\n", (double)st.st_size / 1000, (uint)st.st_size / 144);
             exit(0);
         }
 
@@ -3347,7 +3347,7 @@ int main(int argc , char *argv[])
             printf("\033[H\033[J");
 
             nthreads = get_nprocs();
-            printf("\x1B[33m%i CPU\x1B[0m Cores detected..\nMining Difficulty: \x1B[33m%.2f\x1B[0m\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
+            printf("%i CPU Cores detected..\nMining Difficulty: %.2f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
             
 
             //Launch mining threads
@@ -3421,10 +3421,10 @@ int main(int argc , char *argv[])
                 forceRead(".vfc/rph.mem", &replay_height, sizeof(uint));
 
                 if(replay_allow[0] == 0)
-                    printf("\x1B[33m%.1f\x1B[0m kb of \x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Synchronizing only from the Master.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
+                    printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit. Synchronizing only from the Master.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
                 else
                 {
-                    printf("\x1B[33m%.1f\x1B[0m kb of \x1B[33m%.1f\x1B[0m kb downloaded press CTRL+C to Quit. Authorized Peer: %s / ", (double)st.st_size / 1000, (double)replay_height / 1000, inet_ntoa(i1));
+                    printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit. Authorized Peer: %s / ", (double)st.st_size / 1000, (double)replay_height / 1000, inet_ntoa(i1));
                     printf("%s / ", inet_ntoa(i2));
                     printf("%s / ", inet_ntoa(i3));
                     printf("%s / ", inet_ntoa(i4));
@@ -3444,7 +3444,7 @@ int main(int argc , char *argv[])
             remove("blocks.dat");
             system("wget -O.vfc/master_blocks.dat https://vfcash.uk/sync");
             system("cp .vfc/master_blocks.dat .vfc/blocks.dat");
-            printf("\x1B[33mResync from master complete.\x1B[0m\n\n");
+            printf("Resync from master complete.\n\n");
             exit(0);
         }
 
@@ -3456,7 +3456,7 @@ int main(int argc , char *argv[])
             loadmem();
             resyncBlocks();
             forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*6);
-            printf("\x1B[33mResync Executed.\x1B[0m\n\n");
+            printf("Resync Executed.\n\n");
             exit(0);
         }
 
@@ -3532,8 +3532,8 @@ int main(int argc , char *argv[])
 #endif
 
             setlocale(LC_NUMERIC, "");
-            printf("\x1B[33m(Local Balance / Mode Network Balance / Highest Network Balance)\x1B[0m\n");
-            printf("\x1B[33mYour reward address is:\x1B[0m%s\n(\x1B[33m%'.3f VFC\x1B[0m / \x1B[33m%'.3f VFC\x1B[0m / \x1B[33m%'.3f VFC\x1B[0m)\n\n\x1B[33mFinal Balance:\x1B[0m %'.3f VFC\n\n", myrewardkey, toDB(bal), toDB(balt), toDB(baln), toDB(fbal));
+            printf("(Local Balance / Mode Network Balance / Highest Network Balance)\n");
+            printf("Your reward address is:%s\n(%'.3f VFC / %'.3f VFC / %'.3f VFC)\n\nFinal Balance: %'.3f VFC\n\n", myrewardkey, toDB(bal), toDB(balt), toDB(baln), toDB(fbal));
             exit(0);
         }
 
@@ -3541,7 +3541,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "addpeer") == 0)
         {
             loadmem();
-            printf("\x1B[33mPlease input Peer IP Address: \x1B[0m");
+            printf("Please input Peer IP Address: ");
             char in[32];
             fgets(in, 32, stdin);
             addPeer(inet_addr(in));
@@ -3554,9 +3554,9 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "peers") == 0)
         {
             loadmem();
-            printf("\n\x1B[33mTip; If you are running a full-node then consider hosting a website on port 80 where you can declare a little about your operation and a VFC address people can use to donate to you on. Thus you should be able to visit any of these IP addresses in a web-browser and find out a little about each node or obtain a VFC Address to donate to the node operator on.\x1B[0m\n\n");
-            printf("\x1B[33mTotal Peers:\x1B[0m %u\x1B[33\n\n", num_peers);
-            printf("\x1B[33mIP Address / Number of Transactions Relayed / Seconds since last trans or ping / user-agent [version/blockheight/nodename/machine/difficulty] \x1B[0m\n");
+            printf("\nTip; If you are running a full-node then consider hosting a website on port 80 where you can declare a little about your operation and a VFC address people can use to donate to you on. Thus you should be able to visit any of these IP addresses in a web-browser and find out a little about each node or obtain a VFC Address to donate to the node operator on.\n\n");
+            printf("Total Peers: %u\x1B[33\n\n", num_peers);
+            printf("IP Address / Number of Transactions Relayed / Seconds since last trans or ping / user-agent [version/blockheight/nodename/machine/difficulty] \n");
             uint ac = 0;
             for(uint i = 0; i < num_peers; ++i)
             {
@@ -3569,7 +3569,7 @@ int main(int argc , char *argv[])
                     ac++;
                 }
             }
-            printf("\x1B[33mAlive Peers:\x1B[0m %u\n\n", ac);
+            printf("Alive Peers: %u\n\n", ac);
             // printf("\n--- Possibly Dead Peers ---\n\n");
             // uint dc = 0;
             // for(uint i = 0; i < num_peers; ++i)
@@ -3583,7 +3583,7 @@ int main(int argc , char *argv[])
             //         dc++;
             //     }
             // }
-            // printf("\x1B[33mDead Peers:\x1B[0m %u\n\n", dc);
+            // printf("Dead Peers: %u\n\n", dc);
             exit(0);
         }
     }
@@ -3591,7 +3591,7 @@ int main(int argc , char *argv[])
     //Let's make sure we're on the correct chain
     if(verifyChain(CHAIN_FILE) == 0)
     {
-        printf("\033[1m\x1B[31mSorry you're not on the right chain. Please resync by running ./vfc resync or for a faster resync try ./vfc master_resync\x1B[0m\033[0m\n\n");
+        printf("Sorry you're not on the right chain. Please resync by running ./vfc resync or for a faster resync try ./vfc master_resync\n\n");
         system("vfc master_resync");
         exit(0);
     }
@@ -3607,7 +3607,7 @@ int main(int argc , char *argv[])
     {
         if(isNodeRunning() == 0)
         {
-            printf("\033[1m\x1B[31mPlease make sure you are running the full node and that you have synchronized to the latest blockchain before checking an address balance.\x1B[0m\033[0m\n\n");
+            printf("Please make sure you are running the full node and that you have synchronized to the latest blockchain before checking an address balance.\n\n");
             exit(0);
         }
 
@@ -3644,8 +3644,8 @@ int main(int argc , char *argv[])
 #endif
         
         setlocale(LC_NUMERIC, "");
-        printf("\x1B[33m(Local Balance / Mode Network Balance / Highest Network Balance)\x1B[0m\n");
-        printf("\x1B[33mThe Balance for Address: \x1B[0m%s\n(\x1B[33m%'.3f VFC\x1B[0m / \x1B[33m%'.3f VFC\x1B[0m / \x1B[33m%'.3f VFC\x1B[0m)\n\x1B[33mTime Taken\x1B[0m %li \x1B[33mMilliseconds (\x1B[0m%li ns\x1B[33m).\x1B[0m\n\n\x1B[33mFinal Balance:\x1B[0m %'.3f VFC\n\n", argv[1], toDB(bal), toDB(balt), toDB(baln), td, (e.tv_nsec - s.tv_nsec), toDB(fbal));
+        printf("(Local Balance / Mode Network Balance / Highest Network Balance)\n");
+        printf("The Balance for Address: %s\n(%'.3f VFC / %'.3f VFC / %'.3f VFC)\nTime Taken %li Milliseconds (%li ns).\n\nFinal Balance: %'.3f VFC\n\n", argv[1], toDB(bal), toDB(balt), toDB(baln), td, (e.tv_nsec - s.tv_nsec), toDB(fbal));
         exit(0);
     }
 
@@ -3657,7 +3657,7 @@ int main(int argc , char *argv[])
 
         // if(isNodeRunning() == 0)
         // {
-        //     printf("\033[1m\x1B[31mPlease make sure you are running the full node and that you have synchronized to the latest blockchain before making a transaction.\x1B[0m\033[0m\n\n");
+        //     printf("Please make sure you are running the full node and that you have synchronized to the latest blockchain before making a transaction.\n\n");
         //     exit(0);
         // }
 
@@ -3685,7 +3685,7 @@ int main(int argc , char *argv[])
         //Too low amount?
         if(t.amount < 0.001)
         {
-            printf("\033[1m\x1B[31mSorry the amount you provided was too low, please try 0.001 VFC or above.\x1B[0m\033[0m\n\n");
+            printf("Sorry the amount you provided was too low, please try 0.001 VFC or above.\n\n");
             exit(0);
         }
 
@@ -3703,7 +3703,7 @@ int main(int argc , char *argv[])
         makHash(thash, &t);
         if(ecdsa_sign(priv, thash, t.owner.key) == 0)
         {
-            printf("\n\033[1m\x1B[31mSorry you're client failed to sign the Transaction.\x1B[0m\033[0m\n\n");
+            printf("\nSorry you're client failed to sign the Transaction.\n\n");
             exit(0);
         }
 
@@ -3752,9 +3752,9 @@ int main(int argc , char *argv[])
         size_t zlen = MIN_LEN;
         b58enc(howner, &zlen, t.owner.key, ECC_CURVE);
 
-        printf("\n\x1B[33mPacket Size: %lu. %'.3f VFC. Sending Transaction...\x1B[0m\n", len, (double)t.amount / 1000);
-        printf("\033[1m\x1B[31m%s > %s : %u : %s\x1B[0m\033[0m\n", argv[1], argv[2], t.amount, howner);
-        printf("\x1B[33mTransaction Sent.\x1B[0m\n\n");
+        printf("\nPacket Size: %lu. %'.3f VFC. Sending Transaction...\n", len, (double)t.amount / 1000);
+        printf("%s > %s : %u : %s\n", argv[1], argv[2], t.amount, howner);
+        printf("Transaction Sent.\n\n");
 
     //Get balance again..
 #if MASTER_NODE == 1
@@ -3766,9 +3766,9 @@ int main(int argc , char *argv[])
     const int64_t bal1 = getBalanceLocal(&t.from);
     setlocale(LC_NUMERIC, "");
     if(bal0-bal1 <= 0)
-        printf("\033[1m\x1B[31mTransaction Sent, but unable to verify it's success. Refer to sent transactions for confirmation.\x1B[0m\033[0m\n\n");
+        printf("Transaction Sent, but unable to verify it's success. Refer to sent transactions for confirmation.\n\n");
     else
-        printf("\x1B[33mVFC Sent: \x1B[0m%'.3f VFC\n\n", toDB(bal0-bal1));
+        printf("VFC Sent: %'.3f VFC\n\n", toDB(bal0-bal1));
 
         //Done
         exit(0);
@@ -3785,13 +3785,13 @@ int main(int argc , char *argv[])
     //Don't run a node twice
     if(isNodeRunning() == 1)
     {
-        printf("\033[1m\x1B[31mThe VFC node is already running.\x1B[0m\033[0m\n\n");
+        printf("The VFC node is already running.\n\n");
         exit(0);
     }
 
     //Check for broken blocks
     printf("Quick Scan: Checking blocks.dat for invalid transactions...\n");
-    truncate_at_error(CHAIN_FILE, 33333);
+    truncate_at_error(CHAIN_FILE, 9333);
 
     //Hijack CTRL+C
     signal(SIGINT, sigintHandler);
@@ -3802,17 +3802,17 @@ int main(int argc , char *argv[])
     if(strcmp(ud.machine, "x86_64") != 0)
     {
         is8664 = 0;
-        printf("\033[1m\x1B[31mRunning without mmap() as system is not x86_64.\x1B[0m\033[0m\n\n");
+        printf("Running without mmap() as system is not x86_64.\n\n");
     }
     
     //Launch Info
     timestamp();
-    printf("\n\x1B[33m.. VFC ..\n");
+    printf("\n.. VFC ..\n");
     printf("https://VF.CASH - https://VFCASH.UK\n");
     printf("https://github.com/vfcash\n");
-    printf("v%s\x1B[0m\n\n", version);
-    printf("\x1B[33mYou will have to make a transaction before your IPv4 address registers\nwith the mainnet when running a full time node/daemon.\x1B[0m\n\n");
-    printf("\x1B[33mTo get a full command list use:\x1B[0m\n ./vfc help\n\n");
+    printf("v%s\n\n", version);
+    printf("You will have to make a transaction before your IPv4 address registers\nwith the mainnet when running a full time node/daemon.\n\n");
+    printf("To get a full command list use:\n ./vfc help\n\n");
     char cwd[MIN_LEN];
     getcwd(cwd, sizeof(cwd));
     printf("Current Directory: %s\n\n", cwd);
@@ -3844,7 +3844,7 @@ int main(int argc , char *argv[])
         int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
         if(s == -1)
         {
-            printf("\033[1m\x1B[31mFailed to create write socket ...\x1B[0m\033[0m\n");
+            printf("Failed to create write socket ...\n");
             sleep(3);
             continue;
         }
@@ -3857,7 +3857,7 @@ int main(int argc , char *argv[])
         //Bind port to socket
         if(bind(s, (struct sockaddr*)&server, sizeof(server)) < 0)
         {
-            printf("\033[1m\x1B[31mSorry the port %u seems to already be in use. Daemon must already be running, good bye.\x1B[0m\033[0m\n\n", gport);
+            printf("Sorry the port %u seems to already be in use. Daemon must already be running, good bye.\n\n", gport);
             exit(0);
         }
         printf("Waiting for connections...\n\n");
@@ -4129,7 +4129,7 @@ int main(int argc , char *argv[])
             if(st < time(0))
             {
                 //Log Metrics
-                printf("\x1B[33mSTAT: Req/s: %ld, Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %llu\x1B[0m\n", reqs / (time(0)-tt), countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, MAX_THREADS, err);
+                printf("STAT: Req/s: %ld, Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %llu\n", reqs / (time(0)-tt), countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, MAX_THREADS, err);
 
                 //Prep next loop
                 reqs = 0;
