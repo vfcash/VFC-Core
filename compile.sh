@@ -21,10 +21,10 @@ else
     echo "Cron1 Added";
 fi
 
-if grep -qxF '0 0 * * * pkill vfc && /usr/bin/vfc update' ncron; then
+if grep -qxF '0 0 * * * /usr/bin/vfc update' ncron; then
     echo "Cron2 Exists";
 else
-    echo "0 0 * * * pkill vfc && /usr/bin/vfc update" >> ncron
+    echo "0 0 * * * /usr/bin/vfc update" >> ncron
     echo "Cron2 Added";
 fi
 crontab ncron
