@@ -129,6 +129,8 @@ const char master_ip[] = "198.204.248.26";
     uint rewardpaid = 1;
 #endif
 char mid[8];                         //Clients private identification code used in pings etc.
+float node_difficulty = 0.24;        //Clients weighted contribution to the federated mining difficulty
+float network_difficulty = 0;        //Assumed actual network difficulty
 ulong err = 0;                       //Global error count
 uint replay_allow[6] = {0,0,0,0,0,0};//IP address of peer allowed to send replay blocks
 uint replay_height = 0;              //Block Height of current peer authorized to receive a replay from
@@ -650,7 +652,8 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
 
     //All normal angles a1-a4 must be under this value
     //const double min = fr == 0 ? getMiningDifficulty() : 0.24;
-    const double min = 0.24;
+    //const double min = 0.24;
+    const double min = getMiningDifficulty();
     
     //Was it a straight hit?
     if(a1 < min && a2 < min && a3 < min && a4 < min)
@@ -752,6 +755,8 @@ uint num_peers = 0; //Current number of indexed peers
 uint peer_tcount[MAX_PEERS]; //Amount of transactions relayed by peer
 char peer_ua[MAX_PEERS][64]; //Peer user agent
 uint64_t peer_ba[MAX_PEERS]; //Balance Aggregation
+float peer_da[MAX_PEERS]; //Difficulty Aggregation
+
 
 uint64_t trueBalance()
 {
@@ -817,6 +822,14 @@ uint countLivingPeers()
             c++;
     }
     return c;
+}
+
+uint isPeerAlive(const uint id)
+{
+    const uint pd = time(0)-(peer_timeouts[id]-MAX_PEER_EXPIRE_SECONDS);
+    if(pd <= PING_INTERVAL*4)
+        return 1;
+    return 0;
 }
 
 uint csend(const uint ip, const char* send, const size_t len)
@@ -1027,6 +1040,26 @@ int getPeer(const uint ip)
     return -1;
 }
 
+void networkDifficulty()
+{
+    network_difficulty = 0; //reset
+    uint divisor = 0;
+    for(uint i = 0; i < MAX_PEERS; i++)
+    {
+        const uint p = getPeer(i);
+        if(isPeerAlive(p) == 1)
+        {
+            if(peer_da[p] >= 0.1 && peer_da[p] <= 0.24)
+            {
+                network_difficulty += peer_da[p];
+                divisor++;
+            }
+        }
+    }
+    if(divisor > 1)
+        network_difficulty /= divisor;
+}
+
 #if MASTER_NODE == 1
 void RewardPeer(const uint ip, const char* pubkey)
 {
@@ -1108,6 +1141,8 @@ uint addPeer(const uint ip)
         peers[num_peers] = ip;
         peer_timeouts[num_peers] = time(0) + MAX_PEER_EXPIRE_SECONDS;
         peer_tcount[num_peers] = 1;
+        peer_ba[num_peers] = 0;
+        peer_da[num_peers] = 0;
         num_peers++;
         return 1;
     }
@@ -1116,6 +1151,8 @@ uint addPeer(const uint ip)
         peers[freeindex] = ip;
         peer_timeouts[freeindex] = time(0) + MAX_PEER_EXPIRE_SECONDS;
         peer_tcount[freeindex] = 1;
+        peer_ba[freeindex] = 0;
+        peer_da[freeindex] = 0;
         return 1;
     }
 
@@ -2422,6 +2459,8 @@ void savemem()
         fwrite(peer_ua, 64, MAX_PEERS, f);
         fclose(f);
     }
+
+    forceWrite(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
 }
 
 void loadmem()
@@ -2470,6 +2509,8 @@ void loadmem()
         }
         fclose(f);
     }
+
+    forceRead(".vfc/diff.mem", &node_difficulty, sizeof(float));
 }
 
 void sigintHandler(int sig_num) 
@@ -2582,8 +2623,14 @@ void *generalThread(void *arg)
         //Save memory state
         savemem();
 
+        //Recalculate the network difficulty
+        networkDifficulty();
+
         //Load new replay allow value
         forceRead(".vfc/rp.mem", &replay_allow, sizeof(uint)*6);
+
+        //Load difficulty
+        forceRead(".vfc/diff.mem", &node_difficulty, sizeof(float));
 
         //Let's execute a Sync every 9 mins
         if(time(0) > rs)
@@ -3180,6 +3227,22 @@ int main(int argc , char *argv[])
             printOuts(&a);
             exit(0);
         }
+
+        if(strcmp(argv[1], "setdiff") == 0)
+        {
+            const float d = atof(argv[2]);
+            if(d >= 0.1 && d <= 0.24)
+            {
+                forceWrite(".vfc/diff.mem", &d, sizeof(float));
+                printf("%.3f\n\n", d);
+            }
+            else
+            {
+                printf("Please pick a difficulty between 0.100 and 0.240\n\n");
+            }
+            
+            exit(0);
+        }
     }
 
     //Some basic funcs
@@ -3212,6 +3275,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mReturns the circulating supply:\x1B[0m\n ./vfc circulating\n\n");
             printf("\x1B[33mReturns the mined supply:\x1B[0m\n ./vfc mined\n\n");
             printf("\x1B[33mReturns the mining difficulty:\x1B[0m\n ./vfc difficulty\n\n");
+            printf("\x1B[33mSets your contribution to the federated difficulty:\x1B[0m\n ./vfc setdiff < difficulty between 0.1 - 0.24 >\n\n");
             printf("\x1B[33mCheck's if supplied address is subG, if so returns value of subG address:\x1B[0m\n ./vfc issub <public key>\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./vfc scan\x1B[0m\n\n");
             printf("\x1B[33mScan blocks.dat for invalid transactions and truncate at first invalid transaction:\x1B[0m\n ./vfc trunc <offset x transactions>\n\n");
@@ -3224,7 +3288,8 @@ int main(int argc , char *argv[])
         //get mining difficulty
         if(strcmp(argv[1], "difficulty") == 0)
         {
-            printf("%.3f\n", getMiningDifficulty());
+            forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
+            printf("%.3f\n", network_difficulty);
             exit(0);
         }
 
@@ -3894,7 +3959,21 @@ int main(int argc , char *argv[])
                     snprintf(pc, sizeof(pc), "a%s, %u, %s, %s", version, (uint)st.st_size / 133, ud.nodename, ud.machine);
 
                     csend(client.sin_addr.s_addr, pc, strlen(pc));
+
+                    //also return our difficulty to the peer
+                    pc[0] = '~';
+                    memcpy(pc+1, &node_difficulty, sizeof(float));
+                    csend(client.sin_addr.s_addr, pc, 1+sizeof(float));
                 }
+            }
+
+            //peer is sending it's difficulty
+            else if(rb[0] == '~')
+            {
+                //Check this is a peer
+                const int p = getPeer(client.sin_addr.s_addr);
+                if(p != -1)
+                    memcpy(&peer_da[p], rb+1, sizeof(float));
             }
 
             //peer is sending it's user agent
@@ -3904,7 +3983,7 @@ int main(int argc , char *argv[])
                 const int p = getPeer(client.sin_addr.s_addr);
                 if(p != -1)
                 {
-                    memcpy(peer_ua[p], rb+1, 63);
+                    memcpy(&peer_ua[p], rb+1, 63);
                     peer_ua[p][63] = 0x00;
                 }
             }
