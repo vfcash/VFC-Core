@@ -1049,7 +1049,7 @@ void networkDifficulty()
         const uint p = getPeer(i);
         if(isPeerAlive(p) == 1)
         {
-            if(peer_da[p] >= 0.1 && peer_da[p] <= 0.24)
+            if(peer_da[p] >= 0.03 && peer_da[p] <= 0.24)
             {
                 network_difficulty += peer_da[p];
                 divisor++;
@@ -3233,14 +3233,14 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "setdiff") == 0)
         {
             const float d = atof(argv[2]);
-            if(d >= 0.1 && d <= 0.24)
+            if(d >= 0.03 && d <= 0.24)
             {
                 forceWrite(".vfc/diff.mem", &d, sizeof(float));
                 printf("%.3f\n\n", d);
             }
             else
             {
-                printf("Please pick a difficulty between 0.100 and 0.240\n\n");
+                printf("Please pick a difficulty between 0.030 and 0.240\n\n");
             }
             
             exit(0);
@@ -3277,7 +3277,7 @@ int main(int argc , char *argv[])
             printf("\x1B[33mReturns the circulating supply:\x1B[0m\n ./vfc circulating\n\n");
             printf("\x1B[33mReturns the mined supply:\x1B[0m\n ./vfc mined\n\n");
             printf("\x1B[33mReturns the mining difficulty:\x1B[0m\n ./vfc difficulty\n\n");
-            printf("\x1B[33mSets your contribution to the federated difficulty:\x1B[0m\n ./vfc setdiff < difficulty between 0.1 - 0.24 >\n\n");
+            printf("\x1B[33mSets your contribution to the federated difficulty:\x1B[0m\n ./vfc setdiff < difficulty between 0.03 - 0.24 >\n\n");
             printf("\x1B[33mCheck's if supplied address is subG, if so returns value of subG address:\x1B[0m\n ./vfc issub <public key>\n\n");
             printf("\x1B[33mDoes it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\x1B[0m\n ./vfc scan\x1B[0m\n\n");
             printf("\x1B[33mScan blocks.dat for invalid transactions and truncate at first invalid transaction:\x1B[0m\n ./vfc trunc <offset x transactions>\n\n");
