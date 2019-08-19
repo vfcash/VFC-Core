@@ -1101,7 +1101,7 @@ int ecc_make_key(uint8_t p_publicKey[ECC_BYTES+1], uint8_t p_privateKey[ECC_BYTE
 int ecc_make_key_seed(uint8_t p_publicKey[ECC_BYTES+1], uint8_t p_privateKey[ECC_BYTES], const uint64_t* seed)
 {
     uint64_t l_private[NUM_ECC_DIGITS];
-    memcpy(l_private, seed, NUM_ECC_DIGITS);
+    memcpy(l_private, seed, ECC_BYTES);
     EccPoint l_public;
     
     if(vli_isZero(l_private))

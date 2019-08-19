@@ -3109,7 +3109,7 @@ int main(int argc , char *argv[])
         }
 
         //Gen new address
-        if(strcmp(argv[1], "new") == 0) //requires 32 caracters
+        if(strcmp(argv[1], "new") == 0)
         {
             addr pub, priv;
             
