@@ -3286,7 +3286,7 @@ int main(int argc , char *argv[])
             printf("Scan blocks.dat for invalid transactions and truncate at first invalid transaction:\n ./vfc trunc <offset x transactions>\n\n");
             printf("Scan blocks.dat for invalid transactions and generated a cleaned version in the same directory called cblocks.dat:\n ./vfc clean\n\n");
             
-            printf("To get started running a dedicated node, execute ./vfc on a seperate screen, you will need to make atleast one transaction a month to be indexed by the network.\n\n");
+            printf("To get started running a dedicated node, execute ./vfc on a seperate screen.\n\n");
             exit(0);
         }
 
