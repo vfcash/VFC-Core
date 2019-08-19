@@ -2332,10 +2332,25 @@ pthread_mutex_unlock(&mutex3);
 
 void makAddrSeed(addr* pub, addr* priv, const uint64_t* seed) //Seeded [array of four uint64_t's]
 {
-    ecc_make_key_seed(pub->key, priv->key, seed);
+    if(ecc_make_key_seed(pub->key, priv->key, seed) == 1)
+    {
+        //Dump Base58
+        char bpub[MIN_LEN], bpriv[MIN_LEN];
+        memset(bpub, 0, sizeof(bpub));
+        memset(bpriv, 0, sizeof(bpriv));
+        size_t len = MIN_LEN;
+        b58enc(bpub, &len, pub->key, ECC_CURVE+1);
+        b58enc(bpriv, &len, priv->key, ECC_CURVE);
+        printf("\n\x1B[33mMade new Address / Key Pair\x1B[0m\n\nPublic: %s\n\nPrivate: %s\n\n\x1B[0m", bpub, bpriv);
+    }
+    else
+    {
+        printf("Seed failed to create a valid private key.\n");
+    }
+    
 }
 
-void makAddrS(addr* pub, addr* priv) //Silent
+void makAddrS(addr* pub, addr* priv) //Silent for miner
 {
     ecc_make_key(pub->key, priv->key);
 }
@@ -3097,11 +3112,32 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "new") == 0) //requires 32 caracters
         {
             addr pub, priv;
+            
+            //xor down random input to 32 bytes
+            const size_t len = strlen(argv[2]);
+            const uint xor_chunk = len / 32;
+            if(xor_chunk == 0)
+            {
+                printf("You need to input a longer seed.\n");
+                exit(0);
+            }
+            uint8_t xr[32];
+            for(uint i1 = 1, io = 0; i1 < len; i1 += xor_chunk, io++)
+            {
+                uint8_t xc = argv[2][i1];
+                for(uint i2 = 0; i2 < xor_chunk; i2++)
+                    xc ^= argv[2][i1+i2];
+                xr[io] = xc;
+            }
+            
+            //Split into three uint64's
             uint64_t sp[4];
-            memcpy(&sp[0], argv[2], sizeof(uint64_t));
-            memcpy(&sp[1], argv[2]+sizeof(uint64_t), sizeof(uint64_t));
-            memcpy(&sp[2], argv[2]+sizeof(uint64_t)+sizeof(uint64_t), sizeof(uint64_t));
-            memcpy(&sp[3], argv[2]+sizeof(uint64_t)+sizeof(uint64_t)+sizeof(uint64_t), sizeof(uint64_t));
+            memcpy(&sp[0], xr, sizeof(uint64_t));
+            memcpy(&sp[1], xr+sizeof(uint64_t), sizeof(uint64_t));
+            memcpy(&sp[2], xr+sizeof(uint64_t)+sizeof(uint64_t), sizeof(uint64_t));
+            memcpy(&sp[3], xr+sizeof(uint64_t)+sizeof(uint64_t)+sizeof(uint64_t), sizeof(uint64_t));
+
+            //Pass it over
             makAddrSeed(&pub, &priv, sp);
             exit(0);
         }
