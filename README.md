@@ -34,13 +34,6 @@ For a Windows installation you can follow the steps above via the Ubuntu Console
 
 Each address is limited to one transaction every three seconds, once a transaction is made the sender cannot make another transaction to a different address for three seconds.
 
-# Share your blocks.dat
-```
-apt install nginx
-ln -s .vfc/blocks.dat /var/www/html/blocks.dat
-```
-Now visiting your server IP address from a web-browser will share your blocks.dat file.
-
 # No IPv4 address?
 It is reccomend that users who do not have access to an IPv4 address to use a VPN service that offers port forwarding on IPv4 addresses, such as [AirVPN](https://airvpn.org/).
 
