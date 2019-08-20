@@ -3365,11 +3365,12 @@ int main(int argc , char *argv[])
         //Fork unclaimed addresses from minted.priv
         if(strcmp(argv[1], "unclaimed") == 0)
         {
+            printf("Please Wait...\n");
             FILE* f = fopen(".vfc/minted.priv", "r");
             if(f)
             {
                 char l[256];
-                while(fgets(l, 256, f))
+                while(fgets(l, 256, f) != NULL)
                 {
                     //base58 priv key
                     char* bpriv = strtok(l, " ");
@@ -3389,6 +3390,7 @@ int main(int argc , char *argv[])
                     //Print private key & balance 
                     if(bal > 0)
                         printf("%s (%.3f)\n", bpriv, bal);
+                    
                 }
                 fclose(f);
             }
@@ -3398,11 +3400,12 @@ int main(int argc , char *argv[])
         //claim minted.priv
         if(strcmp(argv[1], "claim") == 0)
         {
+            printf("Please Wait...\n");
             FILE* f = fopen(".vfc/minted.priv", "r");
             if(f)
             {
                 char l[256];
-                while(fgets(l, 256, f))
+                while(fgets(l, 256, f) != NULL)
                 {
                     //base58 priv key
                     char* bpriv = strtok(l, " ");
@@ -3652,7 +3655,9 @@ int main(int argc , char *argv[])
             uint64_t bal = getBalance(&rk);
             uint64_t baln = 0;
             uint64_t balt = 0;
+#if MASTER_NODE == 0
             sleep(3);
+#endif
             forceRead(".vfc/bal.mem", &baln, sizeof(uint64_t));
             forceRead(".vfc/balt.mem", &balt, sizeof(uint64_t));
 
