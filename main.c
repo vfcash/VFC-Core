@@ -3406,10 +3406,15 @@ int main(int argc , char *argv[])
                     b58enc(bpub, &len, subg_pub.key, ECC_CURVE+1);
 
                     //execute transaction
-                    char cmd[1024];
-                    sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
-                    system(cmd);
-                    printf("vfc %s%s %.3f %s", bpub, myrewardkey, bal, bpriv);
+                    printf("vfc %s%s %.3f %s\n", bpub, myrewardkey, bal, bpriv);
+                    pid_t fork_pid = fork();
+                    if(fork_pid == 0)
+                    {
+                        char cmd[1024];
+                        sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
+                        system(cmd);
+                        exit(0);
+                    }
                 }
                 fclose(f);
             }
