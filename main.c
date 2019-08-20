@@ -1096,6 +1096,7 @@ void networkDifficulty()
                     continue;
                 }
                 peer_da[p] = atof(cf);
+                printf("DBG: %s - %.3f\n", cf, peer_da[p]);
 
                 if(peer_da[p] >= 0.030 && peer_da[p] <= 0.240)
                 {
