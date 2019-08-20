@@ -23,9 +23,6 @@ else
 fi
 rm ncron
 
-pkill vfc
-vfc master_resync
-
 echo "Compiled and Installed /usr/bin/vfc and /srv/.vfc or ~/.vfc "
 echo "Don't forget to forward UDP port 8787 if behind a router."
 echo "For more information type; vfc help"
