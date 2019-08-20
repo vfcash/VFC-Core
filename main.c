@@ -3952,6 +3952,9 @@ int main(int argc , char *argv[])
     //Launch the General Processing thread
     pthread_t tid2;
     pthread_create(&tid2, NULL, generalThread, NULL);
+
+    //Pre-calc network difficulty from saved peer_a
+    networkDifficulty();
 	
     //Sync Blocks
     resyncBlocks();
