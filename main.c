@@ -1072,37 +1072,33 @@ void networkDifficulty()
 {
     network_difficulty = 0; //reset
     uint divisor = 0;
-    for(uint i = 0; i < MAX_PEERS; i++)
+    for(uint p = 0; p < MAX_PEERS; p++)
     {
-        const uint p = getPeer(i);
-        if(p != -1)
+        if(isPeerAlive(p) == 1)
         {
-            if(isPeerAlive(p) == 1)
+            char cf[8];
+            memset(cf, 0, sizeof(cf));
+            const uint ual = strlen(peer_ua[p]);
+
+            //if(peer_ua[p][ual-5] == '0' && peer_ua[p][ual-4] == '.')
+            //{
+                cf[0] = peer_ua[p][ual-5];
+                cf[1] = peer_ua[p][ual-4];
+                cf[2] = peer_ua[p][ual-3];
+                cf[3] = peer_ua[p][ual-2];
+                cf[4] = peer_ua[p][ual-1];
+            //}
+            //else
+            //{
+            //    continue;
+            //}
+            peer_da[p] = atof(cf);
+            printf("DBG: %s - %.3f\n", cf, peer_da[p]);
+
+            if(peer_da[p] >= 0.030 && peer_da[p] <= 0.240)
             {
-                char cf[8];
-                memset(cf, 0, sizeof(cf));
-                const uint ual = strlen(peer_ua[p]);
-
-                //if(peer_ua[p][ual-5] == '0' && peer_ua[p][ual-4] == '.')
-                //{
-                    cf[0] = peer_ua[p][ual-5];
-                    cf[1] = peer_ua[p][ual-4];
-                    cf[2] = peer_ua[p][ual-3];
-                    cf[3] = peer_ua[p][ual-2];
-                    cf[4] = peer_ua[p][ual-1];
-                //}
-                //else
-                //{
-                //    continue;
-                //}
-                peer_da[p] = atof(cf);
-                printf("DBG: %s - %.3f\n", cf, peer_da[p]);
-
-                if(peer_da[p] >= 0.030 && peer_da[p] <= 0.240)
-                {
-                    network_difficulty += peer_da[p];
-                    divisor++;
-                }
+                network_difficulty += peer_da[p];
+                divisor++;
             }
         }
     }
