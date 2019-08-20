@@ -3191,7 +3191,7 @@ int main(int argc , char *argv[])
             //xor down random input to 32 bytes
             const size_t len = strlen(argv[2]);
             const uint xor_chunk = len / 32;
-            if(xor_chunk < 1)
+            if(xor_chunk <= 1)
             {
                 printf("You need to input a longer seed.\n");
                 exit(0);
@@ -3211,7 +3211,7 @@ int main(int argc , char *argv[])
             memcpy(&sp[1], xr+sizeof(uint64_t), sizeof(uint64_t));
             memcpy(&sp[2], xr+sizeof(uint64_t)+sizeof(uint64_t), sizeof(uint64_t));
             memcpy(&sp[3], xr+sizeof(uint64_t)+sizeof(uint64_t)+sizeof(uint64_t), sizeof(uint64_t));
-
+            
             //Pass it over
             makAddrSeed(&pub, &priv, sp);
             exit(0);
