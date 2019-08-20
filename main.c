@@ -3399,21 +3399,24 @@ int main(int argc , char *argv[])
                     //Get balance of pub key
                     const double bal = toDB(getBalanceLocal(&subg_pub));
 
-                    //Public Key as Base58
-                    char bpub[MIN_LEN];
-                    memset(bpub, 0, sizeof(bpub));
-                    len = MIN_LEN;
-                    b58enc(bpub, &len, subg_pub.key, ECC_CURVE+1);
-
-                    //execute transaction
-                    printf("vfc %s%s %.3f %s\n", bpub, myrewardkey, bal, bpriv);
-                    pid_t fork_pid = fork();
-                    if(fork_pid == 0)
+                    if(bal > 0)
                     {
-                        char cmd[1024];
-                        sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
-                        system(cmd);
-                        exit(0);
+                        //Public Key as Base58
+                        char bpub[MIN_LEN];
+                        memset(bpub, 0, sizeof(bpub));
+                        len = MIN_LEN;
+                        b58enc(bpub, &len, subg_pub.key, ECC_CURVE+1);
+
+                        //execute transaction
+                        printf("vfc %s%s %.3f %s\n", bpub, myrewardkey, bal, bpriv);
+                        pid_t fork_pid = fork();
+                        if(fork_pid == 0)
+                        {
+                            char cmd[1024];
+                            sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
+                            system(cmd);
+                            exit(0);
+                        }
                     }
                 }
                 fclose(f);
