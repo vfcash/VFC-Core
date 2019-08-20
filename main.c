@@ -3310,6 +3310,7 @@ int main(int argc , char *argv[])
             printf("Returns the mining difficulty:\n ./vfc difficulty\n\n");
             printf("Sets your contribution to the federated difficulty:\n ./vfc setdiff < difficulty between 0.03 - 0.24 >\n\n");
             printf("Check's if supplied address is subG, if so returns value of subG address:\n ./vfc issub <public key>\n\n");
+            printf("Lists all unclaimed addresses and their balances from your minted.priv:\n ./vfc unclaimed\n\n");
             printf("Does it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\n ./vfc scan\n\n");
             printf("Scan blocks.dat for invalid transactions and truncate at first invalid transaction:\n ./vfc trunc <offset x transactions>\n\n");
             printf("Scan blocks.dat for invalid transactions and generated a cleaned version in the same directory called cblocks.dat:\n ./vfc clean\n\n");
@@ -3337,6 +3338,28 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "mined") == 0)
         {
             printf("%.3f\n", toDB(getMinedSupply()));
+            exit(0);
+        }
+
+        //Fork unclaimed addresses from minted.priv
+        if(strcmp(argv[1], "unclaimed") == 0)
+        {
+            FILE* f = fopen("/home/v/.vfc/minted.priv", "r");
+            if(f)
+            {
+                char l[256];
+                while(fgets(l, 256, f))
+                {
+                    char* addr = strtok(l, " ");
+                    struct addr rk;
+                    size_t len = ECC_CURVE+1;
+                    b58tobin(rk.key, &len, addr, strlen(addr));
+                    const double bal = toDB(getBalanceLocal(&rk));
+                    if(bal > 0)
+                        printf("%s (%.3f)\n", addr, bal);
+                }
+                fclose(f);
+            }
             exit(0);
         }
 
