@@ -1079,7 +1079,25 @@ void networkDifficulty()
         {
             if(isPeerAlive(p) == 1)
             {
-                if(peer_da[p] >= 0.03 && peer_da[p] <= 0.24)
+                char cf[8];
+                memset(cf, 0, sizeof(cf));
+                const uint ual = strlen(peer_ua[p]);
+
+                if(peer_ua[p][ual-5] == '0' && peer_ua[p][ual-4] == '.')
+                {
+                    cf[0] = peer_ua[p][ual-5];
+                    cf[1] = peer_ua[p][ual-4];
+                    cf[2] = peer_ua[p][ual-3];
+                    cf[3] = peer_ua[p][ual-2];
+                    cf[4] = peer_ua[p][ual-1];
+                }
+                else
+                {
+                    continue;
+                }
+                peer_da[p] = atof(cf);
+
+                if(peer_da[p] >= 0.030 && peer_da[p] <= 0.240)
                 {
                     network_difficulty += peer_da[p];
                     divisor++;
@@ -1087,6 +1105,21 @@ void networkDifficulty()
             }
         }
     }
+    // for(uint i = 0; i < MAX_PEERS; i++)
+    // {
+    //     const uint p = getPeer(i);
+    //     if(p != -1)
+    //     {
+    //         if(isPeerAlive(p) == 1)
+    //         {
+    //             if(peer_da[p] >= 0.03 && peer_da[p] <= 0.24)
+    //             {
+    //                 network_difficulty += peer_da[p];
+    //                 divisor++;
+    //             }
+    //         }
+    //     }
+    // }
     divisor++;
     if(divisor > 1)
         network_difficulty /= divisor;
