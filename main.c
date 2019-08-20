@@ -3344,19 +3344,69 @@ int main(int argc , char *argv[])
         //Fork unclaimed addresses from minted.priv
         if(strcmp(argv[1], "unclaimed") == 0)
         {
-            FILE* f = fopen("/home/v/.vfc/minted.priv", "r");
+            FILE* f = fopen("minted.priv", "r");
             if(f)
             {
                 char l[256];
                 while(fgets(l, 256, f))
                 {
-                    char* addr = strtok(l, " ");
-                    struct addr rk;
+                    //base58 priv key
+                    char* bpriv = strtok(l, " ");
+
+                    //priv as bytes
+                    struct addr subg_priv;
                     size_t len = ECC_CURVE+1;
-                    b58tobin(rk.key, &len, addr, strlen(addr));
-                    const double bal = toDB(getBalanceLocal(&rk));
+                    b58tobin(subg_priv.key, &len, bpriv, strlen(bpriv));
+
+                    //Gen Public Key
+                    struct addr subg_pub;
+                    ecc_get_pubkey(subg_pub.key, subg_priv.key);
+
+                    //Get balance of pub key
+                    const double bal = toDB(getBalanceLocal(&subg_pub));
+
+                    //Print private key & balance 
                     if(bal > 0)
-                        printf("%s (%.3f)\n", addr, bal);
+                        printf("%s (%.3f)\n", bpriv, bal);
+                }
+                fclose(f);
+            }
+            exit(0);
+        }
+
+        //claim minted.priv
+        if(strcmp(argv[1], "claim") == 0)
+        {
+            FILE* f = fopen("minted.priv", "r");
+            if(f)
+            {
+                char l[256];
+                while(fgets(l, 256, f))
+                {
+                    //base58 priv key
+                    char* bpriv = strtok(l, " ");
+
+                    //priv as bytes
+                    struct addr subg_priv;
+                    size_t len = ECC_CURVE+1;
+                    b58tobin(subg_priv.key, &len, bpriv, strlen(bpriv));
+
+                    //Gen Public Key
+                    struct addr subg_pub;
+                    ecc_get_pubkey(subg_pub.key, subg_priv.key);
+
+                    //Get balance of pub key
+                    const double bal = toDB(getBalanceLocal(&subg_pub));
+
+                    //Public Key as Base58
+                    char bpub[MIN_LEN];
+                    memset(bpub, 0, sizeof(bpub));
+                    len = MIN_LEN;
+                    b58enc(bpub, &len, subg_pub.key, ECC_CURVE+1);
+
+                    char cmd[1024];
+                    sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
+                    system(cmd);
                 }
                 fclose(f);
             }
