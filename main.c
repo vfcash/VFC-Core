@@ -3522,7 +3522,7 @@ int main(int argc , char *argv[])
             while(1)
             {
                 printf("\033[H\033[J");
-                if(tc > 1)
+                if(tc > 4)
                 {
                     tc = 0;
                     resyncBlocks(); //Sync from a new random peer if no data after x seconds
