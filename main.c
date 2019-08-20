@@ -3191,7 +3191,7 @@ int main(int argc , char *argv[])
             //xor down random input to 32 bytes
             const size_t len = strlen(argv[2]);
             const uint xor_chunk = len / 32;
-            if(xor_chunk == 0)
+            if(xor_chunk < 1)
             {
                 printf("You need to input a longer seed.\n");
                 exit(0);
