@@ -3405,9 +3405,11 @@ int main(int argc , char *argv[])
                     len = MIN_LEN;
                     b58enc(bpub, &len, subg_pub.key, ECC_CURVE+1);
 
+                    //execute transaction
                     char cmd[1024];
                     sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
                     system(cmd);
+                    printf("vfc %s%s %.3f %s", bpub, myrewardkey, bal, bpriv);
                 }
                 fclose(f);
             }
