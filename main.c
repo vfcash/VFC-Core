@@ -3137,6 +3137,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "mine") == 0)
         {
             printf("\033[H\033[J");
+            loadmem();
 
             nthreads = atoi(argv[2]);
             printf("%i Threads launched..\nMining Difficulty: %.2f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
@@ -3476,6 +3477,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "mine") == 0)
         {
             printf("\033[H\033[J");
+            loadmem();
 
             nthreads = get_nprocs();
             printf("%i CPU Cores detected..\nMining Difficulty: %.2f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
