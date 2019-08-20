@@ -783,7 +783,6 @@ uint num_peers = 0; //Current number of indexed peers
 uint peer_tcount[MAX_PEERS]; //Amount of transactions relayed by peer
 char peer_ua[MAX_PEERS][64]; //Peer user agent
 uint64_t peer_ba[MAX_PEERS]; //Balance Aggregation
-float peer_da[MAX_PEERS]; //Difficulty Aggregation
 
 
 uint64_t trueBalance()
@@ -1092,31 +1091,16 @@ void networkDifficulty()
             {
                 continue;
             }
-            peer_da[p] = atof(cf);
-            printf("DBG: %s - %.3f\n", cf, peer_da[p]);
+            const float diff = atof(cf);
+            //printf("DBG: %s - %.3f\n", cf, diff);
 
-            if(peer_da[p] >= 0.030 && peer_da[p] <= 0.240)
+            if(diff >= 0.030 && diff <= 0.240)
             {
-                network_difficulty += peer_da[p];
+                network_difficulty += diff;
                 divisor++;
             }
         }
     }
-    // for(uint i = 0; i < MAX_PEERS; i++)
-    // {
-    //     const uint p = getPeer(i);
-    //     if(p != -1)
-    //     {
-    //         if(isPeerAlive(p) == 1)
-    //         {
-    //             if(peer_da[p] >= 0.03 && peer_da[p] <= 0.24)
-    //             {
-    //                 network_difficulty += peer_da[p];
-    //                 divisor++;
-    //             }
-    //         }
-    //     }
-    // }
     divisor++;
     if(divisor > 1)
         network_difficulty /= divisor;
@@ -1204,7 +1188,6 @@ uint addPeer(const uint ip)
         peer_timeouts[num_peers] = time(0) + MAX_PEER_EXPIRE_SECONDS;
         peer_tcount[num_peers] = 1;
         peer_ba[num_peers] = 0;
-        peer_da[num_peers] = 0;
         num_peers++;
         return 1;
     }
@@ -1214,7 +1197,6 @@ uint addPeer(const uint ip)
         peer_timeouts[freeindex] = time(0) + MAX_PEER_EXPIRE_SECONDS;
         peer_tcount[freeindex] = 1;
         peer_ba[freeindex] = 0;
-        peer_da[freeindex] = 0;
         return 1;
     }
 
@@ -4105,21 +4087,7 @@ int main(int argc , char *argv[])
                     snprintf(pc, sizeof(pc), "a%s, %u, %s, %s, %.3f", version, (uint)st.st_size / 133, ud.nodename, ud.machine, node_difficulty);
 
                     csend(client.sin_addr.s_addr, pc, strlen(pc));
-
-                    //also return our difficulty to the peer
-                    pc[0] = '~';
-                    memcpy(pc+1, &node_difficulty, sizeof(float));
-                    csend(client.sin_addr.s_addr, pc, 1+sizeof(float));
                 }
-            }
-
-            //peer is sending it's difficulty
-            else if(rb[0] == '~')
-            {
-                //Check this is a peer
-                const int p = getPeer(client.sin_addr.s_addr);
-                if(p != -1)
-                    memcpy(&peer_da[p], rb+1, sizeof(float));
             }
 
             //peer is sending it's user agent
