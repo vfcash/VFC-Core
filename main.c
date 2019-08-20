@@ -1079,18 +1079,26 @@ void networkDifficulty()
             memset(cf, 0, sizeof(cf));
             const uint ual = strlen(peer_ua[p]);
 
-            if(peer_ua[p][ual-5] == '0' && peer_ua[p][ual-4] == '.')
+            if(ual > 6)
             {
-                cf[0] = peer_ua[p][ual-5];
-                cf[1] = peer_ua[p][ual-4];
-                cf[2] = peer_ua[p][ual-3];
-                cf[3] = peer_ua[p][ual-2];
-                cf[4] = peer_ua[p][ual-1];
+                if(peer_ua[p][ual-5] == '0' && peer_ua[p][ual-4] == '.')
+                {
+                    cf[0] = peer_ua[p][ual-5];
+                    cf[1] = peer_ua[p][ual-4];
+                    cf[2] = peer_ua[p][ual-3];
+                    cf[3] = peer_ua[p][ual-2];
+                    cf[4] = peer_ua[p][ual-1];
+                }
+                else
+                {
+                    continue;
+                }
             }
             else
             {
                 continue;
             }
+            
             const float diff = atof(cf);
             //printf("DBG: %s - %.3f\n", cf, diff);
 
