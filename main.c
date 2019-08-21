@@ -3202,7 +3202,7 @@ int main(int argc , char *argv[])
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
 
             nthreads = atoi(argv[2]);
-            printf("%i Threads launched..\nMining Difficulty: 0.24\nNetwork Difficulty: %.2f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
+            printf("%i Threads launched..\nMining Difficulty: 0.24\nNetwork Difficulty: %.3f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
 
             //Launch mining threads
             for(int i = 0; i < nthreads; i++)
@@ -3554,7 +3554,7 @@ int main(int argc , char *argv[])
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
 
             nthreads = get_nprocs();
-            printf("%i CPU Cores detected..\nMining Difficulty: 0.24\nNetwork Difficulty: %.2f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
+            printf("%i CPU Cores detected..\nMining Difficulty: 0.24\nNetwork Difficulty: %.3f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
             
 
             //Launch mining threads
