@@ -3363,7 +3363,6 @@ int main(int argc , char *argv[])
             printf("To get an address balance use:\n ./vfc <address public key>\n\n");
             printf("To check sent transactions from an address use:\n ./vfc out <address public key>\n\n");
             printf("To check received transactions from an address use:\n ./vfc in <address public key>\n\n");
-            printf("Find a transaction by it's UID:\n ./vfc findtrans <transaction-uid>\n\n");
             printf("To make a transaction use:\n ./vfc <sender public key> <reciever public key> <amount> <sender private key>\n\n");
             printf("To make a transaction from your rewards address use:\n ./vfc qsend <amount> <receiver address>\n\n");
             printf("To manually trigger blockchain resync use:\n ./vfc resync\n\n");
@@ -3376,6 +3375,7 @@ int main(int argc , char *argv[])
             printf("List all locally indexed peers and info:\n ./vfc peers\n\n");
             printf("Dump all transactions in the blockchain:\n ./vfc dump\n\n");
             printf("Print some transactions[start,end] in the blockchain:\n ./vfc printtrans 1000 1010\n\n");
+            printf("Find a transaction by it's UID:\n ./vfc findtrans <transaction-uid>\n\n");
             printf("Dump all double spend transactions detected from other peers:\n ./vfc dumpbad\n\n");
             printf("Clear all double spend transactions detected from other peers:\n ./vfc clearbad\n\n");
             printf("Returns your Public Key stored in ~/.vfc/public.key for reward collections:\n ./vfc reward\n\n");
