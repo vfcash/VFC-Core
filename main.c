@@ -2002,6 +2002,54 @@ void printOuts(addr* a)
     }
 }
 
+//find a specific transaction by UID
+void findTrans(const uint64_t uid)
+{
+    FILE* f = fopen(CHAIN_FILE, "r");
+    if(f)
+    {
+        fseek(f, 0, SEEK_END);
+        const size_t len = ftell(f);
+
+        struct trans t;
+        for(size_t i = 0; i < len; i += sizeof(struct trans))
+        {
+            fseek(f, i, SEEK_SET);
+
+            uint fc = 0;
+            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
+            {
+                fclose(f);
+                f = fopen(CHAIN_FILE, "r");
+                fc++;
+                if(fc > 333)
+                {
+                    printf("ERROR: fread() in printOuts() has failed.\n");
+                    fclose(f);
+                    return;
+                }
+                if(f == NULL)
+                    continue;
+            }
+
+            if(memcmp(&t.uid, &uid, sizeof(uint64_t)) == 0)
+            {
+                char pub[MIN_LEN];
+                memset(pub, 0, sizeof(pub));
+                size_t len = MIN_LEN;
+                b58enc(pub, &len, t.to.key, ECC_CURVE+1);
+                setlocale(LC_NUMERIC, "");
+                printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
+                return;
+            }
+            
+        }
+
+        fclose(f);
+    }
+    printf("Transaction could not be found.\n");
+}
+
 //get balance
 uint64_t getBalanceLocal(addr* from)
 {
@@ -3255,6 +3303,12 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
+        if(strcmp(argv[1], "findtrans") == 0)
+        {
+            findTrans(atoll(argv[2]));
+            exit(0);
+        }
+
         if(strcmp(argv[1], "addpeer") == 0)
         {
             loadmem();
@@ -3309,6 +3363,7 @@ int main(int argc , char *argv[])
             printf("To get an address balance use:\n ./vfc <address public key>\n\n");
             printf("To check sent transactions from an address use:\n ./vfc out <address public key>\n\n");
             printf("To check received transactions from an address use:\n ./vfc in <address public key>\n\n");
+            printf("Find a transaction by it's UID:\n ./vfc findtrans <transaction-uid>\n\n");
             printf("To make a transaction use:\n ./vfc <sender public key> <reciever public key> <amount> <sender private key>\n\n");
             printf("To make a transaction from your rewards address use:\n ./vfc qsend <amount> <receiver address>\n\n");
             printf("To manually trigger blockchain resync use:\n ./vfc resync\n\n");
@@ -3333,9 +3388,10 @@ int main(int argc , char *argv[])
             printf("Check's if supplied address is subG, if so returns value of subG address:\n ./vfc issub <public key>\n\n");
             printf("Lists all unclaimed addresses and their balances from your minted.priv:\n ./vfc unclaimed\n\n");
             printf("Claims the contents of minted.priv to your rewards address:\n ./vfc claim\n\n");
-            printf("Does it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\n ./vfc scan\n\n");
             printf("Scan blocks.dat for invalid transactions and truncate at first invalid transaction:\n ./vfc trunc <offset x transactions>\n\n");
             printf("Scan blocks.dat for invalid transactions and generated a cleaned version in the same directory called cblocks.dat:\n ./vfc clean\n\n");
+
+            printf("Does it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\n ./vfc scan\n\n");
             
             printf("To get started running a dedicated node, execute ./vfc on a seperate screen.\n\n");
             exit(0);
