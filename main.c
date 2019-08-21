@@ -3319,7 +3319,7 @@ int main(int argc , char *argv[])
 
         if(strcmp(argv[1], "findtrans") == 0)
         {
-            findTrans(atoll(argv[2]));
+            findTrans(strtoull(argv[2], NULL, 10));
             exit(0);
         }
 
