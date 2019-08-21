@@ -546,14 +546,11 @@ inline static double gNa(const vec3* a, const vec3* b)
 }
 
 inline static double getMiningDifficulty()
-{
-    // const time_t lt = time(0);
-    // const struct tm* tmi = gmtime(&lt);
-    // return (double)(tmi->tm_hour+1) * 0.01; 
+{ 
     return network_difficulty;
 }
 
-inline static uint64_t diff2val(const double ra)
+inline static uint64_t avg_diff2val(const double ra)
 {
     return (uint64_t)floor(( 1000 + ( 10000*(1-(ra*4.166666667)) ) )+0.5);
 }
@@ -659,13 +656,14 @@ double isSubDiff(uint8_t *a)
     const double a3 = gNa(&v[2], &v[1]);
     const double a4 = gNa(&v[1], &v[4]);
 
-    //printf("%.3f - %.3f - %.3f - %.3f\n", a1,a2,a3,a4);
-    const double at = (a1+a2+a3+a4);
-    //printf("%.3f - %.3f\n", at, at/4);
-    if(at <= 0)
-        return 0;
-    return at/4;
-
+    double diff = a1;
+    if(a2 > diff)
+        diff = a2;
+    if(a3 > diff)
+        diff = a3;
+    if(a4 > diff)
+        diff = a4;
+    return diff;
 }
 
 //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
@@ -3353,7 +3351,7 @@ int main(int argc , char *argv[])
             const double diff = isSubDiff(p_publicKey);
 
             if(diff < 0.24)
-                printf("subG: %s (%.3f DIFF) (%.3f VFC)\n\n", argv[2], diff, toDB(diff2val(diff)));
+                printf("subG: %s (%.3f DIFF) (%.3f VFC)\n\n", argv[2], diff, toDB(isSubGenesisAddress(p_publicKey, 1)));
             else
                 printf("This is not a subGenesis (subG) Address.\n");
             
