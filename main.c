@@ -625,6 +625,49 @@ uint64_t isSubGenesisAddressMine(uint8_t *a)
 
 }
 
+double isSubDiff(uint8_t *a)
+{
+    vec3 v[5]; //Vectors
+
+    uint8_t *ofs = a;
+    memcpy(&v[0].x, ofs, sizeof(uint16_t));
+    memcpy(&v[0].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[0].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[1].x, ofs, sizeof(uint16_t));
+    memcpy(&v[1].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[1].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[2].x, ofs, sizeof(uint16_t));
+    memcpy(&v[2].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[2].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[3].x, ofs, sizeof(uint16_t));
+    memcpy(&v[3].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[3].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    ofs = ofs + (sizeof(uint16_t)*3);
+    memcpy(&v[4].x, ofs, sizeof(uint16_t));
+    memcpy(&v[4].y, ofs + sizeof(uint16_t), sizeof(uint16_t));
+    memcpy(&v[4].z, ofs + (sizeof(uint16_t)*2), sizeof(uint16_t));
+
+    const double a1 = gNa(&v[0], &v[3]);
+    const double a2 = gNa(&v[3], &v[2]);
+    const double a3 = gNa(&v[2], &v[1]);
+    const double a4 = gNa(&v[1], &v[4]);
+
+    //printf("%.3f - %.3f - %.3f - %.3f\n", a1,a2,a3,a4);
+    const double at = (a1+a2+a3+a4);
+    //printf("%.3f - %.3f\n", at, at/4);
+    if(at <= 0)
+        return 0;
+    return at/4;
+
+}
+
 //This is the algorthm to check if a genesis address is a valid "SubGenesis" address
 uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
 {
@@ -3303,14 +3346,14 @@ int main(int argc , char *argv[])
         {
             //Get Public Key
             uint8_t p_publicKey[ECC_BYTES+1];
-            size_t len = ECC_CURVE;
+            size_t len = ECC_CURVE+1;
             b58tobin(p_publicKey, &len, argv[2], strlen(argv[2]));
 
             //Dump Public Key as Base58
-            const uint64_t v = isSubGenesisAddress(p_publicKey, 1);
-            const double diff = 0.24 - ( (v - 1) * 0.024 );
-            if(v > 0)
-                printf("\nsubG:  %lu (%.3f)\n\n", v, diff);
+            const double diff = isSubDiff(p_publicKey);
+
+            if(diff < 0.24)
+                printf("subG: %s (%.3f DIFF) (%.3f VFC)\n\n", argv[2], diff, toDB(diff2val(diff)));
             else
                 printf("This is not a subGenesis (subG) Address.\n");
             
