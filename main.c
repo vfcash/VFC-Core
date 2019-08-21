@@ -1895,7 +1895,8 @@ void printtrans(uint fromR, uint toR)
 
             setlocale(LC_NUMERIC, "");
             //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
-            printf("%lu,%s,%s,%s,%.3f\n", t.uid, from, to, sig, toDB(t.amount));
+            //printf("%lu,%s,%s,%s,%.3f\n", t.uid, from, to, sig, toDB(t.amount));
+            printf("%d,%lu,%s,%s,%s,%.3f\n",(int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
 
             if(i >= toR * sizeof(struct trans))
             {
@@ -2051,7 +2052,7 @@ void findTrans(const uint64_t uid)
 
                 setlocale(LC_NUMERIC, "");
                 //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
-                printf("%lu,%s,%s,%s,%.3f\n", t.uid, from, to, sig, toDB(t.amount));
+                printf("%d,%lu,%s,%s,%s,%.3f\n",(int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
 
                 return;
             }
