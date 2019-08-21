@@ -3962,7 +3962,7 @@ int main(int argc , char *argv[])
         b58enc(howner, &zlen, t.owner.key, ECC_CURVE);
 
         printf("\nPacket Size: %lu. %'.3f VFC. Sending Transaction...\n", len, (double)t.amount / 1000);
-        printf("%s > %s : %u : %s\n", argv[1], argv[2], t.amount, howner);
+        printf("%lu: %s > %s : %u : %s\n", t.uid, argv[1], argv[2], t.amount, howner);
         printf("Transaction Sent.\n\n");
 
     //Get balance again..
