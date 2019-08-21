@@ -1895,7 +1895,7 @@ void printtrans(uint fromR, uint toR)
 
             setlocale(LC_NUMERIC, "");
             //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
-            printf("%d,%lu,%s,%s,%s,%.3f\n",(int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
+            printf("%lu,%s,%s,%s,%.3f\n", t.uid, from, to, sig, toDB(t.amount));
 
             if(i >= toR * sizeof(struct trans))
             {
@@ -2034,12 +2034,25 @@ void findTrans(const uint64_t uid)
 
             if(t.uid == uid)
             {
-                char pub[MIN_LEN];
-                memset(pub, 0, sizeof(pub));
+                char from[MIN_LEN];
+                memset(from, 0, sizeof(from));
                 size_t len = MIN_LEN;
-                b58enc(pub, &len, t.to.key, ECC_CURVE+1);
+                b58enc(from, &len, t.from.key, ECC_CURVE+1);
+
+                char to[MIN_LEN];
+                memset(to, 0, sizeof(from));
+                size_t len2 = MIN_LEN;
+                b58enc(to, &len2, t.to.key, ECC_CURVE+1);
+
+                char sig[MIN_LEN];
+                memset(sig, 0, sizeof(sig));
+                size_t len3 = MIN_LEN;
+                b58enc(sig, &len3, t.owner.key, ECC_CURVE*2);
+
                 setlocale(LC_NUMERIC, "");
-                printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
+                //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
+                printf("%lu,%s,%s,%s,%.3f\n", t.uid, from, to, sig, toDB(t.amount));
+
                 return;
             }
             
