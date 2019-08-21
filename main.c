@@ -656,6 +656,7 @@ double isSubDiff(uint8_t *a)
     const double a3 = gNa(&v[2], &v[1]);
     const double a4 = gNa(&v[1], &v[4]);
 
+    //printf("%.3f - %.3f - %.3f - %.3f\n", a1,a2,a3,a4);
     double diff = a1;
     if(a2 > diff)
         diff = a2;
@@ -723,6 +724,9 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
     const double min = fr == 0 ? getMiningDifficulty() : 0.24;
     //const double min = 0.24;
     //const double min = getMiningDifficulty();
+
+
+    //printf("%.3f - %.3f - %.3f - %.3f > %.3f\n", a1,a2,a3,a4,min);
     
     //Was it a straight hit?
     if(a1 < min && a2 < min && a3 < min && a4 < min)
@@ -3119,6 +3123,9 @@ int main(int argc , char *argv[])
     mkdir(".vfc", 0700);
 #endif
 
+    //Load difficulty
+    forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
+
     //Create rewards address if it doesnt exist
     if(access(".vfc/public.key", F_OK) == -1)
     {
@@ -3221,7 +3228,7 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
- 	if(strstr(argv[1], "printtrans") != NULL)
+ 	    if(strstr(argv[1], "printtrans") != NULL)
         {
             uint from;
             sscanf(argv[2], "%I32u", &from);
@@ -3342,6 +3349,9 @@ int main(int argc , char *argv[])
 
         if(strcmp(argv[1], "issub") == 0)
         {
+            //Load difficulty
+            forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
+
             //Get Public Key
             uint8_t p_publicKey[ECC_BYTES+1];
             size_t len = ECC_CURVE+1;
