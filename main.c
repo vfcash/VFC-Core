@@ -2032,7 +2032,7 @@ void findTrans(const uint64_t uid)
                     continue;
             }
 
-            if(memcmp(&t.uid, &uid, sizeof(uint64_t)) == 0)
+            if(t.uid == uid)
             {
                 char pub[MIN_LEN];
                 memset(pub, 0, sizeof(pub));
