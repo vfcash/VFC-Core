@@ -108,7 +108,7 @@ const char master_ip[] = "198.204.248.26";
 #define PING_INTERVAL 540               // How often to ping the peers and see if they are still alive
 #define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this.
-#define MAX_RALLOW 256                  // Maximum amount of peers to sync of at any one time
+#define MAX_RALLOW 256                  // Maximum amount of peers allowed to sync from at any one time
 
 //Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
@@ -687,9 +687,6 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
 
     //All normal angles a1-a4 must be under this value
     const double min = fr == 0 ? getMiningDifficulty() : 0.24;
-    //const double min = 0.24;
-    //const double min = getMiningDifficulty();
-
 
     //printf("%.3f - %.3f - %.3f - %.3f > %.3f\n", a1,a2,a3,a4,min);
     
@@ -1203,6 +1200,7 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
                         fclose(f);
                     }
                     tq[i].amount = 0; //It looks like it could be a double spend, terminate the original transaction
+                    add_uid(t->uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
                     return 1; //Don't process this one either and tell our peers about this dodgy action so that they terminate also.
                 }
             }
@@ -2351,10 +2349,8 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
         return hbr; //it's an error code
     }
 
-
     //This check after the balance check as we need to verify transactions to self have the balance before confirming 'valid transaction'
-    //which will cause the peers to index them, we don't want botnets loading into VFC. and making sure they have control of balance is
-    //the best way to reduce this impact.
+    //you still need balance to make a transaction to self
     if(memcmp(from->key, to->key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
     {
 
@@ -2849,7 +2845,6 @@ void *miningThread(void *arg)
 
     }
 }
-
 
 
 
