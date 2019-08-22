@@ -1180,9 +1180,8 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
         return 0; //Don't tell the other peers, pointless transaction
 
     //Do a quick unique check [realtime uid cache]
-    // if(has_uid(t->uid) == 1)
-    //     return 0;
-    // add_uid(t->uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
+    if(has_uid(t->uid) == 1)
+        return 0;
 
     //Check if duplicate transaction
     int freeindex = -1;
@@ -1232,6 +1231,7 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
     // }
 
     //Success
+    add_uid(t->uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
     return 1;
 }
 
@@ -2312,10 +2312,10 @@ uint rExi(uint64_t uid)
 //Execute Transaction
 int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* owner)
 {
-    //Do a quick unique check [realtime uid cache]
-    if(has_uid(uid) == 1)
-        return 0;
-    add_uid(uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
+    // //Do a quick unique check [realtime uid cache]
+    // if(has_uid(uid) == 1)
+    //     return 0;
+    // add_uid(uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
 
     //Create trans struct
     struct trans t;
