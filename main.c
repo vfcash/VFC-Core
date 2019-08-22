@@ -3216,6 +3216,27 @@ int main(int argc , char *argv[])
     mid[6] = qRand(0, 255);
     mid[7] = qRand(0, 255);
 
+     if(argc == 6)
+    {
+        //Gen new address
+        if(strcmp(argv[1], "new") == 0)
+        {
+            uint64_t l_private[4];
+
+            sscanf(argv[2], "%lu", &l_private[0]);
+            sscanf(argv[3], "%lu", &l_private[1]);
+            sscanf(argv[4], "%lu", &l_private[2]);
+            sscanf(argv[5], "%lu", &l_private[3]);
+
+            addr pub, priv;
+
+            //Make key pair
+            makAddrSeed(&pub, &priv, l_private);
+
+            exit(0);
+        }
+    }
+
     //quick send
     if(argc == 4)
     {
@@ -3435,6 +3456,7 @@ int main(int argc , char *argv[])
             printf("To manually trigger blockchain sync use:\n ./vfc sync\n\n");
             printf("CPU mining of VFC:\n ./vfc mine <optional-num-threads>\n\n");
             printf("To create a new Address, Public / Private Key-Pair:\n ./vfc new <optional-seed>\n\n");
+            printf("To create a new Address by four random seed(uint64), Public / Private Key-Pair:\n ./vfc new <seed1> <seed2> <seed3> <seed4>\n\n");
             printf("Get Public Key from Private Key:\n ./vfc getpub <private key>\n\n");
             printf("To manually add a peer use:\n ./vfc addpeer <peer ip-address>\n\n");
             printf("List all locally indexed peers and info:\n ./vfc peers\n\n");
