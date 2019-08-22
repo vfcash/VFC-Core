@@ -89,7 +89,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.54";
+const char version[]="0.55";
 const uint16_t gport = 8787;
 const char master_ip[] = "198.204.248.26";
 
@@ -134,18 +134,65 @@ float network_difficulty = 0;        //Assumed actual network difficulty
 ulong err = 0;                       //Global error count
 uint replay_allow[6] = {0,0,0,0,0,0};//IP address of peer allowed to send replay blocks
 uint replay_height = 0;              //Block Height of current peer authorized to receive a replay from
-uint64_t balance_accumulator = 0;    //For accumulating the highest network balance of a requested address
-uint nthreads = 0;                   //number of mining threads
 char myrewardkey[MIN_LEN];           //client reward addr public key
 char myrewardkeyp[MIN_LEN];          //client reward addr private key
 uint8_t genesis_pub[ECC_CURVE+1];    //genesis address public key
 uint thread_ip[MAX_THREADS_BUFF];    //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
+uint nthreads = 0;                   //number of mining threads
 uint threads = 0;                    //number of replay threads
 uint MAX_THREADS = 6;                //maximum number of replay threads
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
 uint is8664 = 1;
+
+///////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////
+/////////////////////////////
+///////////////
+////////
+///
+//
+//
+//
+/* ~ Structures
+
+    sig - signature store
+    addr - public/private addr store
+    trans - transaction data structure
+
+*/
+
+struct addr
+{
+    uint8_t key[ECC_CURVE+1];
+};
+typedef struct addr addr;
+
+struct sig
+{
+    uint8_t key[ECC_CURVE*2];
+};
+typedef struct sig sig;
+
+struct trans
+{
+    uint64_t uid;
+    addr from;
+    addr to;
+    mval amount;
+    sig owner;
+};
+
+void makHash(uint8_t *hash, const struct trans* t)
+{
+    sha3_context c;
+    sha3_Init256(&c);
+    sha3_Update(&c, t, sizeof(struct trans));
+    sha3_Finalize(&c);
+    memcpy(hash, &c.sb, ECC_CURVE);
+}
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
@@ -318,92 +365,9 @@ int isPrivateAddress(const uint32_t iip)
 
 uint getReplayRate()
 {
-    // This changes the delay in microseconds between each transaction sent during a block replay to a peer
-    // for example; 10,000 = 1,000 transactions a second, each transaction is 147 bytes, that a total of 1000*147 = 147,000 bytes a second (147kb a sec) per peer.
-    const time_t lt = time(0);
-    const struct tm* tmi = localtime(&lt);
-    
-
-    if(tmi->tm_hour == 0)        return 1000;
-    else if(tmi->tm_hour == 1)   return 1000;
-    else if(tmi->tm_hour == 2)   return 1000;
-    else if(tmi->tm_hour == 3)   return 1000;
-    else if(tmi->tm_hour == 4)   return 1000;
-    else if(tmi->tm_hour == 5)   return 1000;
-    else if(tmi->tm_hour == 6)   return 1000;
-    else if(tmi->tm_hour == 7)   return 1000;
-    else if(tmi->tm_hour == 8)   return 1000;
-    else if(tmi->tm_hour == 9)   return 1000;
-    else if(tmi->tm_hour == 10)  return 3000;
-    else if(tmi->tm_hour == 11)  return 3000;
-    else if(tmi->tm_hour == 12)  return 6000;
-    else if(tmi->tm_hour == 13)  return 9000;
-    else if(tmi->tm_hour == 14)  return 9000;
-    else if(tmi->tm_hour == 15)  return 9000;
-    else if(tmi->tm_hour == 16)  return 9000;
-    else if(tmi->tm_hour == 17)  return 6000;
-    else if(tmi->tm_hour == 18)  return 6000;
-    else if(tmi->tm_hour == 19)  return 6000;
-    else if(tmi->tm_hour == 20)  return 6000;
-    else if(tmi->tm_hour == 21)  return 3000;
-    else if(tmi->tm_hour == 22)  return 1000;
-    else if(tmi->tm_hour == 23)  return 1000;
-    else if(tmi->tm_hour == 24)  return 1000;
-
-
-    // if(tmi->tm_hour == 0)        return 10000;
-    // else if(tmi->tm_hour == 1)   return 10000;
-    // else if(tmi->tm_hour == 2)   return 10000;
-    // else if(tmi->tm_hour == 3)   return 10000;
-    // else if(tmi->tm_hour == 4)   return 10000;
-    // else if(tmi->tm_hour == 5)   return 10000;
-    // else if(tmi->tm_hour == 6)   return 10000;
-    // else if(tmi->tm_hour == 7)   return 10000;
-    // else if(tmi->tm_hour == 8)   return 10000;
-    // else if(tmi->tm_hour == 9)   return 10000;
-    // else if(tmi->tm_hour == 10)  return 30000;
-    // else if(tmi->tm_hour == 11)  return 30000;
-    // else if(tmi->tm_hour == 12)  return 30000;
-    // else if(tmi->tm_hour == 13)  return 40000;
-    // else if(tmi->tm_hour == 14)  return 40000;
-    // else if(tmi->tm_hour == 15)  return 40000;
-    // else if(tmi->tm_hour == 16)  return 40000;
-    // else if(tmi->tm_hour == 17)  return 30000;
-    // else if(tmi->tm_hour == 18)  return 30000;
-    // else if(tmi->tm_hour == 19)  return 30000;
-    // else if(tmi->tm_hour == 20)  return 30000;
-    // else if(tmi->tm_hour == 21)  return 20000;
-    // else if(tmi->tm_hour == 22)  return 10000;
-    // else if(tmi->tm_hour == 23)  return 10000;
-    // else if(tmi->tm_hour == 24)  return 10000;
-
-    // if(tmi->tm_hour == 0)        return 40000;
-    // else if(tmi->tm_hour == 1)   return 40000;
-    // else if(tmi->tm_hour == 2)   return 40000;
-    // else if(tmi->tm_hour == 3)   return 10000;
-    // else if(tmi->tm_hour == 4)   return 10000;
-    // else if(tmi->tm_hour == 5)   return 10000;
-    // else if(tmi->tm_hour == 6)   return 10000;
-    // else if(tmi->tm_hour == 7)   return 40000;
-    // else if(tmi->tm_hour == 8)   return 40000;
-    // else if(tmi->tm_hour == 9)   return 40000;
-    // else if(tmi->tm_hour == 10)  return 60000;
-    // else if(tmi->tm_hour == 11)  return 120000;
-    // else if(tmi->tm_hour == 12)  return 120000;
-    // else if(tmi->tm_hour == 13)  return 120000;
-    // else if(tmi->tm_hour == 14)  return 120000;
-    // else if(tmi->tm_hour == 15)  return 120000;
-    // else if(tmi->tm_hour == 16)  return 120000;
-    // else if(tmi->tm_hour == 17)  return 120000;
-    // else if(tmi->tm_hour == 18)  return 120000;
-    // else if(tmi->tm_hour == 19)  return 120000;
-    // else if(tmi->tm_hour == 20)  return 120000;
-    // else if(tmi->tm_hour == 21)  return 60000;
-    // else if(tmi->tm_hour == 22)  return 40000;
-    // else if(tmi->tm_hour == 23)  return 40000;
-    // else if(tmi->tm_hour == 24)  return 40000;
-    
-    return 120000;
+    // 1,000,000 microseconds = 1 second
+    // every 1,000 microseconds 1 packet is sent = 1,000 packets per second.
+    return 10000;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -678,7 +642,7 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
         stat(CHAIN_FILE, &st);
         uint64_t ift = 0;
         if(st.st_size > 0)
-            ift = (uint64_t)st.st_size / 133;
+            ift = (uint64_t)st.st_size / sizeof(struct trans);
         else
             return 0;
         
@@ -746,55 +710,6 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
 
 }
 
-
-///////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////
-//////////////////////////////////////////////
-/////////////////////////////
-///////////////
-////////
-///
-//
-//
-//
-/* ~ Structures
-
-    sig - signature store
-    addr - public/private addr store
-    trans - transaction data structure
-
-*/
-
-struct addr
-{
-    uint8_t key[ECC_CURVE+1];
-};
-typedef struct addr addr;
-
-struct sig
-{
-    uint8_t key[ECC_CURVE*2];
-};
-typedef struct sig sig;
-
-struct trans
-{
-    uint64_t uid;
-    addr from;
-    addr to;
-    mval amount;
-    sig owner;
-};
-
-void makHash(uint8_t *hash, const struct trans* t)
-{
-    sha3_context c;
-    sha3_Init256(&c);
-    sha3_Update(&c, t, sizeof(struct trans));
-    sha3_Finalize(&c);
-    memcpy(hash, &c.sb, ECC_CURVE);
-}
-
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
 //////////////////////////////////////////////
@@ -827,50 +742,6 @@ time_t peer_timeouts[MAX_PEERS]; //Peer timeout UNIX epoch stamps
 uint num_peers = 0; //Current number of indexed peers
 uint peer_tcount[MAX_PEERS]; //Amount of transactions relayed by peer
 char peer_ua[MAX_PEERS][64]; //Peer user agent
-uint64_t peer_ba[MAX_PEERS]; //Balance Aggregation
-
-
-uint64_t trueBalance()
-{
-    uint64_t v[num_peers];
-    uint c[num_peers];
-    uint vm = 0;
-    for(uint i = 0; i < num_peers; i++)
-        c[i] = 0;
-    for(uint i = 0; i < num_peers; i++)
-    {
-        if(peer_ba[i] == 0)
-            continue;
-        uint t = 0;
-        for(uint i2 = 0; i2 < vm; i2++)
-        {
-            if(v[i2] == peer_ba[i])
-            {
-                c[i2]++;
-                t = 1;
-                break;
-            }
-        }
-        if(t == 0)
-        {
-            v[vm] = peer_ba[i];
-            c[vm]++;
-            vm++;
-        }
-    }
-
-    uint hc = 0;
-    uint64_t hv = 0;
-    for(uint i = 0; i < vm; i++)
-    {
-        if(c[i] > hc)
-        {
-            hc = c[i];
-            hv = v[i];
-        }
-    }
-    return hv;
-}
 
 uint countPeers()
 {
@@ -1112,6 +983,12 @@ int getPeer(const uint ip)
     return -1;
 }
 
+size_t getPeerHeigh(const uint id)
+{
+    const char* str = strtok(peer_ua[id], ",");
+    return strtoul(str, NULL, 10);
+}
+
 void networkDifficulty()
 {
     network_difficulty = 0; //reset
@@ -1240,7 +1117,6 @@ uint addPeer(const uint ip)
         peers[num_peers] = ip;
         peer_timeouts[num_peers] = time(0) + MAX_PEER_EXPIRE_SECONDS;
         peer_tcount[num_peers] = 1;
-        peer_ba[num_peers] = 0;
         num_peers++;
         return 1;
     }
@@ -1249,7 +1125,6 @@ uint addPeer(const uint ip)
         peers[freeindex] = ip;
         peer_timeouts[freeindex] = time(0) + MAX_PEER_EXPIRE_SECONDS;
         peer_tcount[freeindex] = 1;
-        peer_ba[freeindex] = 0;
         return 1;
     }
 
@@ -1299,6 +1174,11 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
     //If amount is 0
     if(t->amount == 0)
         return 0; //Don't tell the other peers, pointless transaction
+
+    //Do a quick unique check [realtime uid cache]
+    if(has_uid(t->uid) == 1)
+        return 0;
+    add_uid(t->uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
 
     //Check if duplicate transaction
     int freeindex = -1;
@@ -1441,7 +1321,7 @@ uint64_t getCirculatingSupply()
     stat(CHAIN_FILE, &st);
     uint64_t ift = 0;
     if(st.st_size > 0)
-        ift = (uint64_t)st.st_size / 133;
+        ift = (uint64_t)st.st_size / sizeof(struct trans);
     ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
 
     uint64_t rv = (ift / 100) * 20; // 20% of the ift tax
@@ -1527,7 +1407,7 @@ void setRP(const uint32_t ip)
 }
 
 //Replay blocks to x address
-void replayBlocks(const uint ip)
+void replayHead(const uint ip, const size_t len)
 {
     struct in_addr ip_addr;
     ip_addr.s_addr = ip;
@@ -1545,7 +1425,7 @@ void replayBlocks(const uint ip)
         const uint height = st.st_size;
         memcpy(ofs, &height, sizeof(uint));
         csend(ip, pc, 1+sizeof(uint));
-        printf("Replaying: %.1f kb to %s\n", (double) ( (sizeof(struct trans)*REPLAY_SIZE) + (sizeof(struct trans)*3333)) / 1000, inet_ntoa(ip_addr));
+        printf("Replaying Head: %.1f kb to %s\n", (double) ( (sizeof(struct trans)*REPLAY_SIZE) + (sizeof(struct trans)*len)) / 1000, inet_ntoa(ip_addr));
     }
 
     //Replay blocks
@@ -1555,11 +1435,7 @@ void replayBlocks(const uint ip)
         fseek(f, 0, SEEK_END);
         const size_t len = ftell(f);
         
-        // *
-        //  Always send your most recent graph-ends first
-        // *
-
-        size_t end = len-(3333*sizeof(struct trans)); //top 3333 transactions
+        size_t end = len-(len*sizeof(struct trans)); //top len transactions
         struct trans t;
         for(size_t i = len-sizeof(struct trans); i > end; i -= sizeof(struct trans))
         {
@@ -1574,7 +1450,7 @@ void replayBlocks(const uint ip)
                 fc++;
                 if(fc > 333)
                 {
-                    printf("ERROR: fread() in replayBlocks() #1 has failed for peer %s\n", inet_ntoa(ip_addr));
+                    printf("ERROR: fread() in replayHead() #1 has failed for peer %s\n", inet_ntoa(ip_addr));
                     err++;
                     fclose(f);
                     return;
@@ -1600,24 +1476,50 @@ void replayBlocks(const uint ip)
             memcpy(ofs, t.owner.key, ECC_CURVE*2);
             csend(ip, pc, len);
 
-            //333 = 3k, 211 byte packets / 618kb a second
-            #if MASTER_NODE == 1
-                usleep(40000); //
-            #else
-                usleep(replay_rate); //
-            #endif
+            //Rate limit
+            usleep(replay_rate);
         }
 
-        // *
-        //  Now send a random block of transaction data of REPLAY_SIZE
-        // *
+        fclose(f);
+    }
+}
+
+//Replay blocks to x address
+void replayBlocks(const uint ip)
+{
+    struct in_addr ip_addr;
+    ip_addr.s_addr = ip;
+
+    const uint replay_rate = getReplayRate();
+
+    //Send block height
+    struct stat st;
+    stat(CHAIN_FILE, &st);
+    if(st.st_size > 0)
+    {
+        char pc[MIN_LEN];
+        pc[0] = 'h';
+        char* ofs = pc + 1;
+        const uint height = st.st_size;
+        memcpy(ofs, &height, sizeof(uint));
+        csend(ip, pc, 1+sizeof(uint));
+        printf("Replaying Blocks: %.1f kb to %s\n", (double) ( (sizeof(struct trans)*REPLAY_SIZE) + (sizeof(struct trans)*3333)) / 1000, inet_ntoa(ip_addr));
+    }
+
+    //Replay blocks
+    FILE* f = fopen(CHAIN_FILE, "r");
+    if(f)
+    {
+        fseek(f, 0, SEEK_END);
+        const size_t len = ftell(f);
 
         //Pick a random block of data from the chain of the specified REPLAY_SIZE
         const size_t rpbs = (sizeof(struct trans)*REPLAY_SIZE);
         const size_t lp = len / rpbs; //How many REPLAY_SIZE fit into the current blockchain length
         const size_t st = sizeof(struct trans) + (rpbs * qRand(1, lp-1)); //Start at one of these x offsets excluding the end of the last block (no more blocks after this point)
-        end = st+rpbs; //End after that offset + REPLAY_SIZE amount of transactions later
+        size_t end = st+rpbs; //End after that offset + REPLAY_SIZE amount of transactions later
 
+        struct trans t;
         for(size_t i = st; i < len && i < end; i += sizeof(struct trans))
         {
             fseek(f, i, SEEK_SET);
@@ -1655,13 +1557,8 @@ void replayBlocks(const uint ip)
             memcpy(ofs, t.owner.key, ECC_CURVE*2);
             csend(ip, pc, len);
 
-            //333 = 3k, 211 byte packets / 618kb a second
-            #if MASTER_NODE == 1
-                usleep(40000); //
-            #else
-                usleep(replay_rate); //
-            #endif
-            
+            // rate limit
+            usleep(replay_rate);
         }
 
         fclose(f);
@@ -1684,8 +1581,31 @@ void *replayBlocksThread(void *arg)
     chdir(getHome());
     nice(19); //Very low priority thread
 
-    //Replay the blocks
-    replayBlocks(ip);
+    //Get peer by ip
+    const uint peer = getPeer(ip);
+    if(peer != -1)
+    {
+        //Get peer height
+        const size_t peer_heigh = getPeerHeigh(peer);
+        
+        //Get my height
+        struct stat st;
+        stat(CHAIN_FILE, &st);
+        const size_t my_heigh = st.st_size > 0 ? st.st_size / sizeof(struct trans) : 0;
+
+        //if peer has a smaller block height
+        if(peer_heigh < my_heigh)
+        {
+            //10.277 seconds of data
+            replayHead(ip, 3333);
+            replayBlocks(ip);
+        }
+        else
+        {
+            //34.72 seconds of replay duration
+            replayHead(ip, REPLAY_SIZE*5);
+        }
+    }
 
     //End the thread
     pthread_mutex_lock(&mutex1);
@@ -2188,31 +2108,6 @@ uint64_t getBalanceLocal(addr* from)
 
     if(rv < 0)
         return 0;
-    return rv;
-}
-
-//get balance
-uint64_t getBalance(addr* from)
-{
-    //Reset our files & memory for last count
-    balance_accumulator = 0;
-    for(uint i = 0; i < MAX_PEERS; i++)
-        peer_ba[i] = 0;
-    forceWrite(".vfc/bal.mem", &balance_accumulator, sizeof(uint64_t));
-    forceWrite(".vfc/balt.mem", &balance_accumulator, sizeof(uint64_t));
-
-#if MASTER_NODE == 0
-    //Tell peers to fill our accumulator
-    char pc[ECC_CURVE+2];
-    pc[0] = '$';
-    char* ofs = pc+1;
-    memcpy(ofs, from->key, ECC_CURVE+1);
-    sendMaster(pc, ECC_CURVE+2);
-    peersBroadcast(pc, ECC_CURVE+2);
-#endif
-
-    //Get local Balance
-    const uint64_t rv = getBalanceLocal(from);
     return rv;
 }
 
@@ -3594,7 +3489,7 @@ int main(int argc , char *argv[])
             struct stat st;
             stat(CHAIN_FILE, &st);
             if(st.st_size > 0)
-                printf("%1.f kb / %u Transactions\n", (double)st.st_size / 1000, (uint)st.st_size / 144);
+                printf("%1.f kb / %lu Transactions\n", (double)st.st_size / 1000, st.st_size / sizeof(struct trans));
             exit(0);
         }
 
@@ -3772,28 +3667,11 @@ int main(int argc , char *argv[])
             addr rk;
             size_t len = ECC_CURVE+1;
             b58tobin(rk.key, &len, myrewardkey+1, strlen(myrewardkey)-1); //It's got a space in it (at the beginning) ;)
-            printf("Please Wait...\n");
-            
-            uint64_t bal = getBalance(&rk);
-            uint64_t baln = 0;
-            uint64_t balt = 0;
-#if MASTER_NODE == 0
-            sleep(3);
-#endif
-            forceRead(".vfc/bal.mem", &baln, sizeof(uint64_t));
-            forceRead(".vfc/balt.mem", &balt, sizeof(uint64_t));
 
-            uint64_t fbal = bal;
-            if(balt > fbal)
-                fbal = balt;
-
-#if MASTER_NODE == 1
-            fbal = bal;
-#endif
+            const uint64_t bal = getBalanceLocal(&rk);
 
             setlocale(LC_NUMERIC, "");
-            printf("(Local Balance / Mode Network Balance / Highest Network Balance)\n");
-            printf("Your reward address is:%s\n(%'.3f VFC / %'.3f VFC / %'.3f VFC)\n\nFinal Balance: %'.3f VFC\n\n", myrewardkey, toDB(bal), toDB(balt), toDB(baln), toDB(fbal));
+            printf("Your reward address is:%s\nFinal Balance: %'.3f VFC\n\n", myrewardkey, toDB(bal));
             exit(0);
         }
 
@@ -3815,7 +3693,7 @@ int main(int argc , char *argv[])
         {
             loadmem();
             printf("\nTip; If you are running a full-node then consider hosting a website on port 80 where you can declare a little about your operation and a VFC address people can use to donate to you on. Thus you should be able to visit any of these IP addresses in a web-browser and find out a little about each node or obtain a VFC Address to donate to the node operator on.\n\n");
-            printf("Total Peers: %u\x1B[33\n\n", num_peers);
+            printf("Total Peers: %u\n\n", num_peers);
             printf("IP Address / Number of Transactions Relayed / Seconds since last trans or ping / user-agent [version/blockheight/nodename/machine/difficulty] \n");
             uint ac = 0;
             for(uint i = 0; i < num_peers; ++i)
@@ -3865,12 +3743,6 @@ int main(int argc , char *argv[])
     //Does user just wish to get address balance?
     if(argc == 2)
     {
-        if(isNodeRunning() == 0)
-        {
-            printf("Please make sure you are running the full node and that you have synchronized to the latest blockchain before checking an address balance.\n\n");
-            exit(0);
-        }
-
         //Get balance
         addr from;
         size_t len = ECC_CURVE+1;
@@ -3880,32 +3752,16 @@ int main(int argc , char *argv[])
         //Local
         struct timespec s;
         clock_gettime(CLOCK_MONOTONIC, &s);
-        uint64_t bal = getBalance(&from);
+        uint64_t bal = getBalanceLocal(&from);
         struct timespec e;
         clock_gettime(CLOCK_MONOTONIC, &e);
         time_t td = (e.tv_nsec - s.tv_nsec);
         if(td > 0){td /= 1000000;}
         else if(td < 0){td = 0;}
-
-        //Network
-        uint64_t baln = 0, balt = 0;
-#if MASTER_NODE == 0
-        sleep(3);
-#endif
-        forceRead(".vfc/bal.mem", &baln, sizeof(uint64_t));
-        forceRead(".vfc/balt.mem", &balt, sizeof(uint64_t));
-
-        uint64_t fbal = bal;
-        if(balt > fbal)
-            fbal = balt;
-
-#if MASTER_NODE == 1
-        fbal = bal;
-#endif
         
+        //Result
         setlocale(LC_NUMERIC, "");
-        printf("(Local Balance / Mode Network Balance / Highest Network Balance)\n");
-        printf("The Balance for Address: %s\n(%'.3f VFC / %'.3f VFC / %'.3f VFC)\nTime Taken %li Milliseconds (%li ns).\n\nFinal Balance: %'.3f VFC\n\n", argv[1], toDB(bal), toDB(balt), toDB(baln), td, (e.tv_nsec - s.tv_nsec), toDB(fbal));
+        printf("The Balance for Address: %s\nTime Taken %li Milliseconds (%li ns).\n\nFinal Balance: %'.3f VFC\n\n", argv[1], td, (e.tv_nsec - s.tv_nsec), toDB(bal));
         exit(0);
     }
 
@@ -3914,12 +3770,6 @@ int main(int argc , char *argv[])
     {
     //Force console to clear.
     printf("\033[H\033[J");
-
-        // if(isNodeRunning() == 0)
-        // {
-        //     printf("Please make sure you are running the full node and that you have synchronized to the latest blockchain before making a transaction.\n\n");
-        //     exit(0);
-        // }
 
         //Recover data from parameters
         uint8_t from[ECC_CURVE+1];
@@ -4224,7 +4074,7 @@ int main(int argc , char *argv[])
                     uname(&ud);
 
                     char pc[MIN_LEN];
-                    snprintf(pc, sizeof(pc), "a%s, %u, %s, %s, %.3f", version, (uint)st.st_size / 133, ud.nodename, ud.machine, node_difficulty);
+                    snprintf(pc, sizeof(pc), "%lu, a%s, %s, %s, %.3f", st.st_size / sizeof(struct trans), version, ud.nodename, ud.machine, node_difficulty);
 
                     csend(client.sin_addr.s_addr, pc, strlen(pc));
                 }
@@ -4258,59 +4108,6 @@ int main(int argc , char *argv[])
                     if(trh > replay_height)
                         replay_height = trh;
                     forceWrite(".vfc/rph.mem", &replay_height, sizeof(uint));
-                }
-            }
-
-            //peer is requesting an address balance
-            else if(rb[0] == '$' && read_size == ECC_CURVE+2)
-            {
-                //Check this is the replay peer
-                if(isPeer(client.sin_addr.s_addr) == 1)
-                {
-                    //Get balance for supplied address
-                    addr from;
-                    memcpy(from.key, rb+1, ECC_CURVE+1);
-                    const uint64_t bal = getBalanceLocal(&from);
-
-                    //Send back balance for the supplied address
-                    char pc[64];
-                    pc[0] = 'n';
-                    char* ofs = pc+1;
-                    memcpy(ofs, &bal, sizeof(uint64_t));
-                    csend(client.sin_addr.s_addr, pc, 1+sizeof(uint64_t));
-                }
-            }
-
-            //peer is sending an address balance
-            else if(rb[0] == 'n' && read_size == sizeof(uint64_t)+1)
-            {
-                //Check this is the replay peer
-                const int p = getPeer(client.sin_addr.s_addr);
-                if(p != -1)
-                {
-                    //Load the current state (check if the client process reset the log)
-                    uint64_t baln=0, balt=0;
-                    forceRead(".vfc/bal.mem", &baln, sizeof(uint64_t));
-                    forceRead(".vfc/balt.mem", &balt, sizeof(uint64_t));
-
-                    //Is it time to reset?
-                    if(baln == 0)
-                        balance_accumulator = 0;
-                    if(balt == 0)
-                        for(uint i = 0; i < MAX_PEERS; i++)
-                            peer_ba[i] = 0;
-
-                    //Log the new balances
-                    uint64_t bal = 0;
-                    memcpy(&bal, rb+1, sizeof(uint64_t));
-                    peer_ba[p] = bal;
-                    if(bal > balance_accumulator) //Update accumulator if higher balance returned
-                        balance_accumulator = bal;
-
-                    //And write
-                    forceWrite(".vfc/bal.mem", &balance_accumulator, sizeof(uint64_t));
-                    const uint64_t tb = trueBalance();
-                    forceWrite(".vfc/balt.mem", &tb, sizeof(uint64_t));
                 }
             }
 
