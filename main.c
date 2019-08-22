@@ -3428,7 +3428,7 @@ int main(int argc , char *argv[])
             printf("vfc unclaimed    - Lists all unclaimed addresses and their balances from your minted.priv\n");
             printf("vfc claim        - Claims the contents of minted.priv to your rewards address\n");
             printf("----------------\n\n");
-            printf("Does it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\n ./vfc scan\n\n");
+            printf("Does it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\nvfc scan\n\n");
             
             printf("To get started running a dedicated node, execute ./vfc on a seperate screen.\n\n");
             exit(0);
