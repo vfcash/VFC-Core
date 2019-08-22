@@ -912,7 +912,7 @@ void triBroadcast(const char* dat, const size_t len)
     }
 }
 
-void resyncBlocks(const uint num_peers)
+void resyncBlocks(const uint inum_peers)
 {
 #if MASTER_NODE == 0
     //Resync from Master
@@ -923,7 +923,8 @@ void resyncBlocks(const uint num_peers)
     memset(&replay_allow, 0, sizeof(uint)*MAX_RALLOW);
 
     //allow replay from x random peers
-    for(int i = 0; i < num_peers; i++)
+    const uint num_peers = inum_peers < MAX_RALLOW ? inum_peers : MAX_RALLOW;
+    for(uint i = 0; i < num_peers; i++)
     {
 
         //Also Sync from a Random Node (Sync is called fairly often so eventually the random distribution across nodes will fair well)
@@ -1428,7 +1429,7 @@ void replayHead(const uint ip, const size_t len)
         const uint height = st.st_size;
         memcpy(ofs, &height, sizeof(uint));
         csend(ip, pc, 1+sizeof(uint));
-        printf("Replaying Head: %.1f kb to %s\n", (double) ( sizeof(struct trans) * len ) / 1000, inet_ntoa(ip_addr));
+        //printf("Replaying Head: %.1f kb to %s\n", (double) ( sizeof(struct trans) * len ) / 1000, inet_ntoa(ip_addr));
     }
 
     //Replay blocks
@@ -1506,7 +1507,7 @@ void replayBlocks(const uint ip)
         const uint height = st.st_size;
         memcpy(ofs, &height, sizeof(uint));
         csend(ip, pc, 1+sizeof(uint));
-        printf("Replaying Blocks: %.1f kb to %s\n", (double) ( sizeof(struct trans) * REPLAY_SIZE ) / 1000, inet_ntoa(ip_addr));
+        //printf("Replaying Blocks: %.1f kb to %s\n", (double) ( sizeof(struct trans) * REPLAY_SIZE ) / 1000, inet_ntoa(ip_addr));
     }
 
     //Replay blocks
@@ -3232,6 +3233,48 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
+        //sync
+        if(strcmp(argv[1], "sync") == 0)
+        {
+            setMasterNode();
+            loadmem();
+
+            const uint np = atoi(argv[2]);
+            resyncBlocks(np);
+            
+            __off_t ls = 0;
+            uint tc = 0;
+            while(1)
+            {
+                printf("\033[H\033[J");
+                if(tc > 4)
+                {
+                    tc = 0;
+                    resyncBlocks(np); //Sync from a new random peer if no data after x seconds
+                }
+                struct stat st;
+                stat(CHAIN_FILE, &st);
+                if(st.st_size != ls)
+                {
+                    ls = st.st_size;
+                    tc = 0;
+                }
+
+                forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_RALLOW);
+                forceRead(".vfc/rph.mem", &replay_height, sizeof(uint));
+
+                if(replay_allow[0] == 0)
+                    printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit. Synchronizing only from the Master.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
+                else
+                    printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit. Authorized %u Peers.\n", (double)st.st_size / 1000, (double)replay_height / 1000, np);
+
+                tc++;
+                sleep(1);
+            }
+
+            exit(0);
+        }
+
         //Gen new address
         if(strcmp(argv[1], "new") == 0)
         {
@@ -3351,7 +3394,7 @@ int main(int argc , char *argv[])
             printf("To make a transaction from your rewards address use:\n ./vfc qsend <amount> <receiver address>\n\n");
             printf("To reset blockchain back to genesis:\n ./vfc reset_chain\n\n");
             printf("To manually trigger blockchain resync only from the master use:\n ./vfc master_resync\n\n");
-            printf("To manually trigger blockchain sync use:\n ./vfc sync\n\n");
+            printf("To manually trigger blockchain sync from your peers use:\n ./vfc sync <optional-num-peers>\n\n");
             printf("CPU mining of VFC:\n ./vfc mine <optional-num-threads>\n\n");
             printf("To create a new Address, Public / Private Key-Pair:\n ./vfc new <optional-seed>\n\n");
             printf("To create a new Address by four random seed(uint64), Public / Private Key-Pair:\n ./vfc new <seed1> <seed2> <seed3> <seed4>\n\n");
@@ -3562,6 +3605,7 @@ int main(int argc , char *argv[])
         {
             setMasterNode();
             loadmem();
+
             resyncBlocks(33);
             
             __off_t ls = 0;
@@ -3588,7 +3632,7 @@ int main(int argc , char *argv[])
                 if(replay_allow[0] == 0)
                     printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit. Synchronizing only from the Master.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
                 else
-                    printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit. Authorized 33 Peers.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
+                    printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
 
                 tc++;
                 sleep(1);
