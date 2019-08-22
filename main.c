@@ -3394,7 +3394,7 @@ int main(int argc , char *argv[])
             printf("vfc <sender public key> <reciever public key> <amount> <sender private key>\n");
             printf("--------------------------------------\n");
             printf("vfc qsend <amount> <receiver address>  - Send transaction from your rewards address\n");
-            printf("vfc reward                             - Returns your Public Key stored in ~/.vfc/public.key for reward collections:\n");
+            printf("vfc reward                             - Show how much VFC has been awarded or mined\n");
             printf("--------------------------------------\n");
             printf("vfc mine <optional-num-threads>        - CPU miner for VFC\n");
             printf("vfc peers                              - List all locally indexed peers and info\n");
