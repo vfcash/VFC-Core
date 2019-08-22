@@ -1619,7 +1619,6 @@ void *replayBlocksThread(void *arg)
     return 0;
 }
 
-
 //Launch a replay thread
 void launchReplayThread(const uint32_t ip)
 {
@@ -1649,6 +1648,7 @@ void launchReplayThread(const uint32_t ip)
         }
     }
 }
+
 
 //repair chain
 void truncate_at_error(const char* file, const uint num)
@@ -1717,6 +1717,7 @@ void truncate_at_error(const char* file, const uint num)
     }
 
 }
+
 
 //dump all trans
 void dumptrans()
@@ -3383,39 +3384,50 @@ int main(int argc , char *argv[])
         //Help
         if(strcmp(argv[1], "help") == 0)
         {
-            printf("\nTo update your client use:\n ./vfc update\n\n");
-            printf("To get an address balance use:\n ./vfc <address public key>\n\n");
-            printf("To check sent transactions from an address use:\n ./vfc out <address public key>\n\n");
-            printf("To check received transactions from an address use:\n ./vfc in <address public key>\n\n");
-            printf("To make a transaction use:\n ./vfc <sender public key> <reciever public key> <amount> <sender private key>\n\n");
-            printf("To make a transaction from your rewards address use:\n ./vfc qsend <amount> <receiver address>\n\n");
-            printf("To reset blockchain back to genesis:\n ./vfc reset_chain\n\n");
-            printf("To manually trigger blockchain resync only from the master use:\n ./vfc master_resync\n\n");
-            printf("To manually trigger blockchain sync from your peers use:\n ./vfc sync <optional-num-peers>\n\n");
-            printf("CPU mining of VFC:\n ./vfc mine <optional-num-threads>\n\n");
-            printf("To create a new Address, Public / Private Key-Pair:\n ./vfc new <optional-seed>\n\n");
-            printf("To create a new Address by four random seed(uint64), Public / Private Key-Pair:\n ./vfc new <seed1> <seed2> <seed3> <seed4>\n\n");
-            printf("Get Public Key from Private Key:\n ./vfc getpub <private key>\n\n");
-            printf("To manually add a peer use:\n ./vfc addpeer <peer ip-address>\n\n");
-            printf("List all locally indexed peers and info:\n ./vfc peers\n\n");
-            printf("Dump all transactions in the blockchain:\n ./vfc dump\n\n");
-            printf("Print some transactions[start,end] in the blockchain:\n ./vfc printtrans 1000 1010\n\n");
-            printf("Find a transaction by it's UID:\n ./vfc findtrans <transaction-uid>\n\n");
-            printf("Dump all double spend transactions detected from other peers:\n ./vfc dumpbad\n\n");
-            printf("Clear all double spend transactions detected from other peers:\n ./vfc clearbad\n\n");
-            printf("Returns your Public Key stored in ~/.vfc/public.key for reward collections:\n ./vfc reward\n\n");
-            printf("Returns client version:\n ./vfc version\n\n");
-            printf("Returns client blocks.dat size / num transactions:\n ./vfc heigh\n\n");
-            printf("Returns the circulating supply:\n ./vfc circulating\n\n");
-            printf("Returns the mined supply:\n ./vfc mined\n\n");
-            printf("Returns the mining difficulty:\n ./vfc difficulty\n\n");
-            printf("Sets your contribution to the federated difficulty:\n ./vfc setdiff < difficulty between 0.03 - 0.24 >\n\n");
-            printf("Check's if supplied address is subG, if so returns value of subG address:\n ./vfc issub <public key>\n\n");
-            printf("Lists all unclaimed addresses and their balances from your minted.priv:\n ./vfc unclaimed\n\n");
-            printf("Claims the contents of minted.priv to your rewards address:\n ./vfc claim\n\n");
-            printf("Scan blocks.dat for invalid transactions and truncate at first invalid transaction:\n ./vfc trunc <offset x transactions>\n\n");
-            printf("Scan blocks.dat for invalid transactions and generated a cleaned version in the same directory called cblocks.dat:\n ./vfc clean\n\n");
-
+            printf("\n");
+            printf("vfc update                      - Updates node\n");
+            printf("vfc <address public key>        - Get address balance\n");
+            printf("vfc out <address public key>    - Gets sent transactions\n");
+            printf("vfc in <address public key>     - Gets received transactions\n");
+            printf("\n");
+            printf("- Send a transaction:\n");
+            printf("vfc <sender public key> <reciever public key> <amount> <sender private key>\n");
+            printf("\n");
+            printf("vfc mine <optional-num-threads>         - CPU miner for VFC\n");
+            printf("vfc peers                               - List all locally indexed peers and info\n");
+            printf("vfc qsend <amount> <receiver address>   - Send transaction from your rewards address\n");
+            printf("vfc getpub <private key>                - Get Public Key from Private Key\n");
+            printf("vfc issub <public key>                  - Is supplied public key / address a subG address\n");
+            printf("\n");
+            printf("- Returns your Public Key stored in ~/.vfc/public.key for reward collections:\n");
+            printf("vfc reward\n");
+            printf("\n");
+            printf("vfc sync <optional-num-peers>    - Trigger blockchain sync from your peers\n");
+            printf("vfc master_resync                - Trigger blockchain resync only from the master\n");
+            printf("vfc reset_chain                  - Reset blockchain back to genesis state\n");
+            printf("\n");
+            printf("vfc new <optional-seed>                   - Create a new Address, Public / Private Key-Pair\n");
+            printf("vfc new <seed1> <seed2> <seed3> <seed4>   - Create a new Address by four random seed(uint64), Public / Private Key-Pair\n");
+            printf("\n");
+            printf("vfc addpeer <peer ip-address>     - Manually add a peer\n");
+            printf("vfc dump                          - List all transactions in the blockchain\n");
+            printf("vfc printtrans 1000 1010          - Print some transactions[start,end] in the blockchain\n");
+            printf("vfc findtrans <transaction-uid>   - Find a transaction by it's UID\n");
+            printf("vfc dumpbad                       - List all double spend transactions detected from other peers\n");
+            printf("vfc clearbad                      - Clear all double spend transactions detected from other peers\n");
+            printf("\n");
+            printf("vfc version                   - Node version\n");
+            printf("vfc heigh                     - Returns node [ blocks.dat size / num transactions ]\n");
+            printf("vfc circulating               - Circulating supply\n");
+            printf("vfc mined                     - Mined supply\n");
+            printf("vfc difficulty                - Network mining difficulty\n");
+            printf("vfc setdiff < 0.03 - 0.24 >   - Sets your contribution to the federated difficulty\n");
+            printf("vfc unclaimed                 - Lists all unclaimed addresses and their balances from your minted.priv\n");
+            printf("vfc claim                     - Claims the contents of minted.priv to your rewards address\n");
+            printf("\n");
+            printf("vfc trunc <offset x transactions>   - Scan blocks.dat for invalid transactions and truncate at first invalid transaction\n");
+            printf("vfc clean                           - Scan blocks.dat for invalid transactions and generates a cleaned output; cblocks.dat\n");
+            printf("\n");
             printf("Does it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\n ./vfc scan\n\n");
             
             printf("To get started running a dedicated node, execute ./vfc on a seperate screen.\n\n");
