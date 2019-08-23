@@ -142,6 +142,7 @@ uint thread_ip[MAX_THREADS_BUFF];    //IP's replayed to by threads (prevents lau
 uint nthreads = 0;                   //number of mining threads
 uint threads = 0;                    //number of replay threads
 uint MAX_THREADS = 6;                //maximum number of replay threads
+uint num_processors = 1;             //number of logical processors on the device
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
@@ -2689,11 +2690,12 @@ void *generalThread(void *arg)
         //Load difficulty
         forceRead(".vfc/diff.mem", &node_difficulty, sizeof(float));
 
-        //Let's execute a Sync every 9 mins
+        //Let's execute a Sync every 3 mins
         if(time(0) > rs)
         {
-            resyncBlocks(33);
-            rs = time(0) + 540;
+            //How many peers we sync off depends on the number of logical cores
+            resyncBlocks(num_processors / 2);
+            rs = time(0) + 180;
         }
 
         //Check which of the peers are still alive, those that are, update their timestamps
@@ -3007,7 +3009,8 @@ int main(int argc , char *argv[])
     init_sites();
 
     //Workout size of server for replay scaling
-    nthreads = get_nprocs();
+    num_processors = get_nprocs();
+    nthreads = num_processors;
     if(nthreads > 2)
         MAX_THREADS = 8*(nthreads-2);
     if(MAX_THREADS > MAX_THREADS_BUFF)
@@ -4145,7 +4148,7 @@ int main(int argc , char *argv[])
                     uname(&ud);
 
                     char pc[MIN_LEN];
-                    snprintf(pc, sizeof(pc), "%lu, a%s, %s, %s, %.3f", st.st_size / sizeof(struct trans), version, ud.nodename, ud.machine, node_difficulty);
+                    snprintf(pc, sizeof(pc), "%lu, %s, %u, %s, %.3f", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
 
                     csend(client.sin_addr.s_addr, pc, strlen(pc));
                 }
