@@ -3519,7 +3519,7 @@ int main(int argc , char *argv[])
                     //priv as bytes
                     struct addr subg_priv;
                     size_t len = ECC_CURVE;
-                    b58tobin(subg_priv.key, &len, bpriv, strlen(bpriv)-1);
+                    b58tobin(subg_priv.key, &len, bpriv, strlen(bpriv));
 
                     //Gen Public Key
                     struct addr subg_pub;
