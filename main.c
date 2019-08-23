@@ -3470,6 +3470,10 @@ int main(int argc , char *argv[])
                 {
                     //base58 priv key
                     char* bpriv = strtok(l, " ");
+                    if(bpriv == NULL)
+                        bpriv = strtok(l, "\n");
+                    if(bpriv == NULL)
+                        continue;
 
                     //priv as bytes
                     struct addr subg_priv;
@@ -3505,6 +3509,10 @@ int main(int argc , char *argv[])
                 {
                     //base58 priv key
                     char* bpriv = strtok(l, " ");
+                    if(bpriv == NULL)
+                        bpriv = strtok(l, "\n");
+                    if(bpriv == NULL)
+                        continue;
 
                     //priv as bytes
                     struct addr subg_priv;
