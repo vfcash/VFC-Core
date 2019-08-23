@@ -3483,6 +3483,8 @@ int main(int argc , char *argv[])
                     //Get balance of pub key
                     const double bal = toDB(getBalanceLocal(&subg_pub));
 
+                    printf("B: %.3f\n", bal);
+
                     //Print private key & balance 
                     if(bal > 0)
                         printf("%s (%.3f)\n", bpriv, bal);
