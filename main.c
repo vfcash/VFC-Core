@@ -3421,8 +3421,10 @@ int main(int argc , char *argv[])
             printf("vfc dumpbad                      - List all detected double spend attempts\n");
             printf("vfc clearbad                     - Clear all detected double spend attempts\n");
             printf("-------------------------------\n");
-            printf("vfc trunc <offset index>         - Scan blocks.dat for invalid transactions and truncate at first detected\n");
-            printf("vfc clean                        - Scan blocks.dat for invalid transactions and generates a cleaned output; cblocks.dat\n");
+            printf("vfc trunc <offset index>         - Scan blocks.dat for invalid transactions");
+            printf("                                   and truncate at first detected\n");
+            printf("vfc clean                        - Scan blocks.dat for invalid transactions");
+            printf("                                   and generates a cleaned output; cblocks.dat\n");
             printf("----------------\n");
             printf("vfc version      - Node version\n");
             printf("vfc heigh        - Returns node [ blocks.dat size / num transactions ]\n");
