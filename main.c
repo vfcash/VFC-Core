@@ -1377,6 +1377,8 @@ uint64_t getCirculatingSupply()
     return rv;
 }
 
+
+
 //Replay thread queue
 uint32_t replay_peers[MAX_THREADS_BUFF];
 
@@ -1665,13 +1667,13 @@ void truncate_at_error(const char* file, const uint num)
 
             struct trans t;
             time_t st = time(0);
-            for(size_t i = sizeof(struct trans)*((len/144)-num); i < len; i += sizeof(struct trans))
+            for(size_t i = sizeof(struct trans)*((len/sizeof(struct trans))-num); i < len; i += sizeof(struct trans))
             {
                 memcpy(&t, m+i, sizeof(struct trans));
 
                 if(time(0) > st)
                 {
-                    printf("head: %li / %li\n", i/144, len/144);
+                    printf("head: %li / %li\n", i/sizeof(struct trans), len/sizeof(struct trans));
                     st = time(0) + 9;
                 }
 
@@ -3393,7 +3395,7 @@ int main(int argc , char *argv[])
             printf("Send a transaction:\n");
             printf("vfc <sender public key> <reciever public key> <amount> <sender private key>\n");
             printf("--------------------------------------\n");
-            printf("vfc new <optional-seed>                 - Create a new Address / Key-Pair\n");
+            printf("vfc new <optional seed>                 - Create a new Address / Key-Pair\n");
             printf("vfc new <seed1> <seed2> <seed3> <seed4> - Four random seed(uint64), Key-Pair\n");
             printf("--------------------------------------\n");
             printf("vfc qsend <amount> <receiver address>  - Send transaction from rewards address\n");
@@ -3515,6 +3517,8 @@ int main(int argc , char *argv[])
 
                     //Get balance of pub key
                     const double bal = toDB(getBalanceLocal(&subg_pub));
+
+                    printf("B: %.3f\n", bal);
 
                     if(bal > 0)
                     {
