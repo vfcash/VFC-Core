@@ -3428,7 +3428,7 @@ int main(int argc , char *argv[])
             printf("vfc heigh        - Returns node [ blocks.dat size / num transactions ]\n");
             printf("vfc circulating  - Circulating supply\n");
             printf("vfc mined        - Mined supply\n");
-            printf("vfc unclaimed    - Lists all unclaimed addresses and their balances from your minted.priv\n");
+            printf("vfc unclaimed    - Lists all unclaimed addresses from your minted.priv\n");
             printf("vfc claim        - Claims the contents of minted.priv to your rewards address\n");
             printf("----------------\n\n");
   
