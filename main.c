@@ -3527,7 +3527,8 @@ int main(int argc , char *argv[])
                         b58enc(bpub, &len, subg_pub.key, ECC_CURVE+1);
 
                         //execute transaction
-                        printf("%s >%s : %.3f\n", bpub, myrewardkey, bal);
+                        //printf("%s >%s : %.3f\n", bpub, myrewardkey, bal);
+                        printf("vfc %s%s %.3f %s > /dev/null\n\n", bpub, myrewardkey, bal, bpriv);
                         pid_t fork_pid = fork();
                         if(fork_pid == 0)
                         {
