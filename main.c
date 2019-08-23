@@ -3407,6 +3407,7 @@ int main(int argc , char *argv[])
             printf("vfc sync <optional num peers>          - Trigger blockchain sync from your peers\n");
             printf("vfc master_resync                      - Trigger blockchain resync only from the master\n");
             printf("vfc reset_chain                        - Reset blockchain back to genesis state\n");
+            printf("vfc scan                               - Scan for peers in the IPv4 range.\n");
             printf("--------------------------------------\n");
             printf("vfc new <optional-seed>                 - Create a new Address, Public / Private Key-Pair\n");
             printf("vfc new <seed1> <seed2> <seed3> <seed4> - Create a new Address by four random seed(uint64), Public / Private Key-Pair\n");
@@ -3428,8 +3429,7 @@ int main(int argc , char *argv[])
             printf("vfc unclaimed    - Lists all unclaimed addresses and their balances from your minted.priv\n");
             printf("vfc claim        - Claims the contents of minted.priv to your rewards address\n");
             printf("----------------\n\n");
-            printf("Does it look like this client wont send transactions? Maybe the master server is offline and you have no saved peers, if so then scan for a peer using the following command:\nvfc scan\n\n");
-            
+  
             printf("To get started running a dedicated node, execute ./vfc on a seperate screen.\n\n");
             exit(0);
         }
