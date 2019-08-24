@@ -4228,7 +4228,7 @@ int main(int argc , char *argv[])
                     uname(&ud);
 
                     char pc[MIN_LEN];
-                    snprintf(pc, sizeof(pc), "%lu, %s, %u, %s, %.3f", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
+                    snprintf(pc, sizeof(pc), "a%lu, %s, %u, %s, %.3f", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
 
                     csend(client.sin_addr.s_addr, pc, strlen(pc));
                 }
