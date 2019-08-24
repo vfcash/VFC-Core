@@ -3878,10 +3878,10 @@ int main(int argc , char *argv[])
             {
                 struct in_addr ip_addr;
                 ip_addr.s_addr = peers[i];
-                const uint pd = time(0) - peer_rm[i];
+                const time_t pd = time(0) - peer_rm[i];
                 if(isPeerAlive(i) == 1)
                 {
-                    printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
+                    printf("%s / %u / %lu / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
                     ac++;
                 }
             }
