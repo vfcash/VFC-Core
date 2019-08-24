@@ -89,7 +89,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.55";
+const char version[]="0.56";
 const uint16_t gport = 8787;
 const char master_ip[] = "198.204.248.26";
 
