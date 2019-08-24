@@ -3498,10 +3498,11 @@ int main(int argc , char *argv[])
                     const double bal = toDB(getBalanceLocal(&subg_pub));
 
                     //printf("%s (%.3f)\n", bpriv, bal);
+                    printf(".\n");
 
                     //Print private key & balance 
                     if(bal > 0)
-                        printf("%s (%.3f)\n", bpriv, bal);
+                        printf("\n%s (%.3f)\n", bpriv, bal);
                     
                 }
                 fclose(f);
@@ -3554,11 +3555,12 @@ int main(int argc , char *argv[])
                         //execute transaction
                         //printf("%s >%s : %.3f\n", bpub, myrewardkey, bal);
                         //printf("vfc %s%s %.3f %s > /dev/null\n\n", bpub, myrewardkey, bal, bpriv);
+                        printf(".\n");
                         pid_t fork_pid = fork();
                         if(fork_pid == 0)
                         {
                             char cmd[1024];
-                            sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
+                            sprintf(cmd, "\nvfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
                             system(cmd);
                             exit(0);
                         }
