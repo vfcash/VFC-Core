@@ -3466,18 +3466,23 @@ int main(int argc , char *argv[])
         //Fork unclaimed addresses from minted.priv
         if(strcmp(argv[1], "unclaimed") == 0)
         {
-            printf("Please Wait...\n");
+            printf("wtf Please Wait...\n");
             FILE* f = fopen(".vfc/minted.priv", "r");
             if(f)
             {
-                char l[256];
-                while(fgets(l, 256, f) != NULL)
+                char bpriv[256];
+                while(fgets(bpriv, 256, f) != NULL)
                 {
-                    //base58 priv key
-                    char* bpriv = strtok(l, " ");
-                    if(bpriv == NULL)
-                        bpriv = strtok(l, "\n");
-                    if(bpriv == NULL || strlen(bpriv) < 10)
+                    for(uint i = 0; i < 256; i++)
+                    {
+                        if(bpriv[i] == ' ' || bpriv[i] == '\n')
+                        {
+                            bpriv[i] = 0x00;
+                            break;
+                        }
+                    }
+
+                    if(strlen(bpriv) < 16)
                         continue;
 
                     //priv as bytes
@@ -3491,6 +3496,8 @@ int main(int argc , char *argv[])
 
                     //Get balance of pub key
                     const double bal = toDB(getBalanceLocal(&subg_pub));
+
+                    printf("%s (%.3f)\n", bpriv, bal);
 
                     //Print private key & balance 
                     if(bal > 0)
@@ -3509,14 +3516,19 @@ int main(int argc , char *argv[])
             FILE* f = fopen(".vfc/minted.priv", "r");
             if(f)
             {
-                char l[256];
-                while(fgets(l, 256, f) != NULL)
+                char bpriv[256];
+                while(fgets(bpriv, 256, f) != NULL)
                 {
-                    //base58 priv key
-                    char* bpriv = strtok(l, " ");
-                    if(bpriv == NULL)
-                        bpriv = strtok(l, "\n");
-                    if(bpriv == NULL || strlen(bpriv) < 10)
+                    for(uint i = 0; i < 256; i++)
+                    {
+                        if(bpriv[i] == ' ' || bpriv[i] == '\n')
+                        {
+                            bpriv[i] = 0x00;
+                            break;
+                        }
+                    }
+
+                    if(strlen(bpriv) < 16)
                         continue;
 
                     //priv as bytes
