@@ -3458,9 +3458,9 @@ int main(int argc , char *argv[])
             printf("vfc <address public key>      - Get address balance\n");
             printf("vfc out <address public key>  - Gets sent transactions\n");
             printf("vfc in <address public key>   - Gets received transactions\n");
-            printf("-----------------------------\n");
+            printf("-----------------------------\n\n");
             printf("Send a transaction:\n");
-            printf("vfc <sender public key> <reciever public key> <amount> <sender private key>\n");
+            printf("vfc <sender public key> <reciever public key> <amount> <sender private key>\n\n");
             printf("--------------------------------------\n");
             printf("vfc new <optional seed>                 - Create a new Address / Key-Pair\n");
             printf("vfc new <seed1> <seed2> <seed3> <seed4> - Four random seed(uint64), Key-Pair\n");
@@ -3489,11 +3489,9 @@ int main(int argc , char *argv[])
             printf("vfc dump                         - List all transactions on chain\n");
             printf("vfc dumpbad                      - List all detected double spend attempts\n");
             printf("vfc clearbad                     - Clear all detected double spend attempts\n");
-            printf("-------------------------------\n");
-            printf("vfc trunc <offset index>         - Scan blocks.dat for invalid transactions");
-            printf("                                        and truncate at first detected\n");
-            printf("vfc clean                        - Scan blocks.dat for invalid transactions");
-            printf("                                        and generates a cleaned output; cblocks.dat\n");
+            printf("-------------------------------\n\n");
+            printf("Scan blocks.dat for invalid transactions and truncate at first detected:\nvfc trunc <offset index>\n\n");
+            printf("Scan blocks.dat for invalid transactions and generates a cleaned output; cblocks.dat:\nvfc clean\n\n");
             printf("----------------\n");
             printf("vfc version      - Node version\n");
             printf("vfc heigh        - Returns node [ blocks.dat size / num transactions ]\n");
