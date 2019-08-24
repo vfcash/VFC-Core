@@ -3861,9 +3861,8 @@ int main(int argc , char *argv[])
             {
                 struct in_addr ip_addr;
                 ip_addr.s_addr = peers[i];
-                const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS); //ping delta
-                const uint md = time(0) - peer_rm[i];
-                if(pd <= PING_INTERVAL && md <= PING_INTERVAL)
+                const uint pd = time(0) - peer_rm[i];
+                if(isPeerAlive(i) == 1)
                 {
                     printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
                     ac++;
