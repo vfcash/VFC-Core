@@ -3164,6 +3164,70 @@ int main(int argc , char *argv[])
     //Outgoings and Incomings
     if(argc == 3)
     {
+        //claim minted.priv
+        if(strcmp(argv[1], "claim") == 0)
+        {
+            printf("Please Wait...");
+            fflush(stdout);
+            FILE* f = fopen(argv[2], "r");
+            if(f)
+            {
+                char bpriv[256];
+                while(fgets(bpriv, 256, f) != NULL)
+                {
+                    for(uint i = 0; i < 256; i++)
+                    {
+                        if(bpriv[i] == ' ' || bpriv[i] == '\n')
+                        {
+                            bpriv[i] = 0x00;
+                            break;
+                        }
+                    }
+
+                    if(strlen(bpriv) < 16)
+                        continue;
+
+                    //priv as bytes
+                    struct addr subg_priv;
+                    size_t len = ECC_CURVE;
+                    b58tobin(subg_priv.key, &len, bpriv, strlen(bpriv));
+
+                    //Gen Public Key
+                    struct addr subg_pub;
+                    ecc_get_pubkey(subg_pub.key, subg_priv.key);
+
+                    //Get balance of pub key
+                    const double bal = toDB(getBalanceLocal(&subg_pub));
+
+                    printf(".");
+                    fflush(stdout);
+
+                    if(bal > 0)
+                    {
+                        //Public Key as Base58
+                        char bpub[MIN_LEN];
+                        memset(bpub, 0, sizeof(bpub));
+                        len = MIN_LEN;
+                        b58enc(bpub, &len, subg_pub.key, ECC_CURVE+1);
+
+                        //execute transaction
+                        //printf("%s >%s : %.3f\n", bpub, myrewardkey, bal);
+                        //printf("vfc %s%s %.3f %s > /dev/null\n\n", bpub, myrewardkey, bal, bpriv);
+                        pid_t fork_pid = fork();
+                        if(fork_pid == 0)
+                        {
+                            char cmd[1024];
+                            sprintf(cmd, "\nvfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
+                            system(cmd);
+                            exit(0);
+                        }
+                    }
+                }
+                fclose(f);
+            }
+            exit(0);
+        }
+
         //Mine VFC
         if(strcmp(argv[1], "mine") == 0)
         {
@@ -3403,6 +3467,7 @@ int main(int argc , char *argv[])
             printf("--------------------------------------\n");
             printf("vfc qsend <amount> <receiver address>   - Send transaction from rewards address\n");
             printf("vfc reward                              - Your awarded or mined VFC\n");
+            printf("vfc claim <optional file path>          - Claims the contents of minted.priv\n");
             printf("-------------------------------\n");
             printf("vfc mine <optional num threads>  - CPU miner for VFC\n");
             printf("vfc peers                        - List all locally indexed peers and info\n");
@@ -3418,9 +3483,10 @@ int main(int argc , char *argv[])
             printf("vfc scan                         - Scan for peers in the IPv4 range.\n");
             printf("-------------------------------\n");
             printf("vfc addpeer <peer ip address>    - Manually add a peer\n");
-            printf("vfc dump                         - List all transactions on chain\n");
             printf("vfc printtrans 1000 1010         - Print transactions[start,end] on chain\n");
             printf("vfc findtrans <transaction uid>  - Find a transaction by it's UID\n");
+            printf("-------------------------------\n");
+            printf("vfc dump                         - List all transactions on chain\n");
             printf("vfc dumpbad                      - List all detected double spend attempts\n");
             printf("vfc clearbad                     - Clear all detected double spend attempts\n");
             printf("-------------------------------\n");
