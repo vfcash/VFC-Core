@@ -4244,7 +4244,7 @@ int main(int argc , char *argv[])
             }
 
             //peer is sending it's user agent
-            else if(rb[0] == 'a' && read_size > 19)
+            else if(rb[0] == 'a' && read_size >= 19)
             {
                 //Check this is a peer
                 const int p = getPeer(client.sin_addr.s_addr);
