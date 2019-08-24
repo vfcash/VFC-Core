@@ -759,7 +759,7 @@ uint isPeerAlive(const uint id)
 {
     const uint pd = time(0)-(peer_timeouts[id]-MAX_PEER_EXPIRE_SECONDS);
     const uint md = time(0) - peer_rm[id];
-    if(pd <= PING_INTERVAL && md <= PING_INTERVAL)
+    if(pd <= PING_INTERVAL*4 && md <= PING_INTERVAL*4)
         return 1;
     return 0;
 }
