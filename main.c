@@ -3498,7 +3498,7 @@ int main(int argc , char *argv[])
                     const double bal = toDB(getBalanceLocal(&subg_pub));
 
                     //printf("%s (%.3f)\n", bpriv, bal);
-                    printf(".\n");
+                    printf(".");
 
                     //Print private key & balance 
                     if(bal > 0)
@@ -3544,6 +3544,8 @@ int main(int argc , char *argv[])
                     //Get balance of pub key
                     const double bal = toDB(getBalanceLocal(&subg_pub));
 
+                    printf(".");
+
                     if(bal > 0)
                     {
                         //Public Key as Base58
@@ -3555,7 +3557,6 @@ int main(int argc , char *argv[])
                         //execute transaction
                         //printf("%s >%s : %.3f\n", bpub, myrewardkey, bal);
                         //printf("vfc %s%s %.3f %s > /dev/null\n\n", bpub, myrewardkey, bal, bpriv);
-                        printf(".\n");
                         pid_t fork_pid = fork();
                         if(fork_pid == 0)
                         {
