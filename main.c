@@ -967,8 +967,13 @@ uint sendMaster(const char* dat, const size_t len)
 uint isPeer(const uint ip)
 {
     for(uint i = 0; i < num_peers; ++i)
+    {
         if(peers[i] == ip)
+        {
+            peer_timeouts[i] = time(0) + MAX_PEER_EXPIRE_SECONDS;
             return 1;
+        }
+    }
     return 0;
 }
 
