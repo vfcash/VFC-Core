@@ -1087,15 +1087,15 @@ void RewardPeer(const uint ip, const char* pubkey)
 #endif
 
 //Peers are only replaced if they have not responded in a week, otherwise we still consider them contactable until replaced.
-uint addPeer(const uint ip)
+int addPeer(const uint ip)
 {
     //Never add local host
     if(ip == inet_addr("127.0.0.1")) //inet_addr("127.0.0.1") //0x0100007F
-        return 0;
+        return -1;
 
     //Or local network address
     if(isPrivateAddress(ip) == 1)
-        return 0;
+        return -1;
 
     //Is already in peers?
     uint freeindex = 0;
@@ -1105,7 +1105,7 @@ uint addPeer(const uint ip)
         {
             peer_timeouts[i] = time(0) + MAX_PEER_EXPIRE_SECONDS;
             peer_tcount[i]++;
-            return 0; //exists
+            return i; //exists
         }
 
         if(freeindex == 0 && i != 0 && (peer_timeouts[i] < time(0) && time(0) > peer_rm[i]+PING_INTERVAL)) //0 = Master, never a free slot.
@@ -1120,18 +1120,18 @@ uint addPeer(const uint ip)
         peer_tcount[num_peers] = 1;
         peer_rm[num_peers] = time(0);
         num_peers++;
-        return 1;
+        return num_peers;
     }
     else if(freeindex != 0) //If not replace a node that's been quiet for more than three hours
     {
         peers[freeindex] = ip;
         peer_timeouts[freeindex] = time(0) + MAX_PEER_EXPIRE_SECONDS;
         peer_tcount[freeindex] = 1;
-        peer_rm[num_peers] = time(0);
-        return 1;
+        peer_rm[freeindex] = time(0);
+        return freeindex;
     }
 
-    return 0;
+    return -1;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -4315,8 +4315,7 @@ int main(int argc , char *argv[])
                     rb[6] == mid[6] &&
                     rb[7] == mid[7] )
                 {
-                    addPeer(client.sin_addr.s_addr);
-                    int p = getPeer(client.sin_addr.s_addr);
+                    int p = addPeer(client.sin_addr.s_addr);
                     if(p != -1)
                         peer_rm[p] = time(0);
                 }
