@@ -105,7 +105,7 @@ const char master_ip[] = "198.204.248.26";
 #define MAX_REXI_SIZE 1024              // Maximum size of rExi (this should be atlest ~MAX_TRANS_QUEUE/3)
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
-#define PING_INTERVAL 480               // How often to ping the peers and see if they are still alive
+#define PING_INTERVAL 270               // How often to ping the peers and see if they are still alive
 #define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this.
 #define MAX_RALLOW 256                  // Maximum amount of peers allowed to sync from at any one time
