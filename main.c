@@ -994,6 +994,8 @@ void networkDifficulty()
 {
     network_difficulty = 0; //reset
     uint divisor = 0;
+    uint added[MAX_PEERS];
+    uint added_index = 0;
     for(uint p = 0; p < MAX_PEERS; p++)
     {
         if(isPeerAlive(p) == 1)
@@ -1022,11 +1024,26 @@ void networkDifficulty()
                 continue;
             }
             
+            //Peer difficulty
             const float diff = atof(cf);
             //printf("DBG: %s - %.3f\n", cf, diff);
 
-            if(diff >= 0.030 && diff <= 0.240)
+            //check if difficulty already added
+            uint exists = 0;
+            for(uint i = 0; i < added_index; i++)
             {
+                if(added[i] == diff)
+                {
+                    exists = 1;
+                    break;
+                }
+            }
+
+            //Is it in the valid range
+            if(diff >= 0.030 && diff <= 0.240 && exists == 0)
+            {
+                added[added_index] = diff;
+                added_index++;
                 network_difficulty += diff;
                 divisor++;
             }
