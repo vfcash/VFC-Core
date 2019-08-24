@@ -995,7 +995,7 @@ void networkDifficulty()
     remove(".vfc/netdiff.txt");
     network_difficulty = 0; //reset
     uint divisor = 0;
-    uint added[MAX_PEERS];
+    double added[MAX_PEERS];
     uint added_index = 0;
     for(uint p = 0; p < MAX_PEERS; p++)
     {
