@@ -3529,7 +3529,7 @@ int main(int argc , char *argv[])
         {
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
             system("cat .vfc/netdiff.txt");
-            printf("%.3f\n", network_difficulty);
+            printf("Average / Network Difficulty: %.3f\n", network_difficulty);
             exit(0);
         }
 
