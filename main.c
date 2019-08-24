@@ -1049,7 +1049,12 @@ void networkDifficulty()
 
                 struct in_addr ip_addr;
                 ip_addr.s_addr = peers[p];
-                printf("%s: %.3f\n", inet_ntoa(ip_addr), diff);
+                FILE* f = fopen(".vfc/netdiff.txt", "a");
+                if(f)
+                {
+                    fprintf(f, "%s: %.3f\n", inet_ntoa(ip_addr), diff);
+                    fclose(f);
+                }
             }
         }
     }
@@ -3522,6 +3527,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "difficulty") == 0)
         {
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
+            system("cat .vfc/netdiff.txt");
             printf("%.3f\n", network_difficulty);
             exit(0);
         }
