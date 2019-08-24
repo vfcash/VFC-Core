@@ -741,6 +741,7 @@ time_t peer_timeouts[MAX_PEERS]; //Peer timeout UNIX epoch stamps
 uint num_peers = 0; //Current number of indexed peers
 uint peer_tcount[MAX_PEERS]; //Amount of transactions relayed by peer
 char peer_ua[MAX_PEERS][64]; //Peer user agent
+time_t peer_rm[MAX_PEERS]; //Last time peer responded to a mid request
 
 uint countPeers()
 {
@@ -1119,6 +1120,7 @@ uint addPeer(const uint ip)
         peers[num_peers] = ip;
         peer_timeouts[num_peers] = time(0) + MAX_PEER_EXPIRE_SECONDS;
         peer_tcount[num_peers] = 1;
+        peer_rm[num_peers] = time(0);
         num_peers++;
         return 1;
     }
@@ -1127,6 +1129,7 @@ uint addPeer(const uint ip)
         peers[freeindex] = ip;
         peer_timeouts[freeindex] = time(0) + MAX_PEER_EXPIRE_SECONDS;
         peer_tcount[freeindex] = 1;
+        peer_rm[num_peers] = time(0);
         return 1;
     }
 
@@ -3855,7 +3858,8 @@ int main(int argc , char *argv[])
                 struct in_addr ip_addr;
                 ip_addr.s_addr = peers[i];
                 const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS); //ping delta
-                if(pd <= PING_INTERVAL*4)
+                const uint md = time(0) - peer_rm[i];
+                if(pd <= PING_INTERVAL && md <= PING_INTERVAL)
                 {
                     printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
                     ac++;
@@ -4331,6 +4335,9 @@ int main(int argc , char *argv[])
                     rb[7] == mid[7] )
                 {
                     addPeer(client.sin_addr.s_addr);
+                    int p = getPeer(client.sin_addr.s_addr);
+                    if(p != -1)
+                        peer_rm[p] = time(0);
                 }
             }
 
