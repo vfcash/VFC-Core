@@ -1653,76 +1653,6 @@ void launchReplayThread(const uint32_t ip)
     }
 }
 
-
-//repair chain
-void truncate_at_error(const char* file, const uint num)
-{
-    int f = open(file, O_RDONLY);
-    if(f)
-    {
-        const size_t len = lseek(f, 0, SEEK_END);
-
-        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-        if(m != MAP_FAILED)
-        {
-            close(f);
-
-            struct trans t;
-            time_t st = time(0);
-            for(size_t i = sizeof(struct trans)*((len/sizeof(struct trans))-num); i < len; i += sizeof(struct trans))
-            {
-                memcpy(&t, m+i, sizeof(struct trans));
-
-                if(time(0) > st)
-                {
-                    printf("head: %li / %li\n", i/sizeof(struct trans), len/sizeof(struct trans));
-                    st = time(0) + 9;
-                }
-
-                //Make original
-                struct trans to;
-                memset(&to, 0, sizeof(struct trans));
-                to.uid = t.uid;
-                memcpy(to.from.key, t.from.key, ECC_CURVE+1);
-                memcpy(to.to.key, t.to.key, ECC_CURVE+1);
-                to.amount = t.amount;
-
-                //Lets verify if this signature is valid
-                uint8_t thash[ECC_CURVE];
-                makHash(thash, &to);
-                if(ecdsa_verify(t.from.key, thash, t.owner.key) == 0)
-                {
-                    //Alright this trans is invalid
-
-                    char topub[MIN_LEN];
-                    memset(topub, 0, sizeof(topub));
-                    size_t len = MIN_LEN;
-                    b58enc(topub, &len, t.to.key, ECC_CURVE+1);
-
-                    char frompub[MIN_LEN];
-                    memset(frompub, 0, sizeof(frompub));
-                    len = MIN_LEN;
-                    b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
-
-                    setlocale(LC_NUMERIC, "");
-                    printf("%s > %s : %'.3f\n", frompub, topub, toDB(t.amount));
-
-                    forceTruncate(file, i);
-                    printf("Trunc at: %li\n", i);
-                    munmap(m, len);
-                    return;
-                }
-            }
-
-            munmap(m, len);
-        }
-
-        close(f);
-    }
-
-}
-
-
 //dump all trans
 void dumptrans()
 {
@@ -1820,7 +1750,6 @@ void dumpbadtrans()
     }
 }
 
-
 void printtrans(uint fromR, uint toR)
 {
     FILE* f = fopen(CHAIN_FILE, "r");
@@ -1866,9 +1795,7 @@ void printtrans(uint fromR, uint toR)
             b58enc(sig, &len3, t.owner.key, ECC_CURVE*2);
 
             setlocale(LC_NUMERIC, "");
-            //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
-            //printf("%lu,%s,%s,%s,%.3f\n", t.uid, from, to, sig, toDB(t.amount));
-            printf("%d,%lu,%s,%s,%s,%.3f\n",(int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
+            printf("%d,%lu,%s,%s,%s,%.3f\n", (int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
 
             if(i >= toR * sizeof(struct trans))
             {
@@ -1879,7 +1806,6 @@ void printtrans(uint fromR, uint toR)
         fclose(f);
     }
 }
-
 
 //print received transactions
 void printIns(addr* a)
@@ -2849,7 +2775,73 @@ void *miningThread(void *arg)
 
 
 
+//repair chain
+void truncate_at_error(const char* file, const uint num)
+{
+    int f = open(file, O_RDONLY);
+    if(f)
+    {
+        const size_t len = lseek(f, 0, SEEK_END);
 
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
+        {
+            close(f);
+
+            struct trans t;
+            time_t st = time(0);
+            for(size_t i = sizeof(struct trans)*((len/sizeof(struct trans))-num); i < len; i += sizeof(struct trans))
+            {
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                if(time(0) > st)
+                {
+                    printf("head: %li / %li\n", i/sizeof(struct trans), len/sizeof(struct trans));
+                    st = time(0) + 9;
+                }
+
+                //Make original
+                struct trans to;
+                memset(&to, 0, sizeof(struct trans));
+                to.uid = t.uid;
+                memcpy(to.from.key, t.from.key, ECC_CURVE+1);
+                memcpy(to.to.key, t.to.key, ECC_CURVE+1);
+                to.amount = t.amount;
+
+                //Lets verify if this signature is valid
+                uint8_t thash[ECC_CURVE];
+                makHash(thash, &to);
+                if(ecdsa_verify(t.from.key, thash, t.owner.key) == 0)
+                {
+                    //Alright this trans is invalid
+
+                    char topub[MIN_LEN];
+                    memset(topub, 0, sizeof(topub));
+                    size_t len = MIN_LEN;
+                    b58enc(topub, &len, t.to.key, ECC_CURVE+1);
+
+                    char frompub[MIN_LEN];
+                    memset(frompub, 0, sizeof(frompub));
+                    len = MIN_LEN;
+                    b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
+
+                    setlocale(LC_NUMERIC, "");
+                    printf("%s > %s : %'.3f\n", frompub, topub, toDB(t.amount));
+
+                    forceTruncate(file, i);
+                    printf("Trunc at: %li\n", i);
+                    munmap(m, len);
+                    return;
+                }
+            }
+
+            munmap(m, len);
+        }
+
+        close(f);
+    }
+
+}
 
 //This is a quick hackup for a function that scans through the whole local chain, and removes duplicates
 //then saving the new chain to .vfc/cblocks.dat
