@@ -3467,6 +3467,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "unclaimed") == 0)
         {
             printf("Please Wait...");
+            fflush(stdout);
             FILE* f = fopen(".vfc/minted.priv", "r");
             if(f)
             {
@@ -3499,6 +3500,7 @@ int main(int argc , char *argv[])
 
                     //printf("%s (%.3f)\n", bpriv, bal);
                     printf(".");
+                    fflush(stdout);
 
                     //Print private key & balance 
                     if(bal > 0)
@@ -3514,6 +3516,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "claim") == 0)
         {
             printf("Please Wait...");
+            fflush(stdout);
             FILE* f = fopen(".vfc/minted.priv", "r");
             if(f)
             {
@@ -3545,6 +3548,7 @@ int main(int argc , char *argv[])
                     const double bal = toDB(getBalanceLocal(&subg_pub));
 
                     printf(".");
+                    fflush(stdout);
 
                     if(bal > 0)
                     {
