@@ -3466,8 +3466,8 @@ int main(int argc , char *argv[])
             printf("vfc new <seed1> <seed2> <seed3> <seed4> - Four random seed(uint64), Key-Pair\n");
             printf("--------------------------------------\n");
             printf("vfc qsend <amount> <receiver address>   - Send transaction from rewards address\n");
+            printf("vfc claim <optional file path>          - Claims file of private keys to rewards\n");
             printf("vfc reward                              - Your awarded or mined VFC\n");
-            printf("vfc claim <optional file path>          - Claims the contents of minted.priv\n");
             printf("-------------------------------\n");
             printf("vfc mine <optional num threads>  - CPU miner for VFC\n");
             printf("vfc peers                        - List all locally indexed peers and info\n");
