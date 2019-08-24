@@ -992,6 +992,7 @@ size_t getPeerHeigh(const uint id)
 
 void networkDifficulty()
 {
+    remove(".vfc/netdiff.txt");
     network_difficulty = 0; //reset
     uint divisor = 0;
     uint added[MAX_PEERS];
