@@ -1064,7 +1064,6 @@ void networkDifficulty()
             }
         }
     }
-    divisor++;
     if(divisor > 1)
         network_difficulty /= divisor;
 }
