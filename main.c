@@ -3466,7 +3466,7 @@ int main(int argc , char *argv[])
         //Fork unclaimed addresses from minted.priv
         if(strcmp(argv[1], "unclaimed") == 0)
         {
-            printf("Please Wait...\n");
+            printf("Please Wait...");
             FILE* f = fopen(".vfc/minted.priv", "r");
             if(f)
             {
@@ -3513,7 +3513,7 @@ int main(int argc , char *argv[])
         //claim minted.priv
         if(strcmp(argv[1], "claim") == 0)
         {
-            printf("Please Wait...\n");
+            printf("Please Wait...");
             FILE* f = fopen(".vfc/minted.priv", "r");
             if(f)
             {
