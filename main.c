@@ -759,7 +759,7 @@ uint isPeerAlive(const uint id)
 {
     const uint pd = time(0)-(peer_timeouts[id]-MAX_PEER_EXPIRE_SECONDS);
     const uint md = time(0) - peer_rm[id];
-    if(pd <= PING_INTERVAL*4 && md <= PING_INTERVAL*32)
+    if(pd <= PING_INTERVAL*20 && md <= PING_INTERVAL*64)
         return 1;
     return 0;
 }
@@ -4244,7 +4244,7 @@ int main(int argc , char *argv[])
             }
 
             //peer is sending it's user agent
-            else if(rb[0] == 'a')
+            else if(rb[0] == 'a' && read_size > 19)
             {
                 //Check this is a peer
                 const int p = getPeer(client.sin_addr.s_addr);
