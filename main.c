@@ -755,18 +755,6 @@ uint countPeers()
     return c;
 }
 
-uint countLivingPeers()
-{
-    uint c = 0;
-    for(uint i = 0; i < num_peers; i++)
-    {
-        const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS);
-        if(pd <= PING_INTERVAL*4)
-            c++;
-    }
-    return c;
-}
-
 uint isPeerAlive(const uint id)
 {
     const uint pd = time(0)-(peer_timeouts[id]-MAX_PEER_EXPIRE_SECONDS);
@@ -774,6 +762,17 @@ uint isPeerAlive(const uint id)
     if(pd <= PING_INTERVAL && md <= PING_INTERVAL)
         return 1;
     return 0;
+}
+
+uint countLivingPeers()
+{
+    uint c = 0;
+    for(uint i = 0; i < num_peers; i++)
+    {
+        if(isPeerAlive(i) == 1)
+            c++;
+    }
+    return c;
 }
 
 uint csend(const uint ip, const char* send, const size_t len)
@@ -889,8 +888,7 @@ void triBroadcast(const char* dat, const size_t len)
         uint si = qRand(1, num_peers-1);
         do
         {
-            const uint pd = time(0)-(peer_timeouts[si]-MAX_PEER_EXPIRE_SECONDS);
-            if(pd <= PING_INTERVAL*4)
+            if(isPeerAlive(si) == 1)
                 break;
             si++;
         }
@@ -935,8 +933,7 @@ void resyncBlocks(const uint inum_peers)
             uint si = qRand(1, num_peers-1); // start from random offset
             do // find next living peer from offset
             {
-                const uint pd = time(0)-(peer_timeouts[si]-MAX_PEER_EXPIRE_SECONDS); //ping delta
-                if(pd <= PING_INTERVAL*4)
+                if(isPeerAlive(si) == 0)
                     break;
                 si++;
             }
@@ -2746,8 +2743,7 @@ void *generalThread(void *arg)
             else
             {
                 //Is it ping worthy of a payment?
-                uint dt = (time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS)); //Prevent negative numbers, causes wrap
-                while(dt > PING_INTERVAL*4)
+                while(isPeerAlive(rewardindex) == 0)
                 {
                     rewardindex++;
                     if(rewardindex >= num_peers)
@@ -3869,20 +3865,6 @@ int main(int argc , char *argv[])
                 }
             }
             printf("Alive Peers: %u\n\n", ac);
-            // printf("\n--- Possibly Dead Peers ---\n\n");
-            // uint dc = 0;
-            // for(uint i = 0; i < num_peers; ++i)
-            // {
-            //     struct in_addr ip_addr;
-            //     ip_addr.s_addr = peers[i];
-            //     const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS); //ping delta
-            //     if(pd > PING_INTERVAL*4)
-            //     {
-            //         printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
-            //         dc++;
-            //     }
-            // }
-            // printf("Dead Peers: %u\n\n", dc);
             exit(0);
         }
     }
