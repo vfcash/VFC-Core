@@ -1046,6 +1046,10 @@ void networkDifficulty()
                 added_index++;
                 network_difficulty += diff;
                 divisor++;
+
+                struct in_addr ip_addr;
+                ip_addr.s_addr = peers[p];
+                printf("%s: %.3f\n", inet_ntoa(ip_addr), diff);
             }
         }
     }
