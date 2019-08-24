@@ -1108,7 +1108,7 @@ uint addPeer(const uint ip)
             return 0; //exists
         }
 
-        if(freeindex == 0 && i != 0 && peer_timeouts[i] < time(0)) //0 = Master, never a free slot.
+        if(freeindex == 0 && i != 0 && (peer_timeouts[i] < time(0) && time(0) > peer_rm[i]+PING_INTERVAL)) //0 = Master, never a free slot.
             freeindex = i;
     }
 
