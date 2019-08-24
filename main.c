@@ -2751,10 +2751,6 @@ void *generalThread(void *arg)
                         rewardindex = 0; //Master is always worthy, never takes payments
                         break;
                     }
-                    else
-                    {
-                        dt = (time(0)-(peer_timeouts[rewardindex]-MAX_PEER_EXPIRE_SECONDS)); //for the while loop
-                    }
                 }
             }
             
