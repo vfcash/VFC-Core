@@ -770,7 +770,8 @@ uint countLivingPeers()
 uint isPeerAlive(const uint id)
 {
     const uint pd = time(0)-(peer_timeouts[id]-MAX_PEER_EXPIRE_SECONDS);
-    if(pd <= PING_INTERVAL*4)
+    const uint md = time(0) - peer_rm[id];
+    if(pd <= PING_INTERVAL && md <= PING_INTERVAL)
         return 1;
     return 0;
 }
