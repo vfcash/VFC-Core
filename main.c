@@ -3531,7 +3531,6 @@ int main(int argc , char *argv[])
         //Fork unclaimed addresses from minted.priv
         if(strcmp(argv[1], "unclaimed") == 0)
         {
-            printf("Please Wait...");
             fflush(stdout);
             FILE* f = fopen(".vfc/minted.priv", "r");
             if(f)
@@ -3563,10 +3562,6 @@ int main(int argc , char *argv[])
                     //Get balance of pub key
                     const double bal = toDB(getBalanceLocal(&subg_pub));
 
-                    //printf("%s (%.3f)\n", bpriv, bal);
-                    printf(".");
-                    fflush(stdout);
-
                     //Print private key & balance 
                     if(bal > 0)
                         printf("\n%s (%.3f)\n", bpriv, bal);
@@ -3574,7 +3569,6 @@ int main(int argc , char *argv[])
                 }
                 fclose(f);
             }
-            printf("\n");
             exit(0);
         }
 
