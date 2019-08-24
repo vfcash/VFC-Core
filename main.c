@@ -3008,6 +3008,9 @@ int main(int argc , char *argv[])
     memset(&uidtimes, 0, sizeof(time_t)*MIN_LEN);
     // < Peer arrays do not need initilisation >
 
+    for(uint i = 0; i < MAX_PEERS; i++)
+        peer_rm[i] = time(0);
+
     //Init UID hashmap
     init_sites();
 
