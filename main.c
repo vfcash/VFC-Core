@@ -3657,7 +3657,7 @@ int main(int argc , char *argv[])
 
                     //Print private key & balance 
                     if(bal > 0)
-                        printf("\n%s (%.3f)\n", bpriv, bal);
+                        printf("%s (%.3f)\n", bpriv, bal);
                     
                 }
                 fclose(f);
