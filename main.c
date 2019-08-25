@@ -109,6 +109,7 @@ const char master_ip[] = "198.204.248.26";
 #define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this.
 #define MAX_RALLOW 256                  // Maximum amount of peers allowed to sync from at any one time
+#define MAX_VOTES_PER_POSITION 1        // Maximum amount of votes per difficulty position between 0.031 and 0.240 | 18 = 3762 total positions / 3072 total peers
 
 //Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
@@ -1000,14 +1001,14 @@ void networkDifficulty()
     remove(".vfc/netdiff.txt");
     network_difficulty = 0; //reset
     uint divisor = 0;
-    double added[MAX_PEERS];
+    double added[MAX_PEERS]; //max votes per position
     uint added_index = 0;
     for(uint p = 0; p < MAX_PEERS; p++)
     {
         if(isPeerAlive(p) == 1)
         {
             char cf[8];
-            memset(cf, 0, sizeof(cf));
+            memset(cf, 0, sizeof(char)*8);
             const uint ual = strlen(peer_ua[p]);
 
             if(ual > 6)
@@ -1040,13 +1041,14 @@ void networkDifficulty()
             {
                 if(added[i] == diff)
                 {
-                    exists = 1;
-                    break;
+                    exists++;
+                    if(exists >= MAX_VOTES_PER_POSITION) //max votes per position
+                        break;
                 }
             }
 
             //Is it in the valid range
-            if(diff >= 0.030 && diff <= 0.240 && exists == 0)
+            if(diff >= 0.030 && diff <= 0.240 && exists < MAX_VOTES_PER_POSITION)
             {
                 added[added_index] = diff;
                 added_index++;
@@ -1066,6 +1068,53 @@ void networkDifficulty()
     }
     if(divisor > 1)
         network_difficulty /= divisor;
+}
+
+void printDifficultyVotes()
+{
+    uint tally[256];
+    memset(tally, 0, sizeof(uint)*256);
+    for(uint p = 0; p < MAX_PEERS; p++)
+    {
+        if(isPeerAlive(p) == 1)
+        {
+            char cf[8];
+            memset(cf, 0, sizeof(char)*8);
+            const uint ual = strlen(peer_ua[p]);
+
+            if(ual > 6)
+            {
+                if(peer_ua[p][ual-5] == '0' && peer_ua[p][ual-4] == '.')
+                {
+                    cf[0] = peer_ua[p][ual-5];
+                    cf[1] = peer_ua[p][ual-4];
+                    cf[2] = peer_ua[p][ual-3];
+                    cf[3] = peer_ua[p][ual-2];
+                    cf[4] = peer_ua[p][ual-1];
+                }
+                else
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                continue;
+            }
+            
+            //Peer difficulty index
+            const double diff = atof(cf);
+
+            //Is it in the valid range
+            if(diff >= 0.030 && diff <= 0.240)
+            {
+                const int ti = diff * 1000;
+                tally[ti]++;
+            }
+        }
+    }
+    for(uint i = 31; i < 241; i++)
+        printf("%.3f,%u\n", (double)i/1000, tally[i]);
 }
 
 #if MASTER_NODE == 1
@@ -2639,9 +2688,6 @@ void *generalThread(void *arg)
         //Save memory state
         savemem();
 
-        //Recalculate the network difficulty
-        networkDifficulty();
-
         //Load new replay allow value
         forceRead(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_RALLOW);
 
@@ -2651,6 +2697,9 @@ void *generalThread(void *arg)
         //Let's execute a Sync every 3 mins
         if(time(0) > rs)
         {
+            //Recalculate the network difficulty
+            networkDifficulty();
+
             //How many peers we sync off depends on the number of logical cores
             resyncBlocks(num_processors / 2);
             rs = time(0) + 180;
@@ -3012,23 +3061,9 @@ int main(int argc , char *argv[])
     //set local working directory
     chdir(getHome());
 
-    //Init arrays
-    memset(&thread_ip, 0, sizeof(uint)*MAX_THREADS);
-    memset(&tq, 0, sizeof(struct trans)*MAX_TRANS_QUEUE);
-    memset(&ip, 0, sizeof(uint)*MAX_TRANS_QUEUE);
-    memset(&ipo, 0, sizeof(uint)*MAX_TRANS_QUEUE);
-    memset(&replay, 0, sizeof(unsigned char)*MAX_TRANS_QUEUE);
-    memset(&delta, 0, sizeof(time_t)*MAX_TRANS_QUEUE);
-
-    memset(&uidlist, 0, sizeof(uint64_t)*MIN_LEN);
-    memset(&uidtimes, 0, sizeof(time_t)*MIN_LEN);
-    // < Peer arrays do not need initilisation >
-
+    // < Peer arrays do not need initilisation > .. (apart from this one)
     for(uint i = 0; i < MAX_PEERS; i++)
         peer_rm[i] = time(0);
-
-    //Init UID hashmap
-    init_sites();
 
     //Workout size of server for replay scaling
     num_processors = get_nprocs();
@@ -3458,7 +3493,19 @@ int main(int argc , char *argv[])
             const float d = atof(argv[2]);
             if(d >= 0.03 && d <= 0.24)
             {
+                //Set node diff
                 forceWrite(".vfc/diff.mem", &d, sizeof(float));
+
+                //Tell peers our new user-agent
+                struct stat st;
+                stat(CHAIN_FILE, &st);
+                struct utsname ud;
+                uname(&ud);
+                char pc[MIN_LEN];
+                snprintf(pc, sizeof(pc), "a%lu, %s, %u, %s, %.3f", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
+                peersBroadcast(pc, strlen(pc));
+
+                //Output our set difficulty
                 printf("%.3f\n\n", d);
             }
             else
@@ -3466,6 +3513,7 @@ int main(int argc , char *argv[])
                 printf("Please pick a difficulty between 0.030 and 0.240\n\n");
             }
             
+            sleep(3);
             exit(0);
         }
     }
@@ -3489,7 +3537,7 @@ int main(int argc , char *argv[])
             printf("vfc new <seed1> <seed2> <seed3> <seed4> - Four random seed(uint64), Key-Pair\n");
             printf("--------------------------------------\n");
             printf("vfc qsend <amount> <receiver address>   - Send transaction from rewards address\n");
-            printf("vfc claim <optional file path>          - Claims file of private keys to rewards\n");
+            printf("vfc claim <optional file path>          - Claims private keys to rewards addr\n");
             printf("vfc reward                              - Your awarded or mined VFC\n");
             printf("-------------------------------\n");
             printf("vfc mine <optional num threads>  - CPU miner for VFC\n");
@@ -3497,6 +3545,7 @@ int main(int argc , char *argv[])
             printf("vfc getpub <private key>         - Get Public Key from Private Key\n");
             printf("vfc issub <public key>           - Is supplied public address a subG address\n");
             printf("-------------------------------\n");
+            printf("vfc votes                        - Map of difficulty votes\n");
             printf("vfc difficulty                   - Network mining difficulty\n");
             printf("vfc setdiff < 0.03 - 0.24 >      - Sets contribution to the net difficulty\n");
             printf("-------------------------------\n");
@@ -3517,6 +3566,7 @@ int main(int argc , char *argv[])
             printf("Scan blocks.dat for invalid transactions and generates a cleaned output; cblocks.dat:\nvfc clean\n\n");
             printf("----------------\n");
             printf("vfc version      - Node version\n");
+            printf("vfc agent        - Node user-agent\n");
             printf("vfc heigh        - Returns node [ blocks.dat size / num transactions ]\n");
             printf("vfc circulating  - Circulating supply\n");
             printf("vfc minted       - Minted supply\n");
@@ -3528,12 +3578,32 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
-        //get mining difficulty
+        //get node user agent
+        if(strcmp(argv[1], "agent") == 0)
+        {
+            forceRead(".vfc/diff.mem", &node_difficulty, sizeof(float));
+            struct stat st;
+            stat(CHAIN_FILE, &st);
+            struct utsname ud;
+            uname(&ud);
+            printf("%lu, %s, %u, %s, %.3f\n", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
+            exit(0);
+        }
+
+        //get minting difficulty
         if(strcmp(argv[1], "difficulty") == 0)
         {
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
             system("cat .vfc/netdiff.txt");
             printf("Average / Network Difficulty: %.3f\n", network_difficulty);
+            exit(0);
+        }
+
+        //get mining difficulty
+        if(strcmp(argv[1], "votes") == 0)
+        {
+            loadmem();
+            printDifficultyVotes();
             exit(0);
         }
 
@@ -3877,10 +3947,10 @@ int main(int argc , char *argv[])
             {
                 struct in_addr ip_addr;
                 ip_addr.s_addr = peers[i];
-                const time_t pd = time(0) - peer_rm[i];
-                if(isPeerAlive(i) == 1)
+                const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS);
+                if(isPeerAlive(i) == 1 || i == 0)
                 {
-                    printf("%s / %u / %lu / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
+                    printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
                     ac++;
                 }
             }
@@ -3896,6 +3966,20 @@ int main(int argc , char *argv[])
         system("vfc master_resync");
         exit(0);
     }
+
+    //Init arrays
+    memset(&thread_ip, 0, sizeof(uint)*MAX_THREADS);
+    memset(&tq, 0, sizeof(struct trans)*MAX_TRANS_QUEUE);
+    memset(&ip, 0, sizeof(uint)*MAX_TRANS_QUEUE);
+    memset(&ipo, 0, sizeof(uint)*MAX_TRANS_QUEUE);
+    memset(&replay, 0, sizeof(unsigned char)*MAX_TRANS_QUEUE);
+    memset(&delta, 0, sizeof(time_t)*MAX_TRANS_QUEUE);
+
+    memset(&uidlist, 0, sizeof(uint64_t)*MIN_LEN);
+    memset(&uidtimes, 0, sizeof(time_t)*MIN_LEN);
+
+    //Init UID hashmap
+    init_sites();
 
     //Set Master Node
     setMasterNode();
@@ -4103,11 +4187,9 @@ int main(int argc , char *argv[])
     pthread_t tid2;
     pthread_create(&tid2, NULL, generalThread, NULL);
 
-    //Pre-calc network difficulty from saved peer_a
+    //Pre-calc network difficulty from saved peer_ua
     networkDifficulty();
-	
-    //Sync Blocks
-    resyncBlocks(3);
+
      
     //Loop, until sigterm
     while(1)
