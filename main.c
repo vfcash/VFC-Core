@@ -2711,7 +2711,7 @@ void *generalThread(void *arg)
         struct tm* tmi = gmtime(&lt);
         if(tmi->tm_min == 59)
         {
-            //Loop until perfect time
+            //Loop until perfect time to 1 ms accuracy
             while(tmi->tm_min == 59 && tmi->tm_min != 00)
             {
                 usleep(1000); //1 millisecond delay
