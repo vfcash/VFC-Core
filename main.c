@@ -882,32 +882,41 @@ void peersBroadcast(const char* dat, const size_t len)
         csend(peers[i], dat, len);
 }
 
-void triBroadcast(const char* dat, const size_t len)
+void triBroadcast(const char* dat, const size_t len, const uint multi)
 {
-    if(num_peers > 3)
+    if(num_peers > multi)
     {
-        uint si = qRand(1, num_peers-1);
-        do
+        for(uint t = 0; t < multi; t++)
         {
-            if(isPeerAlive(si) == 1)
-                break;
-            si++;
-        }
-        while(si < num_peers);
+            uint si = qRand(1, num_peers-1);
+            uint fc = 0;
+            while(1)
+            {
+                if(isPeerAlive(si) == 1)
+                    break;
+                    
+                si++;
+                if(si == num_peers)
+                {
+                    si = 0;
 
-        if(si == num_peers)
-            csend(peers[qRand(1, num_peers-1)], dat, len);
-        else
+                    fc++;
+                    if(fc > 1)
+                    {
+                        printf("ERROR: triBroadcast() has failed to find a living peer.\n");
+                        err++;
+                        return;
+                    }
+                }
+            }
+
             csend(peers[si], dat, len);
+        }
     }
     else
     {
-        if(num_peers > 0)
-            csend(peers[1], dat, len);
-        if(num_peers > 1)
-            csend(peers[2], dat, len);
-        if(num_peers > 2)
-            csend(peers[3], dat, len);
+        for(uint p = 0; p < num_peers; p++)
+            csend(peers[p], dat, len);
     }
 }
 
@@ -2666,7 +2675,7 @@ pthread_mutex_unlock(&mutex2);
             memcpy(ofs, &t.amount, sizeof(mval));
             ofs += sizeof(mval);
             memcpy(ofs, t.owner.key, ECC_CURVE*2);
-            triBroadcast(pc, len);
+            triBroadcast(pc, len, 6);                       //Tell 6 peers
         }
 
     }
@@ -4249,7 +4258,7 @@ int main(int argc , char *argv[])
 #endif
 
             //peer has sent a live or dead transaction
-            if((rb[0] == 't' || rb[0] == 'd') && read_size == trans_size)
+            if(rb[0] == 't' && read_size == trans_size)
             {
                 //Root origin peer address
                 uint origin = 0;
@@ -4278,7 +4287,7 @@ int main(int argc , char *argv[])
                     //Broadcast to peers
                     origin = client.sin_addr.s_addr;
                     char pc[MIN_LEN];
-                    pc[0] = 'd';
+                    pc[0] = 't';
                     char* ofs = pc + 1;
                     memcpy(ofs, &origin, sizeof(uint));
                     ofs += sizeof(uint);
@@ -4291,7 +4300,7 @@ int main(int argc , char *argv[])
                     memcpy(ofs, &t.amount, sizeof(mval));
                     ofs += sizeof(mval);
                     memcpy(ofs, t.owner.key, ECC_CURVE*2);
-                    triBroadcast(pc, trans_size);
+                    triBroadcast(pc, trans_size, 3);
                 }
             }
 
