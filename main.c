@@ -1005,80 +1005,6 @@ size_t getPeerHeigh(const uint id)
     
 }
 
-void networkDifficulty()
-{
-    remove(".vfc/netdiff.txt");
-    network_difficulty = 0; //reset
-    uint divisor = 0;
-    double added[MAX_PEERS]; //max votes per position
-    uint added_index = 0;
-    for(uint p = 0; p < MAX_PEERS; p++)
-    {
-        if(isPeerAlive(p) == 1)
-        {
-            char cf[8];
-            memset(cf, 0, sizeof(char)*8);
-            const uint ual = strlen(peer_ua[p]);
-
-            if(ual > 6)
-            {
-                if(peer_ua[p][ual-5] == '0' && peer_ua[p][ual-4] == '.')
-                {
-                    cf[0] = peer_ua[p][ual-5];
-                    cf[1] = peer_ua[p][ual-4];
-                    cf[2] = peer_ua[p][ual-3];
-                    cf[3] = peer_ua[p][ual-2];
-                    cf[4] = peer_ua[p][ual-1];
-                }
-                else
-                {
-                    continue;
-                }
-            }
-            else
-            {
-                continue;
-            }
-            
-            //Peer difficulty
-            const float diff = atof(cf);
-            //printf("DBG: %s - %.3f\n", cf, diff);
-
-            //check if difficulty already added
-            uint exists = 0;
-            for(uint i = 0; i < added_index; i++)
-            {
-                if(added[i] == diff)
-                {
-                    exists++;
-                    if(exists >= MAX_VOTES_PER_POSITION) //max votes per position
-                        break;
-                }
-            }
-
-            //Is it in the valid range
-            if(diff >= 0.030 && diff <= 0.240 && exists < MAX_VOTES_PER_POSITION)
-            {
-                added[added_index] = diff;
-                added_index++;
-                network_difficulty += diff;
-                divisor++;
-
-                struct in_addr ip_addr;
-                ip_addr.s_addr = peers[p];
-                FILE* f = fopen(".vfc/netdiff.txt", "a");
-                if(f)
-                {
-                    fprintf(f, "%s: %.3f\n", inet_ntoa(ip_addr), diff);
-                    fclose(f);
-                }
-            }
-        }
-    }
-    if(divisor > 1)
-        network_difficulty /= divisor;
-}
-
 void printDifficultyVotes()
 {
     uint tally[256];
@@ -1355,6 +1281,83 @@ int gQue()
 //
 /* ~ Blockchain Transversal & Functions
 */
+
+
+void networkDifficulty()
+{
+    memset(&tq, 0, sizeof(struct trans)*MAX_TRANS_QUEUE); //Clear network transaction processing que
+    remove(".vfc/netdiff.txt");
+    network_difficulty = 0; //reset
+    uint divisor = 0;
+    double added[MAX_PEERS]; //max votes per position
+    uint added_index = 0;
+    for(uint p = 0; p < MAX_PEERS; p++)
+    {
+        if(isPeerAlive(p) == 1)
+        {
+            char cf[8];
+            memset(cf, 0, sizeof(char)*8);
+            const uint ual = strlen(peer_ua[p]);
+
+            if(ual > 6)
+            {
+                if(peer_ua[p][ual-5] == '0' && peer_ua[p][ual-4] == '.')
+                {
+                    cf[0] = peer_ua[p][ual-5];
+                    cf[1] = peer_ua[p][ual-4];
+                    cf[2] = peer_ua[p][ual-3];
+                    cf[3] = peer_ua[p][ual-2];
+                    cf[4] = peer_ua[p][ual-1];
+                }
+                else
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                continue;
+            }
+            
+            //Peer difficulty
+            const float diff = atof(cf);
+            //printf("DBG: %s - %.3f\n", cf, diff);
+
+            //check if difficulty already added
+            uint exists = 0;
+            for(uint i = 0; i < added_index; i++)
+            {
+                if(added[i] == diff)
+                {
+                    exists++;
+                    if(exists >= MAX_VOTES_PER_POSITION) //max votes per position
+                        break;
+                }
+            }
+
+            //Is it in the valid range
+            if(diff >= 0.030 && diff <= 0.240 && exists < MAX_VOTES_PER_POSITION)
+            {
+                added[added_index] = diff;
+                added_index++;
+                network_difficulty += diff;
+                divisor++;
+
+                struct in_addr ip_addr;
+                ip_addr.s_addr = peers[p];
+                FILE* f = fopen(".vfc/netdiff.txt", "a");
+                if(f)
+                {
+                    fprintf(f, "%s: %.3f\n", inet_ntoa(ip_addr), diff);
+                    fclose(f);
+                }
+            }
+        }
+    }
+    if(divisor > 1)
+        network_difficulty /= divisor;
+}
+
 
 
 //Get mined supply
@@ -2703,12 +2706,26 @@ void *generalThread(void *arg)
         //Load difficulty
         forceRead(".vfc/diff.mem", &node_difficulty, sizeof(float));
 
+        //Recalculate network difficulty
+        time_t lt = time(0);
+        struct tm* tmi = gmtime(&lt);
+        if(tmi->tm_min == 59)
+        {
+            //Loop until perfect time
+            while(tmi->tm_min == 59 && tmi->tm_min != 00)
+            {
+                usleep(1000); //1 millisecond delay
+                lt = time(0);
+                tmi = gmtime(&lt);
+            }
+
+            //It's time !!
+            networkDifficulty(); //Recalculate the network difficulty
+        }
+
         //Let's execute a Sync every 3 mins
         if(time(0) > rs)
         {
-            //Recalculate the network difficulty
-            networkDifficulty();
-
             //How many peers we sync off depends on the number of logical cores
             resyncBlocks(num_processors / 2);
             rs = time(0) + 180;
@@ -4195,9 +4212,6 @@ int main(int argc , char *argv[])
     //Launch the General Processing thread
     pthread_t tid2;
     pthread_create(&tid2, NULL, generalThread, NULL);
-
-    //Pre-calc network difficulty from saved peer_ua
-    networkDifficulty();
 
      
     //Loop, until sigterm
