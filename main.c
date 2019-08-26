@@ -896,7 +896,7 @@ void triBroadcast(const char* dat, const size_t len, const uint multi)
                     break;
                     
                 si++;
-                if(si == num_peers)
+                if(si >= num_peers)
                 {
                     si = 0;
 
