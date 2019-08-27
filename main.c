@@ -878,7 +878,7 @@ void setMasterNode()
 
 void peersBroadcast(const char* dat, const size_t len)
 {
-    for(uint i = 1; i < num_peers; ++i) //Start from 1, skip master
+    for(uint i = 0; i < num_peers; ++i) //Start from 1, skip master
         csend(peers[i], dat, len);
 }
 
@@ -1382,7 +1382,7 @@ uint64_t getMinedSupply()
                 fc++;
                 if(fc > 333)
                 {
-                    printf("ERROR: fread() in getMinedSupply() has failed.\n");
+                    //printf("ERROR: fread() in getMinedSupply() has failed.\n");
                     err++;
                     fclose(f);
                     return 0;
