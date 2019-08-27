@@ -1285,7 +1285,6 @@ int gQue()
 
 void networkDifficulty()
 {
-    memset(&tq, 0, sizeof(struct trans)*MAX_TRANS_QUEUE); //Clear network transaction processing que
     remove(".vfc/netdiff.txt");
     network_difficulty = 0; //reset
     uint divisor = 0;
