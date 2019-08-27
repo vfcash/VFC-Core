@@ -1898,6 +1898,61 @@ void printtrans(uint fromR, uint toR)
     }
 }
 
+//print sent & recv transactions
+void printAll(addr* a)
+{
+    FILE* f = fopen(CHAIN_FILE, "r");
+    if(f)
+    {
+        fseek(f, 0, SEEK_END);
+        const size_t len = ftell(f);
+
+        struct trans t;
+        for(size_t i = 0; i < len; i += sizeof(struct trans))
+        {
+            fseek(f, i, SEEK_SET);
+
+            uint fc = 0;
+            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
+            {
+                fclose(f);
+                f = fopen(CHAIN_FILE, "r");
+                fc++;
+                if(fc > 333)
+                {
+                    printf("ERROR: fread() in printAll() has failed.\n");
+                    fclose(f);
+                    return;
+                }
+                if(f == NULL)
+                    continue;
+            }
+
+            if(memcmp(&t.from.key, a->key, ECC_CURVE+1) == 0)
+            {
+                char pub[MIN_LEN];
+                memset(pub, 0, sizeof(pub));
+                size_t len = MIN_LEN;
+                b58enc(pub, &len, t.to.key, ECC_CURVE+1);
+                setlocale(LC_NUMERIC, "");
+                printf("OUT: %lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
+            }
+            else if(memcmp(&t.to.key, a->key, ECC_CURVE+1) == 0)
+            {
+                char pub[MIN_LEN];
+                memset(pub, 0, sizeof(pub));
+                size_t len = MIN_LEN;
+                b58enc(pub, &len, t.from.key, ECC_CURVE+1);
+                setlocale(LC_NUMERIC, "");
+                printf("IN: %lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
+            }
+            
+        }
+
+        fclose(f);
+    }
+}
+
 //print received transactions
 void printIns(addr* a)
 {
@@ -3513,6 +3568,15 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
+        if(strstr(argv[1], "all") != NULL)
+        {
+            addr a;
+            size_t len = ECC_CURVE+1;
+            b58tobin(a.key, &len, argv[2], strlen(argv[2]));
+            printAll(&a);
+            exit(0);
+        }
+
         if(strcmp(argv[1], "setdiff") == 0)
         {
             const float d = atof(argv[2]);
@@ -3554,6 +3618,7 @@ int main(int argc , char *argv[])
             printf("vfc <address public key>      - Get address balance\n");
             printf("vfc out <address public key>  - Gets sent transactions\n");
             printf("vfc in <address public key>   - Gets received transactions\n");
+            printf("vfc all <address public key>  - Recv & Sent transactions\n");
             printf("-----------------------------\n\n");
             printf("Send a transaction:\n");
             printf("vfc <sender public key> <reciever public key> <amount> <sender private key>\n\n");
