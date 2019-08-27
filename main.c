@@ -1935,7 +1935,7 @@ void printAll(addr* a)
                 size_t len = MIN_LEN;
                 b58enc(pub, &len, t.to.key, ECC_CURVE+1);
                 setlocale(LC_NUMERIC, "");
-                printf("OUT: %lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
+                printf("OUT,%lu,%s,%'.3f\n", t.uid, pub, toDB(t.amount));
             }
             else if(memcmp(&t.to.key, a->key, ECC_CURVE+1) == 0)
             {
@@ -1944,7 +1944,7 @@ void printAll(addr* a)
                 size_t len = MIN_LEN;
                 b58enc(pub, &len, t.from.key, ECC_CURVE+1);
                 setlocale(LC_NUMERIC, "");
-                printf("IN: %lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
+                printf("IN,%lu,%s,%'.3f\n", t.uid, pub, toDB(t.amount));
             }
             
         }
