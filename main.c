@@ -101,7 +101,7 @@ const char master_ip[] = "198.204.248.26";
 
 //Node Settings
 #define MAX_SITES 11111101              // Maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes.
-#define MAX_TRANS_QUEUE 4096            // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
+#define MAX_TRANS_QUEUE 16384           // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
 #define MAX_REXI_SIZE 1024              // Maximum size of rExi (this should be atlest ~MAX_TRANS_QUEUE/3)
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
@@ -1206,7 +1206,7 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
             //Is this a possible double spend?
             if(ir == 1 && replay[i] == 1)
             {
-                if(memcmp(tq[i].from.key, t->from.key, ECC_CURVE+1) == 0 && memcmp(tq[i].to.key, t->to.key, ECC_CURVE+1) != 0)
+                if((memcmp(tq[i].from.key, t->from.key, ECC_CURVE+1) == 0 && memcmp(tq[i].to.key, t->to.key, ECC_CURVE+1) != 0) && time(0) - delta[i] <= 3) //Only terminate if within three seconds of each other
                 {
                     //Log both blocks in bad_blocks
                     FILE* f = fopen(BADCHAIN_FILE, "a");
