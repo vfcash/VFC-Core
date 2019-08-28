@@ -41,15 +41,6 @@
     This client will try to broadcast all transactions through the master first
     and then the peer list.
 
-    Transactions echo two relays deep into the peers, making sure most nodes are
-    repeat notified about the transactions due to the echoing of a packet around in
-    a two relay deep p2p peers broadcast, making a less reliable UDP protocol
-    more reliable and ensuring all peers get the transaction.
-
-    TODO:
-    - Scanning for peers could do with scanning more specific ranges that are more
-      worth-while
-
     Distributed under the MIT software license, see the accompanying
     file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -3271,6 +3262,7 @@ void truncate_at_error(const char* file, const uint num)
     }
 
 }
+
 
 //This is a quick hackup for a function that scans through the whole local chain, and removes duplicates
 //then saving the new chain to .vfc/cblocks.dat
