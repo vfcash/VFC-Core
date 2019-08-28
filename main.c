@@ -133,6 +133,7 @@ const char master_ip[] = "198.204.248.26";
 char mid[8];                         //Clients private identification code used in pings etc.
 float node_difficulty = 0.18;        //Clients weighted contribution to the federated mining difficulty
 float network_difficulty = 0;        //Assumed actual network difficulty
+uint reqs = 0;                       //Global req count
 ulong err = 0;                       //Global error count
 uint replay_allow[MAX_RALLOW];       //IP address of peer allowed to send replay blocks
 uint replay_height = 0;              //Block Height of current peer authorized to receive a replay from
@@ -147,6 +148,8 @@ uint num_processors = 1;             //number of logical processors on the devic
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex4 = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex5 = PTHREAD_MUTEX_INITIALIZER;
 uint is8664 = 1;
 
 ///////////////////////////////////////////////////////////////////////////
@@ -463,12 +466,14 @@ void add_uid(const uint64_t uid, const uint expire_seconds) //Pub
         sites[site_index].expire_epoch = time(0)+expire_seconds;
     }
 
+    //Find the range
+    unsigned short idfar = (uid % (sizeof(unsigned short)-1))+1;
+
     //Collison?
-    if(sites[site_index].uid_low != 0)
+    if(sites[site_index].uid_low != 0 && sites[site_index].uid_low != idfar)
         printf("UID Collision: %u\n", site_index);
 
     //Set the ranges
-    unsigned short idfar = (uid % (sizeof(unsigned short)-1))+1;
     if(idfar < sites[site_index].uid_low || sites[site_index].uid_low == 0)
     {
         sites[site_index].uid_low = idfar;
@@ -1114,12 +1119,15 @@ int addPeer(const uint ip)
 
     //Is already in peers?
     uint freeindex = 0;
+pthread_mutex_lock(&mutex4);
     for(uint i = 0; i < num_peers; ++i)
     {
         if(peers[i] == ip)
         {
+
             peer_timeouts[i] = time(0) + MAX_PEER_EXPIRE_SECONDS;
             peer_tcount[i]++;
+            pthread_mutex_unlock(&mutex4);
             return i; //exists
         }
 
@@ -1135,6 +1143,7 @@ int addPeer(const uint ip)
         peer_tcount[num_peers] = 1;
         peer_rm[num_peers] = time(0);
         num_peers++;
+        pthread_mutex_unlock(&mutex4);
         return num_peers;
     }
     else if(freeindex != 0) //If not replace a node that's been quiet for more than three hours
@@ -1143,8 +1152,10 @@ int addPeer(const uint ip)
         peer_timeouts[freeindex] = time(0) + MAX_PEER_EXPIRE_SECONDS;
         peer_tcount[freeindex] = 1;
         peer_rm[freeindex] = time(0);
+        pthread_mutex_unlock(&mutex4);
         return freeindex;
     }
+pthread_mutex_unlock(&mutex4);
 
     return -1;
 }
@@ -1197,6 +1208,8 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
     if(has_uid(t->uid) == 1)
         return 0;
 
+pthread_mutex_lock(&mutex5);
+
     //Check if duplicate transaction
     int freeindex = -1;
     for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
@@ -1218,13 +1231,17 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
                     }
                     tq[i].amount = 0; //It looks like it could be a double spend, terminate the original transaction
                     add_uid(t->uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
+                    pthread_mutex_unlock(&mutex5);
                     return 1; //Don't process this transaction and do tell our peers about this transaction so that they have detect and terminate also.
                 }
             }
 
             //UID already in queue?
             if(tq[i].uid == t->uid)
+            {
+                pthread_mutex_unlock(&mutex5);
                 return 0; //It's not a double spend, just a repeat, don't tell our peers
+            }
         }
         
         if(freeindex == -1 && tq[i].amount == 0)
@@ -1247,6 +1264,9 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
 
     //Success
     add_uid(t->uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
+
+pthread_mutex_unlock(&mutex5);
+
     return 1;
 }
 
@@ -2668,7 +2688,7 @@ uint isNodeRunning()
 
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons(gport);
+    server.sin_port = htons(31963);
     
     if(bind(s, (struct sockaddr*)&server, sizeof(server)) < 0)
     {
@@ -2677,65 +2697,6 @@ uint isNodeRunning()
     }
 
     close(s);
-    return 0;
-}
-
-void *processThread(void *arg)
-{
-    chdir(getHome());
-    while(1)
-    {
-        //See if there is a new transaction to process
-        struct trans t;
-        uint32_t lip=0, lipo=0;
-        unsigned char lreplay = 0;
-
-pthread_mutex_lock(&mutex2);
-        const int i = gQue();
-        if(i == -1)
-        {
-            pthread_mutex_unlock(&mutex2);
-            continue;
-        }
-        lreplay = replay[i];
-        lip = ip[i];
-        lipo = ipo[i];
-        memcpy(&t, &tq[i], sizeof(struct trans));
-        tq[i].amount = 0; //Signifies transaction as invalid / completed / processed (done)
-pthread_mutex_unlock(&mutex2);
-
-        //Process the transaction
-        const int r = process_trans(t.uid, &t.from, &t.to, t.amount, &t.owner);
-
-        //Good transaction!
-        if(r == 1 && lreplay == 1)
-        {
-            //Track this client from origin
-            addPeer(lip);
-            if(lipo != 0)
-                addPeer(lipo); //Track this client by attached origin
-
-            //Construct a non-repeatable transaction and tell our peers
-            const uint32_t origin = lip;
-            const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
-            char pc[MIN_LEN];
-            pc[0] = 't';
-            char* ofs = pc + 1;
-            memcpy(ofs, &origin, sizeof(uint32_t));
-            ofs += sizeof(uint32_t);
-            memcpy(ofs, &t.uid, sizeof(uint64_t));
-            ofs += sizeof(uint64_t);
-            memcpy(ofs, t.from.key, ECC_CURVE+1);
-            ofs += ECC_CURVE+1;
-            memcpy(ofs, t.to.key, ECC_CURVE+1);
-            ofs += ECC_CURVE+1;
-            memcpy(ofs, &t.amount, sizeof(mval));
-            ofs += sizeof(mval);
-            memcpy(ofs, t.owner.key, ECC_CURVE*2);
-            triBroadcast(pc, len, 6);                       //Tell 6 peers
-        }
-
-    }
     return 0;
 }
 
@@ -2932,6 +2893,314 @@ void *miningThread(void *arg)
 
     }
 }
+
+//Transaction Processing Worker Thread
+void *processThread(void *arg)
+{
+    chdir(getHome());
+    while(1)
+    {
+        //See if there is a new transaction to process
+        struct trans t;
+        uint32_t lip=0, lipo=0;
+        unsigned char lreplay = 0;
+
+pthread_mutex_lock(&mutex2);
+        const int i = gQue();
+        if(i == -1)
+        {
+            pthread_mutex_unlock(&mutex2);
+            continue;
+        }
+        lreplay = replay[i];
+        lip = ip[i];
+        lipo = ipo[i];
+        memcpy(&t, &tq[i], sizeof(struct trans));
+        tq[i].amount = 0; //Signifies transaction as invalid / completed / processed (done)
+pthread_mutex_unlock(&mutex2);
+
+        //Process the transaction
+        const int r = process_trans(t.uid, &t.from, &t.to, t.amount, &t.owner);
+
+        //Good transaction!
+        if(r == 1 && lreplay == 1)
+        {
+            //Track this client from origin
+            addPeer(lip);
+            if(lipo != 0)
+                addPeer(lipo); //Track this client by attached origin
+
+            //Construct a non-repeatable transaction and tell our peers
+            const uint32_t origin = lip;
+            const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+            char pc[MIN_LEN];
+            pc[0] = 't';
+            char* ofs = pc + 1;
+            memcpy(ofs, &origin, sizeof(uint32_t));
+            ofs += sizeof(uint32_t);
+            memcpy(ofs, &t.uid, sizeof(uint64_t));
+            ofs += sizeof(uint64_t);
+            memcpy(ofs, t.from.key, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, t.to.key, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, &t.amount, sizeof(mval));
+            ofs += sizeof(mval);
+            memcpy(ofs, t.owner.key, ECC_CURVE*2);
+            triBroadcast(pc, len, 6);                       //Tell 6 peers
+        }
+
+    }
+    return 0;
+}
+
+//Network Processing Worker Thread
+void *networkThread(void *arg)
+{
+    //Set directory
+    chdir(getHome());
+
+    //Vars
+    struct sockaddr_in server, client;
+    uint slen = sizeof(client);
+
+    //Create socket
+    int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(s == -1)
+    {
+        printf("ERROR: Network Thread Socket Creation Failed.\n");
+        return 0;
+    }
+
+    //Allow the port to be reused
+    int reuse = 1; //mpromonet [stack overflow]
+    if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse)) < 0)
+        perror("setsockopt(SO_REUSEADDR) failed\n");
+    if(setsockopt(s, SOL_SOCKET, SO_REUSEPORT, (const char*)&reuse, sizeof(reuse)) < 0) 
+        perror("setsockopt(SO_REUSEPORT) failed\n");
+
+    //Prepare the sockaddr_in structure
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(gport);
+    
+    //Bind port to socket
+    while(bind(s, (struct sockaddr*)&server, sizeof(server)) < 0)
+        sleep(3);
+
+    //Never allow thread to end
+    int read_size;
+    char rb[RECV_BUFF_SIZE];
+    const uint trans_size = 1+sizeof(uint)+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+    const uint replay_size = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+    while(1)
+    {
+        //Client Command
+        memset(rb, 0, sizeof(rb));
+        read_size = recvfrom(s, rb, RECV_BUFF_SIZE-1, 0, (struct sockaddr *)&client, &slen);
+        reqs++;
+
+        //It's time to payout some rewards (if eligible).
+#if MASTER_NODE == 1
+        if(rb[0] == ' ')
+        {
+            RewardPeer(client.sin_addr.s_addr, rb); //Check if the peer is eligible
+        }
+#endif
+
+        //peer has sent a transaction
+        if(rb[0] == 't' && read_size == trans_size)
+        {
+            //Root origin peer address
+            uint origin = 0;
+
+            //Decode packet into a Transaction & Origin
+            struct trans t;
+            memset(&t, 0, sizeof(struct trans));
+            char* ofs = rb+1;
+            memcpy(&origin, ofs, sizeof(uint)); //grab root origin address
+            ofs += sizeof(uint);
+            memcpy(&t.uid, ofs, sizeof(uint64_t)); //grab uid
+            ofs += sizeof(uint64_t);
+            memcpy(t.from.key, ofs, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(t.to.key, ofs, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(&t.amount, ofs, sizeof(mval));
+            ofs += sizeof(mval);
+            memcpy(t.owner.key, ofs, ECC_CURVE*2);
+
+            //Process Transaction (Threaded (using processThread()) not to jam up UDP relay)
+            if(aQue(&t, client.sin_addr.s_addr, origin, 1) == 1)
+            {
+                //printf("Q: %u %lu %u\n", t.amount, t.uid, gQueSize());
+
+                //Broadcast to peers
+                origin = client.sin_addr.s_addr;
+                char pc[MIN_LEN];
+                pc[0] = 't';
+                char* ofs = pc + 1;
+                memcpy(ofs, &origin, sizeof(uint));
+                ofs += sizeof(uint);
+                memcpy(ofs, &t.uid, sizeof(uint64_t));
+                ofs += sizeof(uint64_t);
+                memcpy(ofs, t.from.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, t.to.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, &t.amount, sizeof(mval));
+                ofs += sizeof(mval);
+                memcpy(ofs, t.owner.key, ECC_CURVE*2);
+                triBroadcast(pc, trans_size, 3);
+            }
+        }
+
+        //peer is requesting a block replay
+        else if(rb[0] == 'r' && read_size == 1)
+        {
+            //Is this peer even registered? if not, suspect foul play, not part of verified network.
+            if(isPeer(client.sin_addr.s_addr) == 1)
+            {
+                //Launch replay
+                launchReplayThread(client.sin_addr.s_addr);
+            }
+        }
+
+        //peer is requesting your user agent
+        else if(rb[0] == 'a' && rb[1] == 0x00 && read_size == 1)
+        {
+            //Check this is the replay peer
+            if(isPeer(client.sin_addr.s_addr))
+            {
+                struct stat st;
+                stat(CHAIN_FILE, &st);
+
+                struct utsname ud;
+                uname(&ud);
+
+                char pc[MIN_LEN];
+                snprintf(pc, sizeof(pc), "a%lu, %s, %u, %s, %.3f", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
+
+                csend(client.sin_addr.s_addr, pc, strlen(pc));
+            }
+        }
+
+        //peer is sending it's user agent
+        else if(rb[0] == 'a' && read_size >= 19)
+        {
+            //Check this is a peer
+            const int p = getPeer(client.sin_addr.s_addr);
+            if(p != -1)
+            {
+                memset(peer_ua[p], 0, 64);
+                memcpy(&peer_ua[p], rb+1, read_size);
+                peer_ua[p][63] = 0x00;
+            }
+        }
+
+        //the replay peer is setting block height
+        else if(rb[0] == 'h' && read_size == sizeof(uint)+1)
+        {
+            //Check if this peer is authorized to send replay transactions
+            uint allow = 0;
+            if(isMasterNode(client.sin_addr.s_addr) == 1)
+            {
+                allow = 1;
+            }
+            else
+            {
+                for(uint i = 0; replay_allow[i] != 0 && i < MAX_RALLOW; i++)
+                {
+                    if(client.sin_addr.s_addr == replay_allow[i])
+                        allow = 1;
+                }
+            }
+
+            if(allow == 1)
+            {
+                uint32_t trh = 0;
+                memcpy(&trh, rb+1, sizeof(uint)); //Set the block height
+                if(trh > replay_height)
+                    replay_height = trh;
+                forceWrite(".vfc/rph.mem", &replay_height, sizeof(uint));
+            }
+        }
+
+        //peer is sending a replay block
+        else if(rb[0] == 'p' && read_size == replay_size)
+        {
+            //Check if this peer is authorized to send replay transactions
+            uint allow = 0;
+            if(client.sin_addr.s_addr == inet_addr("127.0.0.1") || isMasterNode(client.sin_addr.s_addr) == 1)
+            {
+                allow = 1;
+            }
+            else
+            {
+                for(uint i = 0; replay_allow[i] != 0 && i < MAX_RALLOW; i++)
+                {
+                    if(client.sin_addr.s_addr == replay_allow[i])
+                        allow = 1;
+                }
+            }
+
+            if(allow == 1)
+            {
+                //Decode packet into a Transaction
+                struct trans t;
+                memset(&t, 0, sizeof(struct trans));
+                char* ofs = rb+1;
+                memcpy(&t.uid, ofs, sizeof(uint64_t)); //grab uid
+                ofs += sizeof(uint64_t);
+                memcpy(t.from.key, ofs, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(t.to.key, ofs, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(&t.amount, ofs, sizeof(mval));
+                ofs += sizeof(mval);
+                memcpy(t.owner.key, ofs, ECC_CURVE*2);
+
+                //Alright process it, if it was a legitimate transaction we retain it in our chain.
+                aQue(&t, 0, 0, 0);
+            }
+        }
+
+        //Anon is IPv4 scanning for peers: tell Anon we exist but send our mid code, if Anon responds with our mid code we add Anon as a peer
+        else if(rb[0] == '\t' && read_size == sizeof(mid))
+        {
+            rb[0] = '\r';
+            csend(client.sin_addr.s_addr, rb, read_size);
+            addPeer(client.sin_addr.s_addr); //I didn't want to have to do this, but it's not the end of the world.
+        }
+        else if(rb[0] == '\r' && read_size == sizeof(mid)) //Anon responded with our mid code, we add Anon as a peer
+        {
+            if( rb[1] == mid[1] && //Only add as a peer if they responded with our private mid code
+                rb[2] == mid[2] &&
+                rb[3] == mid[3] &&
+                rb[4] == mid[4] &&
+                rb[5] == mid[5] &&
+                rb[6] == mid[6] &&
+                rb[7] == mid[7] )
+            {
+                int p = addPeer(client.sin_addr.s_addr);
+                if(p != -1)
+                    peer_rm[p] = time(0);
+            }
+        }
+
+        //master is requesting clients reward public key to make a payment
+        else if(rb[0] == 'x' && read_size == 1)
+        {
+            //Only the master can pay out rewards from the pre-mine
+            if(isMasterNode(client.sin_addr.s_addr) == 1)
+                csend(client.sin_addr.s_addr, myrewardkey, strlen(myrewardkey));
+        }
+    
+    }
+
+    return 0;
+}
+
 
 
 
@@ -4264,7 +4533,7 @@ int main(int argc , char *argv[])
     getcwd(cwd, sizeof(cwd));
     printf("Current Directory: %s\n\n", cwd);
 
-    //Launch the Transaction Processing thread
+    //Launch the Transaction Processing threads
     nthreads = get_nprocs();
     for(int i = 0; i < nthreads; i++)
     {
@@ -4273,269 +4542,41 @@ int main(int argc , char *argv[])
             continue;
     }
 
+    //Launch the Network Processing threads
+    for(int i = 0; i < nthreads; i++)
+    {
+        pthread_t tid;
+        if(pthread_create(&tid, NULL, networkThread, NULL) != 0)
+            continue;
+    }
+
     //Launch the General Processing thread
     pthread_t tid2;
     pthread_create(&tid2, NULL, generalThread, NULL);
 
-     
+
     //Loop, until sigterm
+    struct sockaddr_in server;
+    int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if(s == -1)
+        return 0;
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(31963);
+    if(bind(s, (struct sockaddr*)&server, sizeof(server)) < 0)
+    {
+        printf("Sorry the port %u seems to already be in use. Daemon must already be running, good bye.\n\n", gport);
+        exit(0);
+    }
+    printf("Waiting for connections...\n\n");
+    time_t tt = time(0);
     while(1)
     {
-        //Vars
-        struct sockaddr_in server, client;
-        uint slen = sizeof(client);
-
-        //Create socket
-        int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-        if(s == -1)
-        {
-            printf("Failed to create write socket ...\n");
-            sleep(3);
-            continue;
-        }
-
-        //Prepare the sockaddr_in structure
-        server.sin_family = AF_INET;
-        server.sin_addr.s_addr = INADDR_ANY;
-        server.sin_port = htons(gport);
-        
-        //Bind port to socket
-        if(bind(s, (struct sockaddr*)&server, sizeof(server)) < 0)
-        {
-            printf("Sorry the port %u seems to already be in use. Daemon must already be running, good bye.\n\n", gport);
-            exit(0);
-        }
-        printf("Waiting for connections...\n\n");
-
-        //Never allow process to end
-        uint reqs = 0;
-        time_t st = time(0);
-        time_t tt = time(0);
-        int read_size;
-        char rb[RECV_BUFF_SIZE];
-        uint rsi = 0;
-        const uint trans_size = 1+sizeof(uint)+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
-        const uint replay_size = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
-        while(1)
-        {
-            //Client Command
-            memset(rb, 0, sizeof(rb));
-            read_size = recvfrom(s, rb, RECV_BUFF_SIZE-1, 0, (struct sockaddr *)&client, &slen);
-            reqs++;
-
-            //Are we the same node sending to itself, if so, ignore.
-            //if(server.sin_addr.s_addr == client.sin_addr.s_addr) //I know, this is very rarily ever effective. If ever.
-                //continue;
-
-            //It's time to payout some rewards (if eligible).
-#if MASTER_NODE == 1
-            if(rb[0] == ' ')
-            {
-                RewardPeer(client.sin_addr.s_addr, rb); //Check if the peer is eligible
-            }
-#endif
-
-            //peer has sent a live or dead transaction
-            if(rb[0] == 't' && read_size == trans_size)
-            {
-                //Root origin peer address
-                uint origin = 0;
-
-                //Decode packet into a Transaction & Origin
-                struct trans t;
-                memset(&t, 0, sizeof(struct trans));
-                char* ofs = rb+1;
-                memcpy(&origin, ofs, sizeof(uint)); //grab root origin address
-                ofs += sizeof(uint);
-                memcpy(&t.uid, ofs, sizeof(uint64_t)); //grab uid
-                ofs += sizeof(uint64_t);
-                memcpy(t.from.key, ofs, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(t.to.key, ofs, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(&t.amount, ofs, sizeof(mval));
-                ofs += sizeof(mval);
-                memcpy(t.owner.key, ofs, ECC_CURVE*2);
-
-                //Process Transaction (Threaded (using processThread()) not to jam up UDP relay)
-                if(aQue(&t, client.sin_addr.s_addr, origin, 1) == 1)
-                {
-                    //printf("Q: %u %lu %u\n", t.amount, t.uid, gQueSize());
-
-                    //Broadcast to peers
-                    origin = client.sin_addr.s_addr;
-                    char pc[MIN_LEN];
-                    pc[0] = 't';
-                    char* ofs = pc + 1;
-                    memcpy(ofs, &origin, sizeof(uint));
-                    ofs += sizeof(uint);
-                    memcpy(ofs, &t.uid, sizeof(uint64_t));
-                    ofs += sizeof(uint64_t);
-                    memcpy(ofs, t.from.key, ECC_CURVE+1);
-                    ofs += ECC_CURVE+1;
-                    memcpy(ofs, t.to.key, ECC_CURVE+1);
-                    ofs += ECC_CURVE+1;
-                    memcpy(ofs, &t.amount, sizeof(mval));
-                    ofs += sizeof(mval);
-                    memcpy(ofs, t.owner.key, ECC_CURVE*2);
-                    triBroadcast(pc, trans_size, 3);
-                }
-            }
-
-            //peer is requesting a block replay
-            else if(rb[0] == 'r' && read_size == 1)
-            {
-                //Is this peer even registered? if not, suspect foul play, not part of verified network.
-                if(isPeer(client.sin_addr.s_addr) == 1)
-                {
-                    //Launch replay
-                    launchReplayThread(client.sin_addr.s_addr);
-                }
-            }
-
-            //peer is requesting your user agent
-            else if(rb[0] == 'a' && rb[1] == 0x00 && read_size == 1)
-            {
-                //Check this is the replay peer
-                if(isPeer(client.sin_addr.s_addr))
-                {
-                    struct stat st;
-                    stat(CHAIN_FILE, &st);
-
-                    struct utsname ud;
-                    uname(&ud);
-
-                    char pc[MIN_LEN];
-                    snprintf(pc, sizeof(pc), "a%lu, %s, %u, %s, %.3f", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
-
-                    csend(client.sin_addr.s_addr, pc, strlen(pc));
-                }
-            }
-
-            //peer is sending it's user agent
-            else if(rb[0] == 'a' && read_size >= 19)
-            {
-                //Check this is a peer
-                const int p = getPeer(client.sin_addr.s_addr);
-                if(p != -1)
-                {
-                    memset(peer_ua[p], 0, 64);
-                    memcpy(&peer_ua[p], rb+1, read_size);
-                    peer_ua[p][63] = 0x00;
-                }
-            }
-
-            //the replay peer is setting block height
-            else if(rb[0] == 'h' && read_size == sizeof(uint)+1)
-            {
-                //Check if this peer is authorized to send replay transactions
-                uint allow = 0;
-                if(isMasterNode(client.sin_addr.s_addr) == 1)
-                {
-                    allow = 1;
-                }
-                else
-                {
-                    for(uint i = 0; replay_allow[i] != 0 && i < MAX_RALLOW; i++)
-                    {
-                        if(client.sin_addr.s_addr == replay_allow[i])
-                            allow = 1;
-                    }
-                }
-
-                if(allow == 1)
-                {
-                    uint32_t trh = 0;
-                    memcpy(&trh, rb+1, sizeof(uint)); //Set the block height
-                    if(trh > replay_height)
-                        replay_height = trh;
-                    forceWrite(".vfc/rph.mem", &replay_height, sizeof(uint));
-                }
-            }
-
-            //peer is sending a replay block
-            else if(rb[0] == 'p' && read_size == replay_size)
-            {
-                //Check if this peer is authorized to send replay transactions
-                uint allow = 0;
-                if(client.sin_addr.s_addr == inet_addr("127.0.0.1") || isMasterNode(client.sin_addr.s_addr) == 1)
-                {
-                    allow = 1;
-                }
-                else
-                {
-                    for(uint i = 0; replay_allow[i] != 0 && i < MAX_RALLOW; i++)
-                    {
-                        if(client.sin_addr.s_addr == replay_allow[i])
-                            allow = 1;
-                    }
-                }
-
-                if(allow == 1)
-                {
-                    //Decode packet into a Transaction
-                    struct trans t;
-                    memset(&t, 0, sizeof(struct trans));
-                    char* ofs = rb+1;
-                    memcpy(&t.uid, ofs, sizeof(uint64_t)); //grab uid
-                    ofs += sizeof(uint64_t);
-                    memcpy(t.from.key, ofs, ECC_CURVE+1);
-                    ofs += ECC_CURVE+1;
-                    memcpy(t.to.key, ofs, ECC_CURVE+1);
-                    ofs += ECC_CURVE+1;
-                    memcpy(&t.amount, ofs, sizeof(mval));
-                    ofs += sizeof(mval);
-                    memcpy(t.owner.key, ofs, ECC_CURVE*2);
-
-                    //Alright process it, if it was a legitimate transaction we retain it in our chain.
-                    aQue(&t, 0, 0, 0);
-                }
-            }
-
-            //Anon is IPv4 scanning for peers: tell Anon we exist but send our mid code, if Anon responds with our mid code we add Anon as a peer
-            else if(rb[0] == '\t' && read_size == sizeof(mid))
-            {
-                rb[0] = '\r';
-                csend(client.sin_addr.s_addr, rb, read_size);
-                addPeer(client.sin_addr.s_addr); //I didn't want to have to do this, but it's not the end of the world.
-            }
-            else if(rb[0] == '\r' && read_size == sizeof(mid)) //Anon responded with our mid code, we add Anon as a peer
-            {
-                if( rb[1] == mid[1] && //Only add as a peer if they responded with our private mid code
-                    rb[2] == mid[2] &&
-                    rb[3] == mid[3] &&
-                    rb[4] == mid[4] &&
-                    rb[5] == mid[5] &&
-                    rb[6] == mid[6] &&
-                    rb[7] == mid[7] )
-                {
-                    int p = addPeer(client.sin_addr.s_addr);
-                    if(p != -1)
-                        peer_rm[p] = time(0);
-                }
-            }
-
-            //master is requesting clients reward public key to make a payment
-            else if(rb[0] == 'x' && read_size == 1)
-            {
-                //Only the master can pay out rewards from the pre-mine
-                if(isMasterNode(client.sin_addr.s_addr) == 1)
-                    csend(client.sin_addr.s_addr, myrewardkey, strlen(myrewardkey));
-            }
-
-
-            //Log Requests per Second
-            if(st < time(0))
-            {
-                //Log Metrics
-                printf("STAT: Req/s: %ld, Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %llu\n", reqs / (time(0)-tt), countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, MAX_THREADS, err);
-
-                //Prep next loop
-                reqs = 0;
-                tt = time(0);
-                st = time(0)+180;
-            }
-        }
+        if(reqs > 0)
+            printf("STAT: Req/s: %ld, Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %llu\n", reqs / (time(0)-tt), countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, MAX_THREADS, err);
+        tt = time(0);
+        reqs = 0;
+        sleep(180);
     }
     
     //Daemon
