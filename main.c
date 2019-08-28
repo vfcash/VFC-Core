@@ -2715,7 +2715,7 @@ void *generalThread(void *arg)
         //Recalculate network difficulty
         time_t lt = time(0);
         struct tm* tmi = gmtime(&lt);
-        if(tmi->tm_min == 59)
+        if(tmi->tm_min == 59 && tmi->tm_sec >= 47)
         {
             //Loop until perfect time to 1 ms accuracy
             while(tmi->tm_min == 59 && tmi->tm_min != 00)
