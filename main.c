@@ -107,8 +107,8 @@ const char master_ip[] = "198.204.248.26";
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
 #define PING_INTERVAL 270               // How often to ping the peers and see if they are still alive
 #define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
-#define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this.
-#define MAX_RALLOW 256                  // Maximum amount of peers allowed to sync from at any one time
+#define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this. [replay sends]
+#define MAX_RALLOW 256                  // Maximum amount of peers allowed to sync from at any one time            [replay requests]
 #define MAX_VOTES_PER_POSITION 18       // Maximum amount of votes per difficulty position between 0.031 and 0.240 | 18 = 3762 total positions / 3072 total peers
 
 //Generic Buffer Sizes
@@ -131,7 +131,7 @@ const char master_ip[] = "198.204.248.26";
     uint rewardpaid = 1;
 #endif
 char mid[8];                         //Clients private identification code used in pings etc.
-float node_difficulty = 0.24;        //Clients weighted contribution to the federated mining difficulty
+float node_difficulty = 0.18;        //Clients weighted contribution to the federated mining difficulty
 float network_difficulty = 0;        //Assumed actual network difficulty
 ulong err = 0;                       //Global error count
 uint replay_allow[MAX_RALLOW];       //IP address of peer allowed to send replay blocks
@@ -1218,7 +1218,7 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
                     }
                     tq[i].amount = 0; //It looks like it could be a double spend, terminate the original transaction
                     add_uid(t->uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
-                    return 1; //Don't process this one either and tell our peers about this dodgy action so that they terminate also.
+                    return 1; //Don't process this transaction and do tell our peers about this transaction so that they have detect and terminate also.
                 }
             }
 
