@@ -461,7 +461,7 @@ void add_uid(const uint64_t uid, const uint expire_seconds) //Pub
     unsigned short idfar = (uid % (sizeof(unsigned short)-1))+1;
 
     //Collison?
-    if(sites[site_index].uid_low != 0 && sites[site_index].uid_low != idfar)
+    if(sites[site_index].uid_low != 0 && (sites[site_index].uid_low != idfar && sites[site_index].uid_high != idfar))
         printf("UID Collision: %u\n", site_index);
 
     //Set the ranges
