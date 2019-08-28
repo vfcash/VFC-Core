@@ -89,7 +89,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.56";
+const char version[]="0.57";
 const uint16_t gport = 8787;
 const char master_ip[] = "198.204.248.26";
 
@@ -109,7 +109,7 @@ const char master_ip[] = "198.204.248.26";
 #define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this.
 #define MAX_RALLOW 256                  // Maximum amount of peers allowed to sync from at any one time
-#define MAX_VOTES_PER_POSITION 1        // Maximum amount of votes per difficulty position between 0.031 and 0.240 | 18 = 3762 total positions / 3072 total peers
+#define MAX_VOTES_PER_POSITION 18       // Maximum amount of votes per difficulty position between 0.031 and 0.240 | 18 = 3762 total positions / 3072 total peers
 
 //Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
