@@ -24,8 +24,8 @@
     There is a small UDP transaction queue and a processing thread to make sure normal
     UDP transmissions do not get particularly blocked up.
 
-    Peers need to be aware of each other by referal, passing the origin ip of a
-    transaction across the echo chamber makes this possible, but this also exposes
+    Peers are aware of each other by referal, passing the origin ip of a
+    transaction across the network makes this possible, but this also exposes
     the IP address of the clients operating specific transactions. This is fine if
     you are behind a VPN but otherwise, this is generally bad for accountability.
     This could give the an attacker insights that could lead to a successfully
@@ -848,7 +848,7 @@ uint verifyChain(const char* path)
     }
     else
     {
-        printf("Look's like the blocks.dat cannot be found please make sure you chmod 700 ~/vfc\n");
+        printf("Look's like the blocks.dat cannot be found please make sure you chmod 700 ~/.vfc\n");
         return 0;
     }
     
