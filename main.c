@@ -1717,8 +1717,8 @@ void *replayBlocksThread(void *arg)
         //if peer has a smaller block height
         if(peer_heigh < my_heigh)
         {
-            //10.277 seconds of data
-            replayHead(ip, 3333);
+            //20.832 seconds of data
+            replayHead(ip, REPLAY_SIZE*2);
             replayBlocks(ip);
         }
         else
