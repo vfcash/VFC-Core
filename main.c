@@ -320,6 +320,8 @@ void forceTruncate(const char* file, const size_t pos)
         uint c = 0;
         while(ftruncate(f, pos) == -1)
         {
+            close(f);
+            f = open(file, O_WRONLY);
             c++;
             if(c > 333)
             {
