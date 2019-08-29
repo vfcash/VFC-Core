@@ -1091,7 +1091,8 @@ void RewardPeer(const uint ip, const char* pubkey)
     if(fork_pid == 0)
     {
         //Just send the transaction using the console, much easier
-        system(cmd);
+        if(system(cmd) == -1)
+            printf("ERROR: Failed to execute transaction to rewards peer: %s\n", inet_ntoa(ip_addr));
         exit(0);
     }
 
@@ -1366,6 +1367,8 @@ void networkDifficulty()
             }
         }
     }
+    //network_difficulty += 0.24-(0.000078125 * countLivingPeers());
+    //divisor++;
     if(divisor > 1)
         network_difficulty /= divisor;
 }
@@ -1676,6 +1679,12 @@ void replayBlocks(const uint ip)
 }
 void *replayBlocksThread(void *arg)
 {
+    //Prep the thread
+    if(chdir(getHome()) == -1)
+        return 0;
+    if(nice(19) == -1) //Very low priority thread
+        printf("ERROR: replayBlocksThread() nice(19) failed.\n");
+
     //Is thread needed?
     pthread_mutex_lock(&mutex1);
     const uint ip = getRP(); //This contains a write
@@ -1686,10 +1695,6 @@ void *replayBlocksThread(void *arg)
         return 0;
     }
     pthread_mutex_unlock(&mutex1);
-
-    //Prep the thread
-    chdir(getHome());
-    nice(19); //Very low priority thread
 
     //Get peer by ip
     const uint peer = getPeer(ip);
@@ -2695,8 +2700,14 @@ uint isNodeRunning()
 
 void *generalThread(void *arg)
 {
-    nice(3);
-    chdir(getHome());
+    if(nice(3) == -1)
+        printf("ERROR: generalThread() nice(3) failed.\n");
+
+    if(chdir(getHome()) == -1)
+    {
+        printf("ERROR: General Thread -1 chdir(%s)\n", getHome());
+        exit(0);
+    }
     time_t rs = time(0);
     time_t nr = time(0);
     time_t pr = time(0);
@@ -2754,7 +2765,8 @@ void *generalThread(void *arg)
         {
             char cmd[1024];
             sprintf(cmd, "vfc%s%s 0.001%s > /dev/null", myrewardkey, myrewardkey, myrewardkeyp);
-            system(cmd);
+            if(system(cmd) == -1)
+                printf("ERROR: Failed to execute VFC Network Authentication.\n");
             aa = time(0) + 3600; //every hour
         }
             
@@ -2804,8 +2816,13 @@ void *generalThread(void *arg)
 uint64_t g_HSEC = 0;
 void *miningThread(void *arg)
 {
-    chdir(getHome());
-    nice(1); //Very high priority thread
+    if(chdir(getHome()) == -1)
+    {
+        printf("ERROR: Mining Thread -1 chdir(%s)\n", getHome());
+        exit(0);
+    }
+    if(nice(1) == -1) //Very high priority thread
+        printf("ERROR: miningThread() nice(1) failed.\n");
     addr pub, priv;
     ecc_make_key(pub.key, priv.key);
     mval r = isSubGenesisAddressMine(pub.key); //cast
@@ -2856,7 +2873,8 @@ void *miningThread(void *arg)
             {
                 char cmd[1024];
                 sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
-                system(cmd);
+                if(system(cmd) == -1)
+                    printf("ERROR: Failed to Execute Auto-Claim Transaction.\n");
                 exit(0);
             }
 
@@ -2890,7 +2908,11 @@ void *miningThread(void *arg)
 //Transaction Processing Worker Thread
 void *processThread(void *arg)
 {
-    chdir(getHome());
+    if(chdir(getHome()) == -1)
+    {
+        printf("ERROR: Process Thread -1 chdir(%s)\n", getHome());
+        exit(0);
+    }
     while(1)
     {
         //See if there is a new transaction to process
@@ -2951,7 +2973,11 @@ pthread_mutex_unlock(&mutex2);
 void *networkThread(void *arg)
 {
     //Set directory
-    chdir(getHome());
+    if(chdir(getHome()) == -1)
+    {
+        printf("ERROR: Network Thread -1 chdir(%s)\n", getHome());
+        exit(0);
+    }
 
     //Vars
     struct sockaddr_in server, client;
@@ -3402,7 +3428,11 @@ int main(int argc , char *argv[])
     signal(SIGPIPE, SIG_IGN);
 
     //set local working directory
-    chdir(getHome());
+    if(chdir(getHome()) == -1)
+    {
+        printf("ERROR: Main Process -1 chdir(%s)\n", getHome());
+        exit(0);
+    }
 
     // < Peer arrays do not need initilisation > .. (apart from this one)
     for(uint i = 0; i < MAX_PEERS; i++)
@@ -3544,7 +3574,8 @@ int main(int argc , char *argv[])
         {
             char cmd[1024];
             sprintf(cmd, "vfc%s %s %.3f%s", myrewardkey, argv[3], atof(argv[2]), myrewardkeyp);
-            system(cmd);
+            if(system(cmd) == -1)
+                printf("ERROR: Failed to execute qsend.\n");
             
             exit(0);
         }
@@ -3618,7 +3649,8 @@ int main(int argc , char *argv[])
                         {
                             char cmd[1024];
                             sprintf(cmd, "\nvfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
-                            system(cmd);
+                            if(system(cmd) == -1)
+                                printf("ERROR: Failed to execute subG address claim.\n");
                             exit(0);
                         }
                     }
@@ -3947,8 +3979,8 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "difficulty") == 0)
         {
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
-            system("cat .vfc/netdiff.txt");
-            printf("Average / Network Difficulty: %.3f\n", network_difficulty);
+            if(system("cat .vfc/netdiff.txt") != -1)
+                printf("Average / Network Difficulty: %.3f\n", network_difficulty);
             exit(0);
         }
 
@@ -4072,7 +4104,8 @@ int main(int argc , char *argv[])
                         {
                             char cmd[1024];
                             sprintf(cmd, "\nvfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
-                            system(cmd);
+                            if(system(cmd) == -1)
+                                printf("ERROR: Failed to execute subG address claim.\n");
                             exit(0);
                         }
                     }
@@ -4094,11 +4127,12 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "update") == 0)
         {
             printf("Please run this command with sudo or sudo -s, aka sudo vfc update\n");
-            system("rm -r VFC-Core");
-            system("git clone https://github.com/vfcash/VFC-Core");
-            chdir("VFC-Core");
-            system("chmod 0777 compile.sh");
-            system("./compile.sh");
+            if(system("rm -r VFC-Core") != -1)
+                if(system("git clone https://github.com/vfcash/VFC-Core") != -1)
+                    if(chdir("VFC-Core") != -1)
+                        if(system("chmod 0777 compile.sh") != -1)
+                            if(system("./compile.sh") != -1)
+                                exit(0);
             exit(0);
         }
 
@@ -4196,9 +4230,9 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "master_resync") == 0)
         {
             remove("blocks.dat");
-            system("wget -O.vfc/master_blocks.dat http://198.204.248.26/sync/");
-            system("cp .vfc/master_blocks.dat .vfc/blocks.dat");
-            printf("Resync from master complete.\n\n");
+            if(system("wget -O.vfc/master_blocks.dat http://198.204.248.26/sync/") != -1)
+                if(system("cp .vfc/master_blocks.dat .vfc/blocks.dat") != -1)
+                    printf("Resync from master complete.\n\n");
             exit(0);
         }
 
@@ -4281,10 +4315,12 @@ int main(int argc , char *argv[])
             loadmem();
             printf("Please input Peer IP Address: ");
             char in[32];
-            fgets(in, 32, stdin);
-            addPeer(inet_addr(in));
-            printf("\nThank you peer %s has been added to your peer list. Please restart your full node process to load the changes.\n\n", in);
-            savemem();
+            if(fgets(in, 32, stdin) != NULL)
+            {
+                addPeer(inet_addr(in));
+                printf("\nThank you peer %s has been added to your peer list. Please restart your full node process to load the changes.\n\n", in);
+                savemem();
+            }
             exit(0);
         }
 
@@ -4316,7 +4352,8 @@ int main(int argc , char *argv[])
     if(verifyChain(CHAIN_FILE) == 0)
     {
         printf("Sorry you're not on the right chain. Please run ./vfc reset_chain & ./vfc sync or ./vfc master_resync\n\n");
-        system("vfc master_resync");
+        if(system("vfc master_resync") == -1)
+            exit(0);
         exit(0);
     }
 
@@ -4524,8 +4561,8 @@ int main(int argc , char *argv[])
     printf("You will have to make a transaction before your IPv4 address registers\nwith the mainnet when running a full time node/daemon.\n\n");
     printf("To get a full command list use:\n ./vfc help\n\n");
     char cwd[MIN_LEN];
-    getcwd(cwd, sizeof(cwd));
-    printf("Current Directory: %s\n\n", cwd);
+    if(getcwd(cwd, sizeof(cwd)) != NULL)
+        printf("Current Directory: %s\n\n", cwd);
 
     //Launch the Transaction Processing threads
     nthreads = get_nprocs();
