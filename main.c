@@ -269,7 +269,7 @@ void forceWrite(const char* file, const void* data, const size_t data_len)
         while(fwrite(data, 1, data_len, f) < data_len)
         {
             fclose(f);
-            fopen(file, "w");
+            f = fopen(file, "w");
             fc++;
             if(fc > 333)
             {
@@ -295,7 +295,7 @@ void forceRead(const char* file, void* data, const size_t data_len)
         while(fread(data, 1, data_len, f) < data_len)
         {
             fclose(f);
-            fopen(file, "r");
+            f = fopen(file, "r");
             fc++;
             if(fc > 333)
             {
