@@ -1374,6 +1374,9 @@ void networkDifficulty()
     //divisor++;
     if(divisor > 1)
         network_difficulty /= divisor;
+
+    //Correctly round the final value to three decimal places.
+    network_difficulty = roundf(network_difficulty * 1000) / 1000;
 }
 
 
