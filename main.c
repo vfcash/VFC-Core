@@ -451,12 +451,14 @@ void add_uid(const uint64_t uid, const uint expire_seconds) //Pub
     //Find site index
     const uint site_index = uid % MAX_SITES;
 
+    //Always update expirary
+    sites[site_index].expire_epoch = time(0)+expire_seconds;
+
     //Reset if expire_epoch dictates this site bucket is expired 
     if(time(0) >= sites[site_index].expire_epoch)
     {
         sites[site_index].uid_low = 0;
         sites[site_index].uid_high = 0;
-        sites[site_index].expire_epoch = time(0)+expire_seconds;
     }
 
     //Find the range
@@ -1224,7 +1226,8 @@ pthread_mutex_lock(&mutex5);
                         fclose(f);
                     }
                     tq[i].amount = 0; //It looks like it could be a double spend, terminate the original transaction
-                    add_uid(t->uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
+                    add_uid(t->uid, 30); //block uid 30 seconds
+                    add_uid(tq[i].uid, 30); //block original uid 30 seconds
                     pthread_mutex_unlock(&mutex5);
                     return 2; //Don't process this transaction and do tell our peers about this transaction so that they have detect and terminate also.
                 }
