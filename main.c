@@ -4127,7 +4127,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "update") == 0)
         {
             printf("Please run this command with sudo or sudo -s, aka sudo vfc update\n");
-            if(system("rm -r VFC-Core") != -1)
+            if(system("rm -r -f VFC-Core") != -1)
                 if(system("git clone https://github.com/vfcash/VFC-Core") != -1)
                     if(chdir("VFC-Core") != -1)
                         if(system("chmod 0777 compile.sh") != -1)
