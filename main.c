@@ -1226,7 +1226,7 @@ pthread_mutex_lock(&mutex5);
                     tq[i].amount = 0; //It looks like it could be a double spend, terminate the original transaction
                     add_uid(t->uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
                     pthread_mutex_unlock(&mutex5);
-                    return 1; //Don't process this transaction and do tell our peers about this transaction so that they have detect and terminate also.
+                    return 2; //Don't process this transaction and do tell our peers about this transaction so that they have detect and terminate also.
                 }
             }
 
@@ -3050,7 +3050,8 @@ void *networkThread(void *arg)
             memcpy(t.owner.key, ofs, ECC_CURVE*2);
 
             //Process Transaction (Threaded (using processThread()) not to jam up UDP relay)
-            if(aQue(&t, client.sin_addr.s_addr, origin, 1) == 1)
+            const uint qrv = aQue(&t, client.sin_addr.s_addr, origin, 1);
+            if(qrv > 0)
             {
                 //printf("Q: %u %lu %u\n", t.amount, t.uid, gQueSize());
 
@@ -3070,7 +3071,11 @@ void *networkThread(void *arg)
                 memcpy(ofs, &t.amount, sizeof(mval));
                 ofs += sizeof(mval);
                 memcpy(ofs, t.owner.key, ECC_CURVE*2);
-                triBroadcast(pc, trans_size, 3);
+
+                if(qrv == 1) //Transaction Added to Que
+                    triBroadcast(pc, trans_size, 3);
+                else if(qrv == 2) //Double spend detected
+                    triBroadcast(pc, trans_size, 9);
             }
         }
 
