@@ -1213,7 +1213,7 @@ pthread_mutex_lock(&mutex5);
             //Is this a possible double spend?
             if(ir == 1 && replay[i] == 1)
             {
-                if((memcmp(tq[i].from.key, t->from.key, ECC_CURVE+1) == 0 && memcmp(tq[i].to.key, t->to.key, ECC_CURVE+1) != 0) && time(0) - delta[i] <= 3)
+                if((memcmp(tq[i].from.key, t->from.key, ECC_CURVE+1) == 0 && memcmp(tq[i].to.key, t->to.key, ECC_CURVE+1) != 0))
                 {
                     //Log both blocks in bad_blocks
                     FILE* f = fopen(BADCHAIN_FILE, "a");
@@ -1271,13 +1271,13 @@ int gQue()
     for(uint i = mi; i > 0; i--) //Check backwards first, que is stacked left to right
     {
         if(tq[i].amount != 0)
-            if(time(0) - delta[i] > 2 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
+            if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
                 return i;
     }
     for(uint i = mi; i < MAX_TRANS_QUEUE; i++) ///check into the distance
     {
         if(tq[i].amount != 0)
-            if(time(0) - delta[i] > 2 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
+            if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
                 return i;
     }
     return -1;
