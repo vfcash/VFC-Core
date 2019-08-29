@@ -1213,7 +1213,7 @@ pthread_mutex_lock(&mutex5);
             //Is this a possible double spend?
             if(ir == 1 && replay[i] == 1)
             {
-                if((memcmp(tq[i].from.key, t->from.key, ECC_CURVE+1) == 0 && memcmp(tq[i].to.key, t->to.key, ECC_CURVE+1) != 0) && time(0) - delta[i] <= 3) //Only terminate if within three seconds of each other
+                if((memcmp(tq[i].from.key, t->from.key, ECC_CURVE+1) == 0 && memcmp(tq[i].to.key, t->to.key, ECC_CURVE+1) != 0))
                 {
                     //Log both blocks in bad_blocks
                     FILE* f = fopen(BADCHAIN_FILE, "a");
