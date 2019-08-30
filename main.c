@@ -122,7 +122,7 @@ const char master_ip[] = "198.204.248.26";
     uint rewardpaid = 1;
 #endif
 char mid[8];                         //Clients private identification code used in pings etc.
-float node_difficulty = 0.18;        //Clients weighted contribution to the federated mining difficulty
+float node_difficulty = 0.063;       //Clients weighted contribution to the federated mining difficulty
 float network_difficulty = 0;        //Assumed actual network difficulty
 uint reqs = 0;                       //Global req count
 ulong err = 0;                       //Global error count
