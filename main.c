@@ -1105,6 +1105,10 @@ void RewardPeer(const uint ip, const char* pubkey)
 //Peers are only replaced if they have not responded in a week, otherwise we still consider them contactable until replaced.
 int addPeer(const uint ip)
 {
+    //Is there room for a new peer?
+    if(num_peers >= MAX_PEERS)
+        return 0;
+
     //Never add local host
     if(ip == inet_addr("127.0.0.1")) //inet_addr("127.0.0.1") //0x0100007F
         return -1;
@@ -2416,11 +2420,6 @@ uint rExi(uint64_t uid)
 //Execute Transaction
 int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* owner)
 {
-    // //Do a quick unique check [realtime uid cache]
-    // if(has_uid(uid) == 1)
-    //     return 0;
-    // add_uid(uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
-
     //Create trans struct
     struct trans t;
     memset(&t, 0, sizeof(struct trans));
