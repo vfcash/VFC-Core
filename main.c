@@ -1687,7 +1687,12 @@ void *replayBlocksThread(void *arg)
 {
     //Prep the thread
     if(chdir(getHome()) == -1)
+    {
+pthread_mutex_lock(&mutex1);
+        threads--;
+pthread_mutex_unlock(&mutex1);
         return 0;
+    }
     if(nice(19) == -1) //Very low priority thread
         printf("ERROR: replayBlocksThread() nice(19) failed.\n");
 
