@@ -2952,12 +2952,12 @@ pthread_mutex_unlock(&mutex2);
         if(r == 1 && lreplay == 1)
         {
             //Track this client from origin
-            if(getPeer(lip) == -1)
-            {
-                addPeer(lip); //Locks and unlocks
-                if(lipo != 0)
+            if(getPeer(lip) == -1) //Avoid Locks and unlocks if possible
+                addPeer(lip); 
+
+            if(lipo != 0)
+                if(getPeer(lipo) == -1) //Avoid Locks and unlocks if possible
                     addPeer(lipo); //Track this client by attached origin
-            }
 
             //Construct a non-repeatable transaction and tell our peers
             const uint32_t origin = lip;
