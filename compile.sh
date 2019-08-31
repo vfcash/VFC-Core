@@ -3,13 +3,13 @@ clear
 apt --assume-yes update && upgrade
 apt install --assume-yes crontab
 apt install --assume-yes wget
-apt install --assume-yes clang
+apt install --assume-yes gcc
 clear
 clear
 pkill vfc
 rm vfc
 rm /usr/bin/vfc
-clang -Ofast -pthread base58.c crc64.c ecc.c sha3.c main.c -lm -o vfc
+gcc -Ofast -pthread base58.c crc64.c ecc.c sha3.c main.c -lm -o vfc
 cp vfc /usr/bin/vfc
 chmod 0777 /usr/bin/vfc
 
