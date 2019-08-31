@@ -3600,10 +3600,10 @@ int main(int argc , char *argv[])
  	    if(strstr(argv[1], "printtrans") != NULL)
         {
             uint from;
-            sscanf(argv[2], "%I32u", &from);
+            sscanf(argv[2], "%u", &from);
 
             uint to;
-            sscanf(argv[3], "%I32u", &to);
+            sscanf(argv[3], "%u", &to);
             printtrans(from, to);
             exit(0);
         }
