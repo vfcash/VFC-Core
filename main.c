@@ -16,7 +16,7 @@
 
     NOTES:
     Only Supports IPv4 addresses.
-    Local storage in ~/vfc
+    Local storage in ~/.vfc
 
     *** In it's current state we only track peer's who send a transaction to the server. ***
     *** Send a transaction to yourself, you wont see any address balance until verified ***
@@ -80,7 +80,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.57";
+const char version[]="0.58";
 const uint16_t gport = 8787;
 const char master_ip[] = "198.204.248.26";
 
@@ -89,6 +89,7 @@ const char master_ip[] = "198.204.248.26";
 #define ERROR_SIGFAIL -2
 #define ERROR_UIDEXIST -3
 #define ERROR_WRITE -4
+#define ERROR_OPEN -5
 
 //Node Settings
 #define MAX_SITES 11111101              // Maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes.
@@ -109,6 +110,7 @@ const char master_ip[] = "198.204.248.26";
 //Chain Paths
 #define CHAIN_FILE ".vfc/blocks.dat"
 #define BADCHAIN_FILE ".vfc/bad_blocks.dat"
+#define CONFIG_FILE ".vfc/vfc.cnf"
 
 //Vairable Definitions
 #define uint uint32_t
@@ -122,9 +124,8 @@ const char master_ip[] = "198.204.248.26";
     uint rewardpaid = 1;
 #endif
 char mid[8];                         //Clients private identification code used in pings etc.
-float node_difficulty = 0.063;       //Clients weighted contribution to the federated mining difficulty
-float network_difficulty = 0;        //Assumed actual network difficulty
-uint reqs = 0;                       //Global req count
+float node_difficulty = 0.031;       //Clients weighted contribution to the federated mining difficulty
+float network_difficulty = 0.031;    //Assumed or actual network difficulty (starts at lowest until known)
 ulong err = 0;                       //Global error count
 uint replay_allow[MAX_RALLOW];       //IP address of peer allowed to send replay blocks
 uint replay_height = 0;              //Block Height of current peer authorized to receive a replay from
@@ -141,7 +142,11 @@ pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex4 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex5 = PTHREAD_MUTEX_INITIALIZER;
+
+//User-Configurable
 uint is8664 = 1;
+uint single_threaded = 1;
+uint replay_packet_delay = 1000;
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
@@ -204,9 +209,19 @@ void makHash(uint8_t *hash, const struct trans* t)
 /* ~ Util Functions
 */
 
+//Round a floating point
+float roundFloat(const float f)
+{
+    if(f == 0)
+        return 0;
+    return roundf(f * 1000) / 1000;
+}
+
 //Convert to decimal balance
 double toDB(const uint64_t b)
 {
+    if(b == 0)
+        return 0;
     return (double)(b) / 1000;
 }
 mval fromDB(const double b) //and from
@@ -236,7 +251,10 @@ uint qRand(const uint min, const uint max)
         srand(time(0));
         ls = time(0) + 33;
     }
-    return ( ((float)rand() / RAND_MAX) * (max-min) ) + min; //(rand()%(max-min))+min;
+    const int rv = rand();
+    if(rv == 0)
+        return min;
+    return ( ((float)rv / RAND_MAX) * (max-min) ) + min; //(rand()%(max-min))+min;
 }
 
 void timestamp()
@@ -263,53 +281,76 @@ double floor(double i)
 void forceWrite(const char* file, const void* data, const size_t data_len)
 {
     FILE* f = fopen(file, "w");
-    if(f)
+
+    uint fc = 0;
+    while(f == NULL)
     {
-        uint fc = 0;
-        while(fwrite(data, 1, data_len, f) < data_len)
+        fc++;
+        if(fc > 333)
         {
-            fclose(f);
-            f = fopen(file, "w");
-            fc++;
-            if(fc > 333)
-            {
-                printf("ERROR: fwrite() in forceWrite() has failed for '%s'.\n", file);
-                err++;
-                fclose(f);
-                return;
-            }
-            if(f == NULL)
-                continue;
+            printf("ERROR: fopen() in forceWrite() has failed.\n");
+            err++;
+            return;
         }
 
-        fclose(f);
+        f = fopen(file, "w");
     }
+
+    fc = 0;
+    while(fwrite(data, 1, data_len, f) < data_len)
+    {
+        fclose(f);
+        f = fopen(file, "w");
+        fc++;
+        if(fc > 333)
+        {
+            printf("ERROR: fwrite() in forceWrite() has failed for '%s'.\n", file);
+            err++;
+            return;
+        }
+        if(f == NULL)
+            continue;
+    }
+
+    fclose(f);
 }
 
 void forceRead(const char* file, void* data, const size_t data_len)
 {
     FILE* f = fopen(file, "r");
-    if(f)
+
+    uint fc = 0;
+    while(f == NULL)
     {
-        uint fc = 0;
-        while(fread(data, 1, data_len, f) < data_len)
+        fc++;
+        if(fc > 333)
         {
-            fclose(f);
-            f = fopen(file, "r");
-            fc++;
-            if(fc > 333)
-            {
-                printf("ERROR: fread() in forceRead() has failed for '%s'.\n", file);
-                err++;
-                fclose(f);
-                return;
-            }
-            if(f == NULL)
-                continue;
+            printf("ERROR: fopen() in forceRead() has failed.\n");
+            err++;
+            return;
         }
 
-        fclose(f);
+        f = fopen(file, "r");
     }
+
+    fc = 0;
+    while(fread(data, 1, data_len, f) < data_len)
+    {
+        fclose(f);
+        f = fopen(file, "r");
+        fc++;
+        if(fc > 333)
+        {
+            printf("ERROR: fread() in forceRead() has failed for '%s'.\n", file);
+            err++;
+            fclose(f);
+            return;
+        }
+        if(f == NULL)
+            continue;
+    }
+
+    fclose(f);
 }
 
 void forceTruncate(const char* file, const size_t pos)
@@ -366,7 +407,7 @@ uint getReplayRate()
 {
     // 1,000,000 microseconds = 1 second
     // every 1,000 microseconds 1 packet is sent = 1,000 packets per second.
-    return 10000;
+    return replay_packet_delay;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -506,7 +547,7 @@ inline static double gNa(const vec3* a, const vec3* b)
     const double m1 = sqrt((double)((a->x) * (double)(a->x)) + (double)((a->y) * (double)(a->y)) + (double)((a->z) * (double)(a->z))); //magnitude
     const double m2 = sqrt((double)((b->x) * (double)(b->x)) + (double)((b->y) * (double)(b->y)) + (double)((b->z) * (double)(b->z))); //magnitude
 
-    if((m1 == 0 && m2 == 0) || dot == 0)
+    if((m1 == 0 || m2 == 0) || dot == 0)
         return 1; //returns angle that is too wide, exclusion / (aka/equiv) ret0
 
     return dot / (m1*m2); //Should never divide by 0
@@ -758,6 +799,8 @@ uint countPeers()
 
 uint isPeerAlive(const uint id)
 {
+    if(peers[id] == 0)
+        return 0;
     const uint pd = time(0)-(peer_timeouts[id]-MAX_PEER_EXPIRE_SECONDS);
     const uint md = time(0) - peer_rm[id];
     if(pd <= PING_INTERVAL*20 && md <= PING_INTERVAL*64)
@@ -882,6 +925,20 @@ void peersBroadcast(const char* dat, const size_t len)
         csend(peers[i], dat, len);
 }
 
+void broadcastUserAgent()
+{
+    struct stat st;
+    stat(CHAIN_FILE, &st);
+    struct utsname ud;
+    uname(&ud);
+    char pc[MIN_LEN];
+    if(st.st_size > 0)
+    {
+        snprintf(pc, sizeof(pc), "a%lu, %s, %u, %s, %.3f", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
+        peersBroadcast(pc, strlen(pc));
+    }
+}
+
 void triBroadcast(const char* dat, const size_t len, const uint multi)
 {
     if(num_peers > multi)
@@ -950,13 +1007,13 @@ void resyncBlocks(const uint inum_peers)
             while(si < num_peers);
 
             if(si == num_peers)
-                replay_allow[i] = peers[qRand(1, num_peers-1)];
+                replay_allow[i] = peers[qRand(0, num_peers-1)];
             else
                 replay_allow[i] = peers[si];
         }
         else if(num_peers == 1)
         {
-            replay_allow[i] = peers[1];
+            replay_allow[i] = peers[0];
         }
 
         //Alright ask this peer to replay to us too
@@ -1002,7 +1059,35 @@ size_t getPeerHeigh(const uint id)
         return strtoul(str, NULL, 10);
     else
         return 0;
+}
+
+float getPeerDiff(const uint id)
+{
+    char cf[8];
+    memset(cf, 0, sizeof(char)*8);
+    const uint ual = strlen(peer_ua[id]);
+
+    if(ual > 6)
+    {
+        if(peer_ua[id][ual-5] == '0' && peer_ua[id][ual-4] == '.')
+        {
+            cf[0] = peer_ua[id][ual-5];
+            cf[1] = peer_ua[id][ual-4];
+            cf[2] = peer_ua[id][ual-3];
+            cf[3] = peer_ua[id][ual-2];
+            cf[4] = peer_ua[id][ual-1];
+        }
+        else
+        {
+            return 0.031;
+        }
+    }
+    else
+    {
+        return 0.031;
+    }
     
+    return roundFloat(atof(cf));
 }
 
 void printDifficultyVotes()
@@ -1064,7 +1149,7 @@ void RewardPeer(const uint ip, const char* pubkey)
         return;
 
     //Base amount
-    double amount = 3.000;
+    double amount = 1.000;
 
     //Wrong / not latest version? Low reward
     if(strstr(peer_ua[rewardindex], version) == NULL)
@@ -1119,7 +1204,10 @@ int addPeer(const uint ip)
 
     //Is already in peers?
     uint freeindex = 0;
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
 pthread_mutex_lock(&mutex4);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     for(uint i = 0; i < num_peers; ++i)
     {
         if(peers[i] == ip)
@@ -1127,7 +1215,10 @@ pthread_mutex_lock(&mutex4);
 
             peer_timeouts[i] = time(0) + MAX_PEER_EXPIRE_SECONDS;
             peer_tcount[i]++;
-            pthread_mutex_unlock(&mutex4);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
+pthread_mutex_unlock(&mutex4);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             return i; //exists
         }
 
@@ -1143,7 +1234,10 @@ pthread_mutex_lock(&mutex4);
         peer_tcount[num_peers] = 1;
         peer_rm[num_peers] = time(0);
         num_peers++;
-        pthread_mutex_unlock(&mutex4);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
+pthread_mutex_unlock(&mutex4);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         return num_peers;
     }
     else if(freeindex != 0) //If not replace a node that's been quiet for more than three hours
@@ -1152,11 +1246,16 @@ pthread_mutex_lock(&mutex4);
         peer_timeouts[freeindex] = time(0) + MAX_PEER_EXPIRE_SECONDS;
         peer_tcount[freeindex] = 1;
         peer_rm[freeindex] = time(0);
-        pthread_mutex_unlock(&mutex4);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
+pthread_mutex_unlock(&mutex4);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         return freeindex;
     }
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
 pthread_mutex_unlock(&mutex4);
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     return -1;
 }
 
@@ -1207,9 +1306,10 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
     //Do a quick unique check [realtime uid cache]
     if(has_uid(t->uid) == 1)
         return 0;
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
 pthread_mutex_lock(&mutex5);
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     //Check if duplicate transaction
     int freeindex = -1;
     for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
@@ -1232,7 +1332,10 @@ pthread_mutex_lock(&mutex5);
                     tq[i].amount = 0; //It looks like it could be a double spend, terminate the original transaction
                     add_uid(t->uid, 30); //block uid 30 seconds
                     add_uid(tq[i].uid, 30); //block original uid 30 seconds
-                    pthread_mutex_unlock(&mutex5);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
+pthread_mutex_unlock(&mutex5);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                     return 2; //Don't process this transaction and do tell our peers about this transaction so that they have detect and terminate also.
                 }
             }
@@ -1240,7 +1343,10 @@ pthread_mutex_lock(&mutex5);
             //UID already in queue?
             if(tq[i].uid == t->uid)
             {
-                pthread_mutex_unlock(&mutex5);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
+pthread_mutex_unlock(&mutex5);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                 return 0; //It's not a double spend, just a repeat, don't tell our peers
             }
         }
@@ -1264,9 +1370,12 @@ pthread_mutex_lock(&mutex5);
     // }
 
     //Success
-    add_uid(t->uid, 32400); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
+    add_uid(t->uid, 30); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
 
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
 pthread_mutex_unlock(&mutex5);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     return 1;
 }
@@ -1274,20 +1383,27 @@ pthread_mutex_unlock(&mutex5);
 //pop the first living transaction index off the Queue
 int gQue()
 {
-    const uint mi = qRand(0, MAX_TRANS_QUEUE-1);
+    const uint mi = qRand(3, MAX_TRANS_QUEUE-3);
     for(uint i = mi; i > 0; i--) //Check backwards first, que is stacked left to right
     {
         if(tq[i].amount != 0)
             if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
                 return i;
     }
-    for(uint i = mi; i < MAX_TRANS_QUEUE; i++) ///check into the distance
+    for(uint i = mi; i < MAX_TRANS_QUEUE; i++) //check into the distance
     {
         if(tq[i].amount != 0)
             if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
                 return i;
     }
     return -1;
+    // for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
+    // {
+    //     if(tq[i].amount != 0)
+    //         if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
+    //             return i;
+    // }
+    // return -1;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1306,41 +1422,18 @@ int gQue()
 
 void networkDifficulty()
 {
+#if MASTER_NODE == 1
     remove(".vfc/netdiff.txt");
     network_difficulty = 0; //reset
     uint divisor = 0;
     double added[MAX_PEERS]; //max votes per position
     uint added_index = 0;
-    for(uint p = 0; p < MAX_PEERS; p++)
+    for(uint p = 1; p < MAX_PEERS; p++)
     {
         if(isPeerAlive(p) == 1)
-        {
-            char cf[8];
-            memset(cf, 0, sizeof(char)*8);
-            const uint ual = strlen(peer_ua[p]);
-
-            if(ual > 6)
-            {
-                if(peer_ua[p][ual-5] == '0' && peer_ua[p][ual-4] == '.')
-                {
-                    cf[0] = peer_ua[p][ual-5];
-                    cf[1] = peer_ua[p][ual-4];
-                    cf[2] = peer_ua[p][ual-3];
-                    cf[3] = peer_ua[p][ual-2];
-                    cf[4] = peer_ua[p][ual-1];
-                }
-                else
-                {
-                    continue;
-                }
-            }
-            else
-            {
-                continue;
-            }
-            
+        {   
             //Peer difficulty
-            const float diff = atof(cf);
+            const float diff = getPeerDiff(p);
             //printf("DBG: %s - %.3f\n", cf, diff);
 
             //check if difficulty already added
@@ -1376,11 +1469,16 @@ void networkDifficulty()
     }
     //network_difficulty += 0.24-(0.000078125 * countLivingPeers());
     //divisor++;
-    if(divisor > 1)
+    if(divisor > 1 && network_difficulty > 1)
         network_difficulty /= divisor;
 
     //Correctly round the final value to three decimal places.
-    network_difficulty = roundf(network_difficulty * 1000) / 1000;
+    network_difficulty = roundFloat(network_difficulty);
+    node_difficulty = network_difficulty;
+    broadcastUserAgent();
+#else
+    network_difficulty = getPeerDiff(0);
+#endif
 }
 
 
@@ -1445,7 +1543,10 @@ uint64_t getCirculatingSupply()
         ift = (uint64_t)st.st_size / sizeof(struct trans);
     ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
 
-    uint64_t rv = (ift / 100) * 20; // 20% of the ift tax
+    uint64_t rv = 0;
+    if(ift > 0)
+        rv = (ift / 100) * 20; // 20% of the ift tax
+    
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
     {
@@ -1635,6 +1736,11 @@ void replayBlocks(const uint ip)
     {
         fseek(f, 0, SEEK_END);
         const size_t len = ftell(f);
+        if(len == 0)
+        {
+            fclose(f);
+            return;
+        }
 
         //Pick a random block of data from the chain of the specified REPLAY_SIZE
         const size_t rpbs = (sizeof(struct trans)*REPLAY_SIZE);
@@ -1866,7 +1972,7 @@ void dumpbadtrans()
             b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
 
             setlocale(LC_NUMERIC, "");
-            printf("%s > %s : %'.3f\n", frompub, topub, toDB(t.amount));
+            printf("%lu: %s > %s : %'.3f\n", t.uid, frompub, topub, toDB(t.amount));
         
         }
 
@@ -2458,18 +2564,38 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     //you still need balance to make a transaction to self
     if(memcmp(from->key, to->key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
     {
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
 pthread_mutex_lock(&mutex3);
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         //The mutex is not preventing race conditions, thats why we have the temporary 1 second expirary rExi / UID check in a limited size buffer. [has_uid()/add_uid() further protects from this condition]
         if(rExi(uid) == 0)
         {
             FILE* f = fopen(CHAIN_FILE, "a");
+
+            uint fc = 0;
+            while(f == NULL)
+            {
+                fc++;
+                if(fc > 333)
+                {
+                    printf("ERROR: fopen() in process_trans() has failed.\n");
+                    err++;
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
+pthread_mutex_unlock(&mutex3);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                    return ERROR_OPEN;
+                }
+
+                f = fopen(CHAIN_FILE, "a");
+            }
+
+            size_t written = 0;
+
             if(f)
             {
-                size_t written = 0;
-
-                uint fc = 0;
+                fc = 0;
                 while(written == 0)
                 {
                     written = fwrite(&t, 1, sizeof(struct trans), f);
@@ -2483,7 +2609,10 @@ pthread_mutex_lock(&mutex3);
                         printf("ERROR: fwrite() in process_trans() has failed.\n");
                         err++;
                         fclose(f);
-                        pthread_mutex_lock(&mutex3);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
+pthread_mutex_unlock(&mutex3);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
                         return ERROR_WRITE;
                     }
                     
@@ -2517,7 +2646,18 @@ pthread_mutex_lock(&mutex3);
             }
         }
 
+
+// FILE* f = fopen("/var/www/html/p_good.txt", "a");
+// if(f)
+// {
+//     fprintf(f, "%lu : %lu / %.3f\n", time(0), t.uid, network_difficulty);
+//     fclose(f);
+// }
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
 pthread_mutex_unlock(&mutex3);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     }
     
@@ -2588,6 +2728,33 @@ void makGenesis()
 //
 /* ~ Console & Socket I/O
 */
+
+void loadConfig()
+{
+    FILE* f = fopen(CONFIG_FILE, "r");
+    if(f)
+    {
+        char line[256];
+        while(fgets(line, 256, f) != NULL)
+        {
+            char set[64];
+            uint val;
+            
+            if(scanf("%s %u\n", &set[0], &val) == 1)
+            {
+                if(strcmp(set, "mmap") == 0) //mmap is best disabled on arm devices with low memory
+                    is8664 = val;
+
+                if(strcmp(set, "multi-threaded") == 0) //Single threaded is more stable.
+                    single_threaded = val == 0 ? 1 : 0;
+
+                if(strcmp(set, "replay-packet-delay") == 0) //Default 1,000, the higher the number the less bandwith used refer to notes in getReplatRate() function.
+                    replay_packet_delay = val;
+            }
+        }
+        fclose(f);
+    }
+}
 
 void savemem()
 {
@@ -2669,7 +2836,9 @@ void loadmem()
         fclose(f);
     }
 
+#if MASTER_NODE == 0
     forceRead(".vfc/diff.mem", &node_difficulty, sizeof(float));
+#endif
 }
 
 void sigintHandler(int sig_num) 
@@ -2718,6 +2887,9 @@ void *generalThread(void *arg)
         printf("ERROR: General Thread -1 chdir(%s)\n", getHome());
         exit(0);
     }
+
+    networkDifficulty();
+
     time_t rs = time(0);
     time_t nr = time(0);
     time_t pr = time(0);
@@ -2732,10 +2904,8 @@ void *generalThread(void *arg)
         //Load new replay allow value
         forceRead(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_RALLOW);
 
-        //Load difficulty
-        forceRead(".vfc/diff.mem", &node_difficulty, sizeof(float));
-
         //Recalculate network difficulty
+#if MASTER_NODE == 1
         time_t lt = time(0);
         struct tm* tmi = gmtime(&lt);
         if(tmi->tm_min == 59 && tmi->tm_sec >= 47)
@@ -2743,7 +2913,9 @@ void *generalThread(void *arg)
             //Loop until perfect time to 1 ms accuracy
             while(tmi->tm_min == 59 && tmi->tm_min != 00)
             {
-                usleep(1000); //1 millisecond delay
+                const int td = 59 - tmi->tm_sec;
+                if(td != 0)
+                    usleep((((td))*1000000)/15);
                 lt = time(0);
                 tmi = gmtime(&lt);
             }
@@ -2751,12 +2923,19 @@ void *generalThread(void *arg)
             //It's time !!
             networkDifficulty(); //Recalculate the network difficulty
         }
+#else
+        networkDifficulty(); //Recalculate the network difficulty
+#endif
 
         //Let's execute a Sync every 3 mins
         if(time(0) > rs)
         {
             //How many peers we sync off depends on the number of logical cores
-            resyncBlocks(num_processors / 2);
+            if(num_processors > 1)
+                resyncBlocks(num_processors / 2);
+            else
+                resyncBlocks(1);
+            
             rs = time(0) + 180;
         }
 
@@ -2923,18 +3102,25 @@ void *processThread(void *arg)
         printf("ERROR: Process Thread -1 chdir(%s)\n", getHome());
         exit(0);
     }
+
+    struct trans t;
     while(1)
     {
         //See if there is a new transaction to process
-        struct trans t;
+        memset(&t, 0, sizeof(struct trans));
         uint32_t lip=0, lipo=0;
         unsigned char lreplay = 0;
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
 pthread_mutex_lock(&mutex2);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         const int i = gQue();
         if(i == -1)
         {
-            pthread_mutex_unlock(&mutex2);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
+pthread_mutex_unlock(&mutex2);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             continue;
         }
         lreplay = replay[i];
@@ -2942,10 +3128,73 @@ pthread_mutex_lock(&mutex2);
         lipo = ipo[i];
         memcpy(&t, &tq[i], sizeof(struct trans));
         tq[i].amount = 0; //Signifies transaction as invalid / completed / processed (done)
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
 pthread_mutex_unlock(&mutex2);
-
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         //Process the transaction
         const int r = process_trans(t.uid, &t.from, &t.to, t.amount, &t.owner);
+
+        // if(r == 1)
+        // {
+        //     FILE* f = fopen(".vfc/process_log.txt", "a");
+        //     if(f)
+        //     {
+        //         flockfile(f);
+        //         fprintf(f, "%lu\n", t.uid);
+        //         funlockfile(f);
+        //         fclose(f);
+        //     }
+        // }
+
+        // if(r == ERROR_NOFUNDS)
+        // {
+        //     FILE* f = fopen(".vfc/process_log.txt", "a");
+        //     if(f)
+        //     {
+        //         flockfile(f);
+        //         fprintf(f, "%lu: Insufficient Ballance.\n", t.uid);
+        //         funlockfile(f);
+        //         fclose(f);
+        //     }
+        // }
+
+        // if(r == ERROR_SIGFAIL)
+        // {
+        //     FILE* f = fopen(".vfc/process_log.txt", "a");
+        //     if(f)
+        //     {
+        //         flockfile(f);
+        //         fprintf(f, "%lu: Transaction signature is invalid.\n", t.uid);
+        //         funlockfile(f);
+        //         fclose(f);
+        //     }
+        // }
+
+        // if(r == ERROR_UIDEXIST)
+        // {
+        //     FILE* f = fopen(".vfc/process_log.txt", "a");
+        //     if(f)
+        //     {
+        //         flockfile(f);
+        //         fprintf(f, "%lu: Transaction exists in chain.\n", t.uid);
+        //         funlockfile(f);
+        //         fclose(f);
+        //     }
+        // }
+
+        // if(r == ERROR_WRITE)
+        // {
+        //     FILE* f = fopen(".vfc/process_log.txt", "a");
+        //     if(f)
+        //     {
+        //         flockfile(f);
+        //         fprintf(f, "%lu: Transaction write error.\n", t.uid);
+        //         funlockfile(f);
+        //         fclose(f);
+        //     }
+        // }
+
 
         //Good transaction!
         if(r == 1 && lreplay == 1)
@@ -2975,7 +3224,8 @@ pthread_mutex_unlock(&mutex2);
             memcpy(ofs, &t.amount, sizeof(mval));
             ofs += sizeof(mval);
             memcpy(ofs, t.owner.key, ECC_CURVE*2);
-            triBroadcast(pc, len, 6);                       //Tell 6 peers
+            //triBroadcast(pc, len, 6);                       //Tell 6 peers
+            peersBroadcast(pc, len);
         }
 
     }
@@ -3021,7 +3271,7 @@ void *networkThread(void *arg)
         sleep(3);
 
     //Never allow thread to end
-    int read_size;
+    int read_size = 0;
     char rb[RECV_BUFF_SIZE];
     const uint trans_size = 1+sizeof(uint)+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
     const uint replay_size = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
@@ -3030,7 +3280,6 @@ void *networkThread(void *arg)
         //Client Command
         memset(rb, 0, sizeof(rb));
         read_size = recvfrom(s, rb, RECV_BUFF_SIZE-1, 0, (struct sockaddr *)&client, &slen);
-        reqs++;
 
         //It's time to payout some rewards (if eligible).
 #if MASTER_NODE == 1
@@ -3114,11 +3363,13 @@ void *networkThread(void *arg)
 
                 struct utsname ud;
                 uname(&ud);
-
-                char pc[MIN_LEN];
-                snprintf(pc, sizeof(pc), "a%lu, %s, %u, %s, %.3f", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
-
-                csend(client.sin_addr.s_addr, pc, strlen(pc));
+                
+                if(st.st_size > 0)
+                {
+                    char pc[MIN_LEN];
+                    snprintf(pc, sizeof(pc), "a%lu, %s, %u, %s, %.3f", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
+                    csend(client.sin_addr.s_addr, pc, strlen(pc));
+                }
             }
         }
 
@@ -3247,6 +3498,11 @@ void truncate_at_error(const char* file, const uint num)
     if(f)
     {
         const size_t len = lseek(f, 0, SEEK_END);
+        if(len == 0)
+        {
+            close(f);
+            return;
+        }
 
         unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
         if(m != MAP_FAILED)
@@ -3259,7 +3515,7 @@ void truncate_at_error(const char* file, const uint num)
             {
                 memcpy(&t, m+i, sizeof(struct trans));
 
-                if(time(0) > st)
+                if(time(0) > st && i > 0)
                 {
                     printf("head: %li / %li\n", i/sizeof(struct trans), len/sizeof(struct trans));
                     st = time(0) + 9;
@@ -3450,6 +3706,19 @@ int main(int argc , char *argv[])
         printf("ERROR: Main Process -1 chdir(%s)\n", getHome());
         exit(0);
     }
+
+    //is x86_64? only use mmap on x86_64
+    struct utsname ud;
+    uname(&ud);
+    if(strcmp(ud.machine, "x86_64") != 0)
+    {
+        is8664 = 0;
+        printf("Running without mmap() as system is not x86_64. Unless specified in ~vfc/vfc.cnf\n\n");
+    }
+
+    //Load the config file
+    loadConfig();
+    uint command_skip = 0;
 
     // < Peer arrays do not need initilisation > .. (apart from this one)
     for(uint i = 0; i < MAX_PEERS; i++)
@@ -3706,9 +3975,9 @@ int main(int argc , char *argv[])
                 setlocale(LC_NUMERIC, "");
                 if(g_HSEC < 1000)
                     printf("HASH/s: %'lu\n", g_HSEC);
-                else if(g_HSEC < 1000000)
+                else if(g_HSEC < 1000000 && g_HSEC > 0)
                     printf("kH/s: %.2f\n", (double)g_HSEC / 1000);
-                else if(g_HSEC < 1000000000)
+                else if(g_HSEC < 1000000000 && g_HSEC > 0)
                     printf("mH/s: %.2f\n", (double)g_HSEC / 1000000);
             }
             
@@ -3761,14 +4030,9 @@ int main(int argc , char *argv[])
             
             __off_t ls = 0;
             uint tc = 0;
+            time_t tt = time(0);
             while(1)
             {
-                printf("\033[H\033[J");
-                if(tc > 4)
-                {
-                    tc = 0;
-                    resyncBlocks(np); //Sync from a new random peer if no data after x seconds
-                }
                 struct stat st;
                 stat(CHAIN_FILE, &st);
                 if(st.st_size != ls)
@@ -3777,13 +4041,29 @@ int main(int argc , char *argv[])
                     tc = 0;
                 }
 
+                printf("\033[H\033[J");
+                if(tc > 1 || time(0) > tt)
+                {
+                    tc = 0;
+                    resyncBlocks(np); //Sync from a new random peer if no data after x seconds
+                    tt = time(0) + 33;
+                }
+
                 forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_RALLOW);
                 forceRead(".vfc/rph.mem", &replay_height, sizeof(uint));
 
-                if(replay_allow[0] == 0)
-                    printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit. Synchronizing only from the Master.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
+                if(st.st_size > 0 && replay_height > 0)
+                {
+                    if(np == 0)
+                        printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit. Synchronizing only from the Master.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
+                    else
+                        printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit. Authorized %u Peers.\n", (double)st.st_size / 1000, (double)replay_height / 1000, np);
+                }
                 else
-                    printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit. Authorized %u Peers.\n", (double)st.st_size / 1000, (double)replay_height / 1000, np);
+                {
+                    printf("Please wait while we try to connect...\n");
+                }
+                
 
                 tc++;
                 sleep(1);
@@ -3799,6 +4079,9 @@ int main(int argc , char *argv[])
             
             //xor down random input to 32 bytes
             const size_t len = strlen(argv[2]);
+            if(len == 0)
+                exit(0);
+
             const uint xor_chunk = len / 32;
             if(xor_chunk <= 1)
             {
@@ -3898,13 +4181,8 @@ int main(int argc , char *argv[])
                 forceWrite(".vfc/diff.mem", &d, sizeof(float));
 
                 //Tell peers our new user-agent
-                struct stat st;
-                stat(CHAIN_FILE, &st);
-                struct utsname ud;
-                uname(&ud);
-                char pc[MIN_LEN];
-                snprintf(pc, sizeof(pc), "a%lu, %s, %u, %s, %.3f", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
-                peersBroadcast(pc, strlen(pc));
+                node_difficulty = d;
+                broadcastUserAgent();
 
                 //Output our set difficulty
                 printf("%.3f\n\n", d);
@@ -3974,6 +4252,9 @@ int main(int argc , char *argv[])
             printf("vfc minted       - Minted supply\n");
             printf("vfc unclaimed    - Lists all unclaimed addresses from your minted.priv\n");
             printf("vfc claim        - Claims the contents of minted.priv to your rewards address\n");
+            printf("----------------\n");
+            printf("vfc single       - Launches the VFC node as single threaded\n");
+            printf("vfc multi        - Launches the VFC node as multi threaded\n");
             printf("----------------\n\n");
   
             printf("To get started running a dedicated node, execute ./vfc on a seperate screen.\n\n");
@@ -3988,7 +4269,8 @@ int main(int argc , char *argv[])
             stat(CHAIN_FILE, &st);
             struct utsname ud;
             uname(&ud);
-            printf("%lu, %s, %u, %s, %.3f\n", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
+            if(st.st_size > 0)
+                printf("%lu, %s, %u, %s, %.3f\n", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
             exit(0);
         }
 
@@ -3996,8 +4278,12 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "difficulty") == 0)
         {
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
+#if MASTER_NODE == 1
             if(system("cat .vfc/netdiff.txt") != -1)
                 printf("Average / Network Difficulty: %.3f\n", network_difficulty);
+#else
+            printf("Average / Network Difficulty: %.3f\n", network_difficulty);
+#endif
             exit(0);
         }
 
@@ -4021,6 +4307,18 @@ int main(int argc , char *argv[])
         {
             printf("%.3f\n", toDB(getMinedSupply()));
             exit(0);
+        }
+
+        //threading options
+        if(strcmp(argv[1], "single") == 0)
+        {
+            single_threaded = 1;
+            command_skip = 1;
+        }
+        if(strcmp(argv[1], "multi") == 0)
+        {
+            single_threaded = 0;
+            command_skip = 1;
         }
 
         //Fork unclaimed addresses from minted.priv
@@ -4192,9 +4490,9 @@ int main(int argc , char *argv[])
                 setlocale(LC_NUMERIC, "");
                 if(g_HSEC < 1000)
                     printf("HASH/s: %'lu\n", g_HSEC);
-                else if(g_HSEC < 1000000)
+                else if(g_HSEC < 1000000 && g_HSEC > 0)
                     printf("kH/s: %.2f\n", (double)g_HSEC / 1000);
-                else if(g_HSEC < 1000000000)
+                else if(g_HSEC < 1000000000 && g_HSEC > 0)
                     printf("mH/s: %.2f\n", (double)g_HSEC / 1000000);
             }
             
@@ -4212,14 +4510,9 @@ int main(int argc , char *argv[])
             
             __off_t ls = 0;
             uint tc = 0;
+            time_t tt = time(0);
             while(1)
             {
-                printf("\033[H\033[J");
-                if(tc > 4)
-                {
-                    tc = 0;
-                    resyncBlocks(33); //Sync from a new random peer if no data after x seconds
-                }
                 struct stat st;
                 stat(CHAIN_FILE, &st);
                 if(st.st_size != ls)
@@ -4228,13 +4521,28 @@ int main(int argc , char *argv[])
                     tc = 0;
                 }
 
+                printf("\033[H\033[J");
+                if(tc > 1 || time(0) > tt)
+                {
+                    tc = 0;
+                    resyncBlocks(33); //Sync from a new random peer if no data after x seconds
+                    tt = time(0) + 33;
+                }
+
                 forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_RALLOW);
                 forceRead(".vfc/rph.mem", &replay_height, sizeof(uint));
 
-                if(replay_allow[0] == 0)
-                    printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit. Synchronizing only from the Master.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
+                if(st.st_size > 0 && replay_height > 0)
+                {
+                    if(replay_allow[0] == 0)
+                        printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit. Synchronizing only from the Master.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
+                    else
+                        printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
+                }
                 else
-                    printf("%.1f kb of %.1f kb downloaded press CTRL+C to Quit.\n", (double)st.st_size / 1000, (double)replay_height / 1000);
+                {
+                    printf("Please wait while we try to connect...\n");
+                }
 
                 tc++;
                 sleep(1);
@@ -4395,13 +4703,12 @@ int main(int argc , char *argv[])
     loadmem();
 
     //Does user just wish to get address balance?
-    if(argc == 2)
+    if(argc == 2 && command_skip == 0)
     {
         //Get balance
         addr from;
         size_t len = ECC_CURVE+1;
         b58tobin(from.key, &len, argv[1], strlen(argv[1]));
-        printf("Please Wait...\n");
 
         //Local
         struct timespec s;
@@ -4539,7 +4846,7 @@ int main(int argc , char *argv[])
     }
 
     //How did we get here?
-    if(argc > 1)
+    if(argc > 1 && command_skip == 0)
     {
         //Looks like some unknown command was executed.
         printf("Command not recognised.\n");
@@ -4560,15 +4867,7 @@ int main(int argc , char *argv[])
     //Hijack CTRL+C
     signal(SIGINT, sigintHandler);
 
-    //is x86_64? only use mmap on x86_64
-    struct utsname ud;
-    uname(&ud);
-    if(strcmp(ud.machine, "x86_64") != 0)
-    {
-        is8664 = 0;
-        printf("Running without mmap() as system is not x86_64.\n\n");
-    }
-    
+
     //Launch Info
     timestamp();
     printf("\n.. VFC ..\n");
@@ -4581,8 +4880,12 @@ int main(int argc , char *argv[])
     if(getcwd(cwd, sizeof(cwd)) != NULL)
         printf("Current Directory: %s\n\n", cwd);
 
-    //Launch the Transaction Processing threads
+    //Decide if single or multi-threaded
     nthreads = get_nprocs();
+    if(single_threaded == 1)
+        nthreads = 1;
+    
+    //Launch the Transaction Processing threads
     for(int i = 0; i < nthreads; i++)
     {
         pthread_t tid;
@@ -4620,10 +4923,8 @@ int main(int argc , char *argv[])
     time_t tt = time(0);
     while(1)
     {
-        if(reqs > 0)
-            printf("STAT: Req/s: %ld, Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %llu\n", reqs / (time(0)-tt), countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, MAX_THREADS, err);
+        printf("STAT: Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %llu\n", countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, MAX_THREADS, err);
         tt = time(0);
-        reqs = 0;
         sleep(180);
     }
     
