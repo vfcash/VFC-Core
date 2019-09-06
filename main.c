@@ -64,6 +64,7 @@
 #include <locale.h> //setlocale
 #include <signal.h> //SIGPIPE
 #include <pthread.h> //Threading
+#include <execinfo.h> //backtrace
 
 #include "ecc.h"
 #include "sha3.h"
@@ -1098,32 +1099,8 @@ void printDifficultyVotes()
     {
         if(isPeerAlive(p) == 1)
         {
-            char cf[8];
-            memset(cf, 0, sizeof(char)*8);
-            const uint ual = strlen(peer_ua[p]);
-
-            if(ual > 6)
-            {
-                if(peer_ua[p][ual-5] == '0' && peer_ua[p][ual-4] == '.')
-                {
-                    cf[0] = peer_ua[p][ual-5];
-                    cf[1] = peer_ua[p][ual-4];
-                    cf[2] = peer_ua[p][ual-3];
-                    cf[3] = peer_ua[p][ual-2];
-                    cf[4] = peer_ua[p][ual-1];
-                }
-                else
-                {
-                    continue;
-                }
-            }
-            else
-            {
-                continue;
-            }
-            
             //Peer difficulty index
-            const double diff = atof(cf);
+            const double diff = getPeerDiff(p);
 
             //Is it in the valid range
             if(diff >= 0.030 && diff <= 0.240)
@@ -1187,7 +1164,7 @@ void RewardPeer(const uint ip, const char* pubkey)
 }
 #endif
 
-//Peers are only replaced if they have not responded in a week, otherwise we still consider them contactable until replaced.
+//Peers are only replaced if they have not responded in a x time period, otherwise we still consider them contactable until replaced.
 int addPeer(const uint ip)
 {
     //Is there room for a new peer?
@@ -2738,21 +2715,25 @@ void loadConfig()
         while(fgets(line, 256, f) != NULL)
         {
             char set[64];
+            memset(set, 0, 64);
             uint val;
             
-            if(scanf("%s %u\n", &set[0], &val) == 1)
+            if(sscanf(line, "%s %u", set, &val) == 2)
             {
+                printf("Setting Loaded: %s %u\n", set, val);
+
                 if(strcmp(set, "mmap") == 0) //mmap is best disabled on arm devices with low memory
                     is8664 = val;
 
                 if(strcmp(set, "multi-threaded") == 0) //Single threaded is more stable.
                     single_threaded = val == 0 ? 1 : 0;
 
-                if(strcmp(set, "replay-packet-delay") == 0) //Default 1,000, the higher the number the less bandwith used refer to notes in getReplatRate() function.
+                if(strcmp(set, "replay-delay") == 0) //Default 1,000, the higher the number the less bandwith used refer to notes in getReplatRate() function.
                     replay_packet_delay = val;
             }
         }
         fclose(f);
+        printf("\n");
     }
 }
 
@@ -3692,6 +3673,16 @@ void cleanChain()
 
 
 
+//https://stackoverflow.com/questions/77005/how-to-automatically-generate-a-stacktrace-when-my-program-crashes
+void exception_handler(int sig)
+{
+    void *array[10];
+    size_t size;
+    size = backtrace(array, 10);
+    fprintf(stderr, "Error: signal %d:\n", sig);
+    backtrace_symbols_fd(array, size, STDERR_FILENO);
+    exit(1);
+}
 
 
 
@@ -3699,6 +3690,9 @@ int main(int argc , char *argv[])
 {
     //Suppress Sigpipe
     signal(SIGPIPE, SIG_IGN);
+
+    //Handle SIGSEV
+    signal(SIGSEGV, exception_handler);
 
     //set local working directory
     if(chdir(getHome()) == -1)
