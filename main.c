@@ -1281,8 +1281,17 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
         return 0; //Don't tell the other peers, pointless transaction
 
     //Do a quick unique check [realtime uid cache]
-    if(has_uid(t->uid) == 1)
-        return 0;
+    if(memcmp(t->from.key, t->to.key, ECC_CURVE+1) == 0) //is auth trans
+    {
+        if(has_uid(crc64(0, (unsigned char*)t->from.key, ECC_CURVE+1)) == 1)
+            return 0;
+    }
+    else
+    {
+        if(has_uid(t->uid) == 1)
+            return 0;
+    }
+
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if(single_threaded == 0)
 pthread_mutex_lock(&mutex5);
@@ -1347,7 +1356,14 @@ pthread_mutex_unlock(&mutex5);
     // }
 
     //Success
-    add_uid(t->uid, 30); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
+    if(memcmp(t->from.key, t->to.key, ECC_CURVE+1) == 0) //is auth trans
+    {
+        add_uid(crc64(0, (unsigned char*)t->from.key, ECC_CURVE+1), 1600); //1 hr for auth trans
+    }
+    else
+    {
+        add_uid(t->uid, 30); //block uid for 9 hours (there can be collisions, as such it's a temporary block)
+    }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if(single_threaded == 0)
@@ -2909,16 +2925,16 @@ void *generalThread(void *arg)
 #endif
 
         //Let's execute a Sync every 3 mins
-        if(time(0) > rs)
-        {
-            //How many peers we sync off depends on the number of logical cores
-            if(num_processors > 1)
-                resyncBlocks(num_processors / 2);
-            else
-                resyncBlocks(1);
+        // if(time(0) > rs)
+        // {
+        //     //How many peers we sync off depends on the number of logical cores
+        //     if(num_processors > 1)
+        //         resyncBlocks(num_processors / 2);
+        //     else
+        //         resyncBlocks(1);
             
-            rs = time(0) + 180;
-        }
+        //     rs = time(0) + 180;
+        // }
 
         //Check which of the peers are still alive, those that are, update their timestamps
         if(time(0) > pr)
@@ -3128,6 +3144,13 @@ pthread_mutex_unlock(&mutex2);
         //     }
         // }
 
+        //Possible race condition
+        if(r == 1)
+            add_uid(t.uid, 32400); //Everything was fine, block for nine hours
+
+        if(r == ERROR_UIDEXIST)
+            add_uid(t.uid, 32400); //Everything was fine, block for nine hours
+
         // if(r == ERROR_NOFUNDS)
         // {
         //     FILE* f = fopen(".vfc/process_log.txt", "a");
@@ -3297,6 +3320,18 @@ void *networkThread(void *arg)
             if(qrv > 0)
             {
                 //printf("Q: %u %lu %u\n", t.amount, t.uid, gQueSize());
+
+                //Log
+                // char pfrom[MIN_LEN];
+                // memset(pfrom, 0, sizeof(pfrom));
+                // char pto[MIN_LEN];
+                // memset(pto, 0, sizeof(pto));
+                // size_t len = MIN_LEN;
+                // b58enc(pfrom, &len, t.from.key, ECC_CURVE+1);
+                // len = MIN_LEN;
+                // b58enc(pto, &len, t.to.key, ECC_CURVE+1);
+                // printf("%s / t: %lu, %s, %s, %u\n", inet_ntoa(client.sin_addr), t.uid, pfrom, pto, t.amount);
+
 
                 //Broadcast to peers
                 origin = client.sin_addr.s_addr;
@@ -4795,45 +4830,64 @@ int main(int argc , char *argv[])
         peersBroadcast(pc, len);
 
 #if MASTER_NODE == 1
-        //Send locally as a replay
-        len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
-        pc[0] = 'p'; //This is a re*P*lay
-        ofs = pc + 1;
-        memcpy(ofs, &t.uid, sizeof(uint64_t));
-        ofs += sizeof(uint64_t);
-        memcpy(ofs, t.from.key, ECC_CURVE+1);
-        ofs += ECC_CURVE+1;
-        memcpy(ofs, t.to.key, ECC_CURVE+1);
-        ofs += ECC_CURVE+1;
-        memcpy(ofs, &t.amount, sizeof(mval));
-        ofs += sizeof(mval);
-        memcpy(ofs, t.owner.key, ECC_CURVE*2);
-        csend(inet_addr("127.0.0.1"), pc, len);
+            //Send locally as a replay
+            len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+            pc[0] = 'p'; //This is a re*P*lay
+            ofs = pc + 1;
+            memcpy(ofs, &t.uid, sizeof(uint64_t));
+            ofs += sizeof(uint64_t);
+            memcpy(ofs, t.from.key, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, t.to.key, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, &t.amount, sizeof(mval));
+            ofs += sizeof(mval);
+            memcpy(ofs, t.owner.key, ECC_CURVE*2);
+            csend(inet_addr("127.0.0.1"), pc, len);
 #endif
 
-        //Log
-        char howner[MIN_LEN];
-        memset(howner, 0, sizeof(howner));
-        size_t zlen = MIN_LEN;
-        b58enc(howner, &zlen, t.owner.key, ECC_CURVE);
+            //Log
+            char howner[MIN_LEN];
+            memset(howner, 0, sizeof(howner));
+            size_t zlen = MIN_LEN;
+            b58enc(howner, &zlen, t.owner.key, ECC_CURVE);
 
-        printf("\nPacket Size: %lu. %'.3f VFC. Sending Transaction...\n", len, (double)t.amount / 1000);
-        printf("%lu: %s > %s : %u : %s\n", t.uid, argv[1], argv[2], t.amount, howner);
-        printf("Transaction Sent.\n\n");
+            printf("\nPacket Size: %lu. %'.3f VFC. Sending Transaction...\n", len, (double)t.amount / 1000);
+            printf("%lu: %s > %s : %u : %s\n", t.uid, argv[1], argv[2], t.amount, howner);
+            printf("Transaction Sent.\n\n");
 
-    //Get balance again..
-#if MASTER_NODE == 1
-    sleep(3);
-#else
-    sleep(6);
-#endif
+            //Wait before getting balance again..
+            #if MASTER_NODE == 0
+                sleep(6);
+            #endif
 
-    const int64_t bal1 = getBalanceLocal(&t.from);
-    setlocale(LC_NUMERIC, "");
-    if(bal0-bal1 <= 0)
-        printf("Transaction Sent, but unable to verify it's success. Refer to sent transactions for confirmation.\n\n");
-    else
-        printf("VFC Sent: %'.3f VFC\n\n", toDB(bal0-bal1));
+//////////////////////////////////////////
+//Loop until send confirmed atleast locally
+//////////////////////////////////////////
+time_t mtt = time(0)+33;
+while(1)
+{
+        if(time(0) > mtt)
+        {
+            printf("Transaction Sent, but unable to verify it's success. Refer to sent transactions for confirmation. Ending...\n\n");
+            break;
+        }
+
+        const int64_t bal1 = getBalanceLocal(&t.from);
+        setlocale(LC_NUMERIC, "");
+        if(bal0-bal1 <= 0)
+        {
+            printf("Transaction Sent, but unable to verify it's success. Refer to sent transactions for confirmation. Trying again..\n\n");
+            csend(inet_addr("127.0.0.1"), pc, len); //Will locally cache on non-master nodes at this point.
+            sleep(1);
+        }
+        else
+        {
+            printf("VFC Sent: %'.3f VFC\n\n", toDB(bal0-bal1));
+            break;
+        }
+}
+//////////////////////////////////////////
 
         //Done
         exit(0);
