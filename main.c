@@ -1377,7 +1377,7 @@ pthread_mutex_unlock(&mutex5);
 int gQue()
 {
     const uint mi = qRand(3, MAX_TRANS_QUEUE-3);
-    for(uint i = mi; i >= 0; i--) //Check backwards first, que is stacked left to right
+    for(uint i = mi; i > 0; i--) //Check backwards first, que is stacked left to right
     {
         if(tq[i].amount != 0)
             if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
