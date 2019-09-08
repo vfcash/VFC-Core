@@ -258,6 +258,20 @@ uint qRand(const uint min, const uint max)
     return ( ((float)rv / RAND_MAX) * (max-min) ) + min; //(rand()%(max-min))+min;
 }
 
+float qRandFloat(const float min, const float max)
+{
+    static time_t ls = 0;
+    if(time(0) > ls)
+    {
+        srand(time(0));
+        ls = time(0) + 33;
+    }
+    const float rv = (float)rand();
+    if(rv == 0)
+        return min;
+    return ( (rv / RAND_MAX) * (max-min) ) + min;
+}
+
 void timestamp()
 {
     time_t ltime = time(0);
@@ -1379,12 +1393,18 @@ int gQue()
     const uint mi = qRand(3, MAX_TRANS_QUEUE-3);
     for(int i = mi; i >= 0; i--) //Check backwards first, que is stacked left to right
     {
+        if(i < 0 || i >= MAX_TRANS_QUEUE) //just being sure
+            break;
+
         if(tq[i].amount != 0)
             if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
                 return i;
     }
     for(int i = mi; i < MAX_TRANS_QUEUE; i++) //check into the distance
     {
+        if(i < 0 || i >= MAX_TRANS_QUEUE) //just being sure
+            break;
+
         if(tq[i].amount != 0)
             if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
                 return i;
@@ -3728,6 +3748,9 @@ int main(int argc , char *argv[])
 
     //Handle SIGSEV
     signal(SIGSEGV, exception_handler);
+
+    //If never set difficulty before, let's set random
+    node_difficulty = qRandFloat(0.031, 0.240);
 
     //set local working directory
     if(chdir(getHome()) == -1)
