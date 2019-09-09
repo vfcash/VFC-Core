@@ -4300,6 +4300,7 @@ int main(int argc , char *argv[])
             printf("vfc findtrans <transaction uid>  - Find a transaction by it's UID\n");
             printf("-------------------------------\n");
             printf("vfc dump                         - List all transactions on chain\n");
+            printf("vfc dumptop <num trans>          - List top x transactions on chain\n");
             printf("vfc dumpbad                      - List all detected double spend attempts\n");
             printf("vfc clearbad                     - Clear all detected double spend attempts\n");
             printf("-------------------------------\n\n");
