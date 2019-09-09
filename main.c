@@ -1843,16 +1843,24 @@ pthread_mutex_unlock(&mutex1);
         const size_t my_heigh = st.st_size > 0 ? st.st_size / sizeof(struct trans) : 0;
 
         //if peer has a smaller block height
-        if(peer_heigh < my_heigh)
+        const int diff = my_heigh - peer_heigh;
+        if(diff <= REPLAY_SIZE) //Give peer the fast update
         {
-            // 21 seconds of replay duration
-            replayHead(ip, REPLAY_SIZE*2);
-            replayBlocks(ip);
+            //Give the peer double the head they need, just to be sure !
+            replayHead(ip, diff*2);
         }
         else
         {
-            // 35 seconds of replay duration
-            replayHead(ip, REPLAY_SIZE*5);
+            if(peer_heigh < my_heigh)
+            {
+                //Give peer a random block because the peer is way behind
+                replayBlocks(ip);
+            }
+            else
+            {
+                //Just give the peer *some* head, because the peer is waaaay ahead of us and only our latest graph ends are potentially useful
+                replayHead(ip, REPLAY_SIZE*3);
+            }
         }
     }
 
