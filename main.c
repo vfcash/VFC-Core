@@ -992,26 +992,22 @@ void triBroadcast(const char* dat, const size_t len, const uint multi)
     }
 }
 
-void resyncBlocks(const uint inum_peers)
+void resyncBlocks(const uint irnp)
 {
-#if MASTER_NODE == 0
-    //Resync from Master
-    csend(peers[0], "r", 1);
-#endif
-
     //Clear replay_allow
     memset(&replay_allow, 0, sizeof(uint)*MAX_RALLOW);
 
     //allow replay from x random peers
-    const uint num_peers = inum_peers < MAX_RALLOW ? inum_peers : MAX_RALLOW;
-    for(uint i = 0; i < num_peers; i++)
+    const uint rnp = irnp < MAX_RALLOW ? irnp : MAX_RALLOW;
+    for(uint i = 0; i < rnp; i++)
     {
-
-        //Also Sync from a Random Node (Sync is called fairly often so eventually the random distribution across nodes will fair well)
+        //Init
         replay_allow[i] = 0;
-        if(num_peers > 1)
+
+        //Select Peer
+        if(rnp > 1)
         {
-            //Look for a living peer
+            //Pick random peer
             uint si = qRand(1, num_peers-1); // start from random offset
             do // find next living peer from offset
             {
@@ -1026,13 +1022,13 @@ void resyncBlocks(const uint inum_peers)
             else
                 replay_allow[i] = peers[si];
         }
-        else if(num_peers == 1)
+        else if(rnp <= 1)
         {
             replay_allow[i] = peers[0];
         }
 
-        //Alright ask this peer to replay to us too
-        if(num_peers > 1 && replay_allow[i] != 0)
+        //Finally ask this peer to replay to us
+        if(replay_allow[i] != 0)
             csend(replay_allow[i], "r", 1);
   
     }
