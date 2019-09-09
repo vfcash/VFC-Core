@@ -95,7 +95,7 @@ const char master_ip[] = "198.204.248.26";
 //Node Settings
 #define MAX_SITES 11111101              // Maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes.
 #define MAX_TRANS_QUEUE 8192            // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
-#define MAX_REXI_SIZE 2048              // Maximum size of rExi (this should be atlest ~MAX_TRANS_QUEUE/3)
+#define MAX_REXI_SIZE 4096              // Maximum size of rExi (this should be atlest ~MAX_TRANS_QUEUE/3)
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
 #define PING_INTERVAL 270               // How often to ping the peers and see if they are still alive
@@ -1946,7 +1946,7 @@ void dumptrans(const size_t offset)
             b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
 
             setlocale(LC_NUMERIC, "");
-            printf("%s > %s : %'.3f\n", frompub, topub, toDB(t.amount));
+            printf("%lu: %s\n\t%s > %'.3f\n", t.uid, frompub, topub, toDB(t.amount));
         }
 
         fclose(f);
