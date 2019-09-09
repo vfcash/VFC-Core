@@ -3911,7 +3911,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "qsend") == 0)
         {
             char cmd[1024];
-            sprintf(cmd, "vfc%s %s %.3f%s", myrewardkey, argv[3], atof(argv[2]), myrewardkeyp);
+            snprintf(cmd, sizeof(cmd), "vfc%s %s %.3f%s", myrewardkey, argv[3], atof(argv[2]), myrewardkeyp);
             if(system(cmd) == -1)
                 printf("ERROR: Failed to execute qsend.\n");
             
@@ -3986,7 +3986,7 @@ int main(int argc , char *argv[])
                         if(fork_pid == 0)
                         {
                             char cmd[1024];
-                            sprintf(cmd, "\nvfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
+                            snprintf(cmd, sizeof(cmd), "\nvfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
                             if(system(cmd) == -1)
                                 printf("ERROR: Failed to execute subG address claim.\n");
                             exit(0);
@@ -4470,7 +4470,7 @@ int main(int argc , char *argv[])
                         if(fork_pid == 0)
                         {
                             char cmd[1024];
-                            sprintf(cmd, "\nvfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
+                            snprintf(cmd, sizeof(cmd), "\nvfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, bal, bpriv);
                             if(system(cmd) == -1)
                                 printf("ERROR: Failed to execute subG address claim.\n");
                             exit(0);
