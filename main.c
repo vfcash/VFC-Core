@@ -1897,7 +1897,7 @@ void launchReplayThread(const uint32_t ip)
 }
 
 //dump all trans
-void dumptrans()
+void dumptrans(const size_t offset)
 {
     FILE* f = fopen(CHAIN_FILE, "r");
     if(f)
@@ -1906,7 +1906,7 @@ void dumptrans()
         const size_t len = ftell(f);
 
         struct trans t;
-        for(size_t i = 0; i < len; i += sizeof(struct trans))
+        for(size_t i = sizeof(struct trans)*offset; i < len; i += sizeof(struct trans))
         {
             fseek(f, i, SEEK_SET);
 
@@ -2754,7 +2754,7 @@ void loadConfig()
             memset(set, 0, 64);
             uint val;
             
-            if(sscanf(line, "%s %u", set, &val) == 2)
+            if(sscanf(line, "%63s %u", set, &val) == 2)
             {
                 printf("Setting Loaded: %s %u\n", set, val);
 
@@ -3528,7 +3528,7 @@ void *networkThread(void *arg)
 
 
 //repair chain
-void truncate_at_error(const char* file, const uint num)
+void truncate_at_error(const char* file, const size_t num)
 {
     int f = open(file, O_RDONLY);
     if(f)
@@ -4224,6 +4224,15 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
+        //Dump top trans
+        if(strcmp(argv[1], "dumptop") == 0)
+        {
+            struct stat st;
+            stat(CHAIN_FILE, &st);
+            dumptrans((st.st_size / sizeof(struct trans)) - atoi(argv[2]));
+            exit(0);
+        }
+
         if(strcmp(argv[1], "setdiff") == 0)
         {
             const float d = atof(argv[2]);
@@ -4644,7 +4653,7 @@ int main(int argc , char *argv[])
         //Dump all trans
         if(strcmp(argv[1], "dump") == 0)
         {
-            dumptrans();
+            dumptrans(0);
             exit(0);
         }
 
