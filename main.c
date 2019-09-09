@@ -994,6 +994,11 @@ void triBroadcast(const char* dat, const size_t len, const uint multi)
 
 void resyncBlocks(const uint irnp)
 {
+#if MASTER_NODE == 0
+    //Resync from Master
+    csend(peers[0], "r", 1);
+#endif
+
     //Clear replay_allow
     memset(&replay_allow, 0, sizeof(uint)*MAX_RALLOW);
 
