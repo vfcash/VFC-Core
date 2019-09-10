@@ -1301,6 +1301,9 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
     }
     else
     {
+        if(getPeer(iip) == -1 || getPeer(iipo) == -1) //The only kind of transaction a non-peer can send is a network auth packet
+            return 0;
+
         if(has_uid(t->uid) == 1)
             return 0;
     }
@@ -3410,7 +3413,8 @@ void *networkThread(void *arg)
 
                 if(qrv == 1) //Transaction Added to Que
                     triBroadcast(pc, trans_size, 3);
-                else if(qrv == 2) //Double spend detected
+                else
+                if(qrv == 2) //Double spend detected
                     peersBroadcast(pc, trans_size); //triBroadcast(pc, trans_size, 9);
             }
         }
