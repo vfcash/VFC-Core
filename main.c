@@ -2567,9 +2567,10 @@ uint rExi(uint64_t uid)
     {
         uidlist[free] = uid;
         uidtimes[free] = time(0) + 1; //We block for one seconds
+        return 0;
     }
 
-    return 0;
+    return 1;
 }
 
 //Execute Transaction
