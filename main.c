@@ -1301,9 +1301,11 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
     }
     else
     {
-        if(getPeer(iip) == -1 || getPeer(iipo) == -1) //The only kind of transaction a non-peer can send is a network auth packet
+        //The only kind of transaction a non-peer can send is a network auth
+        if(getPeer(iip) == -1 || getPeer(iipo) == -1)
             return 0;
 
+        //Check it's not on the cache block
         if(has_uid(t->uid) == 1)
             return 0;
     }
