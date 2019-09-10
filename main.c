@@ -81,7 +81,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.58";
+const char version[]="0.59";
 const uint16_t gport = 8787;
 const char master_ip[] = "198.204.248.26";
 
@@ -2363,6 +2363,7 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
     {
         int f = open(CHAIN_FILE, O_RDONLY);
 
+        //Too critical to fail
         uint fc = 0;
         while(f == -1)
         {
@@ -2377,6 +2378,7 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
             f = open(CHAIN_FILE, O_RDONLY);
         }
 
+        //No need for this if really
         if(f)
         {
             const size_t len = lseek(f, 0, SEEK_END);
@@ -2418,6 +2420,7 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
     {
         FILE* f = fopen(CHAIN_FILE, "r");
 
+        //Too critical to fail
         uint fc = 0;
         while(f == NULL)
         {
@@ -2432,6 +2435,7 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
             f = fopen(CHAIN_FILE, "r");
         }
 
+        //No need for this if really
         if(f)
         {
             fseek(f, 0, SEEK_END);
