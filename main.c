@@ -961,7 +961,7 @@ void triBroadcast(const char* dat, const size_t len, const uint multi)
     {
         for(uint t = 0; t < multi; t++)
         {
-            uint si = qRand(1, num_peers-1);
+            uint si = qRand(0, num_peers-1);
             uint fc = 0;
             while(1)
             {
@@ -3203,11 +3203,8 @@ pthread_mutex_unlock(&mutex2);
         // }
 
         //Possible race condition
-        if(r == 1)
-            add_uid(t.uid, 32400); //Everything was fine, block for nine hours
-
-        if(r == ERROR_UIDEXIST)
-            add_uid(t.uid, 32400); //Everything was fine, block for nine hours
+        if(r == 1 || r == ERROR_UIDEXIST || r == ERROR_SIGFAIL)
+            add_uid(t.uid, 32400); //Block for nine hours
 
         // if(r == ERROR_NOFUNDS)
         // {
