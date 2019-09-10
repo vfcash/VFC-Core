@@ -9,7 +9,7 @@ clear
 pkill vfc
 rm vfc
 rm /usr/bin/vfc
-gcc -Ofast -pthread base58.c crc64.c ecc.c sha3.c main.c -lm -o vfc
+gcc -std=gnu99 -Ofast -pthread base58.c crc64.c ecc.c sha3.c main.c -lm -o vfc
 cp vfc /usr/bin/vfc
 chmod 0777 /usr/bin/vfc
 
