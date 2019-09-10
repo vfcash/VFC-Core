@@ -2566,7 +2566,7 @@ uint rExi(uint64_t uid)
     if(free != -1)
     {
         uidlist[free] = uid;
-        uidtimes[free] = time(0) + 3; //We block for three seconds
+        uidtimes[free] = time(0) + 1; //We block for one seconds
     }
 
     return 0;
