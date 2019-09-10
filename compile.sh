@@ -12,7 +12,6 @@ rm /usr/bin/vfc
 gcc -std=gnu99 -Ofast -pthread base58.c crc64.c ecc.c sha3.c main.c -lm -o vfc
 cp vfc /usr/bin/vfc
 chmod 0777 /usr/bin/vfc
-
 crontab -l > ncron
 if grep -qxF '*/6 * * * * /usr/bin/vfc' ncron; then
     echo "Cron1 Exists";
@@ -22,7 +21,6 @@ else
     echo "Cron1 Added";
 fi
 rm ncron
-
 echo "Compiled and Installed /usr/bin/vfc and /srv/.vfc or ~/.vfc "
 echo "Don't forget to forward UDP port 8787 if behind a router."
 echo "For more information type; vfc help"
