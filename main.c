@@ -93,9 +93,8 @@ const char master_ip[] = "198.204.248.26";
 #define ERROR_OPEN -5
 
 //Node Settings
-#define MAX_SITES 11111101              // Maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes. [433024253 = 3,464 mb]
 #define MAX_TRANS_QUEUE 8192            // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
-#define MAX_REXI_SIZE MAX_TRANS_QUEUE
+#define MAX_REXI_SIZE MAX_TRANS_QUEUE   // Need to be atleast MAX_TRANS_QUEUE / 3
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
 #define PING_INTERVAL 270               // How often to ping the peers and see if they are still alive
@@ -138,6 +137,7 @@ uint nthreads = 0;                   //number of mining threads
 uint threads = 0;                    //number of replay threads
 uint MAX_THREADS = 6;                //maximum number of replay threads
 uint num_processors = 1;             //number of logical processors on the device
+size_t MAX_SITES = 11111101;         //Maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes. [433024253 = 3,464 mb]
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
@@ -461,8 +461,9 @@ struct site //8 bytes, no padding.
 //Our buckets
 struct site *sites;
 
-void init_sites()
+void init_sites(const size_t ims)
 {
+    MAX_SITES = ims;
     sites = malloc(MAX_SITES * sizeof(struct site));
     if(sites == NULL)
     {
@@ -3658,13 +3659,13 @@ void newClean()
 }
 void cleanChain()
 {
-    //Pre-Verify ECDSA
+    //Pre-Verify ECDSA (we don't really need to do this because we never allow invalid signatures on chain)
     // struct stat st;
     // stat(CHAIN_FILE, &st);
     // truncate_at_error(CHAIN_FILE, st.st_size);
 
     //Init hashmap
-    init_sites();
+    init_sites(433024253); //3,464 mb = 54,128,031 sites = 18,042,677 transactions before unsafe collision potential
     
     //Now clean the chain
     int f = open(CHAIN_FILE, O_RDONLY);
@@ -3682,60 +3683,6 @@ void cleanChain()
             {
                 //Copy transaction
                 memcpy(&t, m+i, sizeof(struct trans));
-                
-                // //Check has balance and is unique
-                // int hbr = 0;
-                // int64_t rv = isSubGenesisAddress(t.from.key, 1);
-                // f = open(".vfc/cblocks.dat", O_RDONLY);
-                // if(f)
-                // {
-                //     const size_t len = lseek(f, 0, SEEK_END);
-
-                //     unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-                //     if(m != MAP_FAILED)
-                //     {
-                //         close(f);
-
-                //         struct trans tn;
-                //         for(size_t i = 0; i < len; i += sizeof(struct trans))
-                //         {
-                //             if(tn.uid == t.uid)
-                //             {
-                //                 hbr = ERROR_UIDEXIST;
-                //                 munmap(m, len);
-                //                 break;
-                //             }
-                //             memcpy(&tn, m+i, sizeof(struct trans));
-
-                //             if(memcmp(&tn.to.key, &t.from.key, ECC_CURVE+1) == 0)
-                //                 rv += tn.amount;
-                //             else if(memcmp(&tn.from.key, &t.from.key, ECC_CURVE+1) == 0)
-                //                 rv -= tn.amount;
-                //         }
-
-                //         munmap(m, len);
-                //     }
-
-                //     close(f);
-                // }
-                // if(hbr != ERROR_UIDEXIST)
-                // {
-                //     if(rv >= t.amount)
-                //         hbr = 1;
-                //     else
-                //         hbr = 0;
-                // }
-                // if(hbr == 0)
-                // {
-                //     printf("%lu: no balance\n", t.uid);
-                //     continue;
-                // }
-                // else if(hbr < 0)
-                // {
-                //     printf("%lu uid exists\n", t.uid);
-                //     continue;
-                // }
-                // //
 
                 if(has_uid(t.uid) == 1)
                 {
@@ -4793,7 +4740,7 @@ int main(int argc , char *argv[])
     memset(&uidtimes, 0, sizeof(time_t)*MIN_LEN);
 
     //Init UID hashmap
-    init_sites();
+    init_sites(11111101); //11 mb
 
     //Set Master Node
     setMasterNode();
