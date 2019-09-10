@@ -8,7 +8,7 @@ Divisible to three decimal places, mineable, written in C, compiled with GCC, 25
 Transactions are free, there is no charge for making a transaction on the network.
 However transactions can optionally create inflation of the currency which is partly paid back to the node operators as rewards.
 
-VFC is a private decentralised network, as-in you will need control of some currency before the rest of the network considers your dedicated node viable for indexing. The usual method is to mine some.
+VFC is a private decentralised network, as-in you will need control of some currency before the rest of the network considers your dedicated node viable for indexing. The usual method is to mine some. Also you can transfer VFC to your node's reward address `vfc reward` will identify your reward public key / address and as such your node will automatically verify itself within the hour.
 
 Join us on Telegram [@vfcash](https://t.me/vfcash)
 
