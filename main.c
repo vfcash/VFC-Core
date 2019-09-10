@@ -3206,6 +3206,9 @@ pthread_mutex_unlock(&mutex2);
         if(r == 1 || r == ERROR_UIDEXIST || r == ERROR_SIGFAIL)
             add_uid(t.uid, 32400); //Block for nine hours
 
+        if(r == ERROR_NOFUNDS)
+            add_uid(t.uid, 540); //Probably spam, block for 9 minutes
+
         // if(r == ERROR_NOFUNDS)
         // {
         //     FILE* f = fopen(".vfc/process_log.txt", "a");
