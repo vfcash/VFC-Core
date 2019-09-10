@@ -93,7 +93,7 @@ const char master_ip[] = "198.204.248.26";
 #define ERROR_OPEN -5
 
 //Node Settings
-#define MAX_SITES 11111101              // Maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes.
+#define MAX_SITES 11111101              // Maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes. [433024253 = 3,464 mb]
 #define MAX_TRANS_QUEUE 8192            // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
 #define MAX_REXI_SIZE MAX_TRANS_QUEUE
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
@@ -1856,7 +1856,7 @@ pthread_mutex_unlock(&mutex1);
             }
             else
             {
-                //Just give the peer *some* head, because the peer is waaaay ahead of us and only our latest graph ends are potentially useful
+                //Just give the peer *some* head, because the peer is way ahead of us and only our latest graph ends are potentially useful
                 replayHead(ip, REPLAY_SIZE*3);
             }
         }
@@ -3658,6 +3658,15 @@ void newClean()
 }
 void cleanChain()
 {
+    //Pre-Verify ECDSA
+    // struct stat st;
+    // stat(CHAIN_FILE, &st);
+    // truncate_at_error(CHAIN_FILE, st.st_size);
+
+    //Init hashmap
+    init_sites();
+    
+    //Now clean the chain
     int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
@@ -3673,76 +3682,66 @@ void cleanChain()
             {
                 //Copy transaction
                 memcpy(&t, m+i, sizeof(struct trans));
-
-                //Verify
-                struct trans nt;
-                memset(&nt, 0, sizeof(struct trans));
-                nt.uid = t.uid;
-                memcpy(nt.from.key, t.from.key, ECC_CURVE+1);
-                memcpy(nt.to.key, t.to.key, ECC_CURVE+1);
-                nt.amount = t.amount;
-                uint8_t thash[ECC_CURVE];
-                makHash(thash, &nt);
-                if(ecdsa_verify(nt.from.key, thash, t.owner.key) == 0)
-                {
-                    printf("%lu: no verification\n", t.uid);
-                    continue;
-                }
-                //
                 
-                //Check has balance and is unique
-                int hbr = 0;
-                int64_t rv = isSubGenesisAddress(t.from.key, 1);
-                f = open(".vfc/cblocks.dat", O_RDONLY);
-                if(f)
-                {
-                    const size_t len = lseek(f, 0, SEEK_END);
+                // //Check has balance and is unique
+                // int hbr = 0;
+                // int64_t rv = isSubGenesisAddress(t.from.key, 1);
+                // f = open(".vfc/cblocks.dat", O_RDONLY);
+                // if(f)
+                // {
+                //     const size_t len = lseek(f, 0, SEEK_END);
 
-                    unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-                    if(m != MAP_FAILED)
-                    {
-                        close(f);
+                //     unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+                //     if(m != MAP_FAILED)
+                //     {
+                //         close(f);
 
-                        struct trans tn;
-                        for(size_t i = 0; i < len; i += sizeof(struct trans))
-                        {
-                            if(tn.uid == t.uid)
-                            {
-                                hbr = ERROR_UIDEXIST;
-                                munmap(m, len);
-                                break;
-                            }
-                            memcpy(&tn, m+i, sizeof(struct trans));
+                //         struct trans tn;
+                //         for(size_t i = 0; i < len; i += sizeof(struct trans))
+                //         {
+                //             if(tn.uid == t.uid)
+                //             {
+                //                 hbr = ERROR_UIDEXIST;
+                //                 munmap(m, len);
+                //                 break;
+                //             }
+                //             memcpy(&tn, m+i, sizeof(struct trans));
 
-                            if(memcmp(&tn.to.key, &t.from.key, ECC_CURVE+1) == 0)
-                                rv += tn.amount;
-                            else if(memcmp(&tn.from.key, &t.from.key, ECC_CURVE+1) == 0)
-                                rv -= tn.amount;
-                        }
+                //             if(memcmp(&tn.to.key, &t.from.key, ECC_CURVE+1) == 0)
+                //                 rv += tn.amount;
+                //             else if(memcmp(&tn.from.key, &t.from.key, ECC_CURVE+1) == 0)
+                //                 rv -= tn.amount;
+                //         }
 
-                        munmap(m, len);
-                    }
+                //         munmap(m, len);
+                //     }
 
-                    close(f);
-                }
-                if(hbr != ERROR_UIDEXIST)
-                {
-                    if(rv >= t.amount)
-                        hbr = 1;
-                    else
-                        hbr = 0;
-                }
-                if(hbr == 0)
-                {
-                    printf("%lu: no balance\n", t.uid);
-                    continue;
-                }
-                else if(hbr < 0)
+                //     close(f);
+                // }
+                // if(hbr != ERROR_UIDEXIST)
+                // {
+                //     if(rv >= t.amount)
+                //         hbr = 1;
+                //     else
+                //         hbr = 0;
+                // }
+                // if(hbr == 0)
+                // {
+                //     printf("%lu: no balance\n", t.uid);
+                //     continue;
+                // }
+                // else if(hbr < 0)
+                // {
+                //     printf("%lu uid exists\n", t.uid);
+                //     continue;
+                // }
+                // //
+
+                if(has_uid(t.uid) == 1)
                 {
                     printf("%lu uid exists\n", t.uid);
                     continue;
                 }
-                //
 
                 //Ok let's write the transaction to chain
                 if(memcmp(t.from.key, t.to.key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
@@ -3751,6 +3750,7 @@ void cleanChain()
                     if(f)
                     {
                         fwrite(&t, sizeof(struct trans), 1, f);
+                        add_uid(t.uid, 172800); //48 hours
                         fclose(f);
                     }
                 }
