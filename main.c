@@ -1156,10 +1156,6 @@ void RewardPeer(const uint ip, const char* pubkey)
         if(isalonu(sa[i]) == 0)
             sa[i] = 0x00;
 
-    //Construct command
-    char cmd[2048];
-    sprintf(cmd, reward_command, sa, amount);
-
     //Drop info
     struct in_addr ip_addr;
     ip_addr.s_addr = ip;
@@ -1171,7 +1167,7 @@ void RewardPeer(const uint ip, const char* pubkey)
     if(f)
     {
         flockfile(f);
-        fprintf(f, cmd);
+        fprintf(f, reward_command, sa, amount);
         funlockfile(f);
         fclose(f);
     }
