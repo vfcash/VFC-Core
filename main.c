@@ -95,7 +95,7 @@ const char master_ip[] = "198.204.248.26";
 //Node Settings
 #define MAX_SITES 11111101              // Maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes.
 #define MAX_TRANS_QUEUE 8192            // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
-#define MAX_REXI_SIZE 4096              // Maximum size of rExi (this should be atlest ~MAX_TRANS_QUEUE/3)
+#define MAX_REXI_SIZE MAX_TRANS_QUEUE
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
 #define PING_INTERVAL 270               // How often to ping the peers and see if they are still alive
@@ -1166,13 +1166,14 @@ void RewardPeer(const uint ip, const char* pubkey)
     timestamp();
     printf("Reward Yapit (%u):%s, %.3f, %s\n", rewardindex, sa, amount, inet_ntoa(ip_addr));
 
-    pid_t fork_pid = fork();
-    if(fork_pid == 0)
+    //Do not fork from here, will fork the threads too.
+    FILE* f = fopen(".vfc/payout.txt", "a");
+    if(f)
     {
-        //Just send the transaction using the console, much easier
-        if(system(cmd) == -1)
-            printf("ERROR: Failed to execute transaction to rewards peer: %s\n", inet_ntoa(ip_addr));
-        exit(0);
+        flockfile(f);
+        fprintf(f, cmd);
+        funlockfile(f);
+        fclose(f);
     }
 
     rewardpaid = 1;
@@ -2359,6 +2360,21 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
     if(is8664 == 1) //mmap on x86_64
     {
         int f = open(CHAIN_FILE, O_RDONLY);
+
+        uint fc = 0;
+        while(f == -1)
+        {
+            fc++;
+            if(fc > 333)
+            {
+                printf("ERROR: open() in hasbalance() has failed.\n");
+                err++;
+                return ERROR_OPEN;
+            }
+
+            f = open(CHAIN_FILE, O_RDONLY);
+        }
+
         if(f)
         {
             const size_t len = lseek(f, 0, SEEK_END);
@@ -2399,6 +2415,21 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
     else //Other devices use a lower memory intensive version
     {
         FILE* f = fopen(CHAIN_FILE, "r");
+
+        uint fc = 0;
+        while(f == NULL)
+        {
+            fc++;
+            if(fc > 333)
+            {
+                printf("ERROR: fopen() in hasbalance() has failed.\n");
+                err++;
+                return ERROR_OPEN;
+            }
+
+            f = fopen(CHAIN_FILE, "r");
+        }
+
         if(f)
         {
             fseek(f, 0, SEEK_END);
@@ -2532,7 +2563,7 @@ uint rExi(uint64_t uid)
     {
         if(uidlist[i] == uid && uidtimes[i] > time(0)) //It's blocked for three seconds otherwise.
             return 1;
-        else if(time(0) > uidtimes[i]-2 || uidtimes[i] == 0) //But we expire after 1 second if in high demand
+        else if(time(0) > uidtimes[i] || uidtimes[i] == 0) //Expired? Is free slot
             free = i;
     }
 
@@ -4901,6 +4932,8 @@ int main(int argc , char *argv[])
             //Wait before getting balance again..
             #if MASTER_NODE == 0
                 sleep(6);
+            #else
+                sleep(3);
             #endif
 
 //////////////////////////////////////////
