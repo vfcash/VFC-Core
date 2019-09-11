@@ -1146,7 +1146,10 @@ void RewardPeer(const uint ip, const char* pubkey)
 
     //Wrong / not latest version? Low reward
     if(strstr(peer_ua[rewardindex], version) == NULL)
+    {
         amount = 0;
+        return;
+    }
 
     //Clean the input ready for sprintf (exploit vector potential otherwise)
     char sa[MIN_LEN];
@@ -1648,7 +1651,7 @@ void setRP(const uint32_t ip)
 }
 
 //Replay blocks to x address
-void replayHead(const uint ip, const size_t len)
+void replayHead(const uint ip, const size_t rlen)
 {
     struct in_addr ip_addr;
     ip_addr.s_addr = ip;
@@ -1666,7 +1669,7 @@ void replayHead(const uint ip, const size_t len)
         const uint height = st.st_size;
         memcpy(ofs, &height, sizeof(uint));
         csend(ip, pc, 1+sizeof(uint));
-        //printf("Replaying Head: %.1f kb to %s\n", (double) ( sizeof(struct trans) * len ) / 1000, inet_ntoa(ip_addr));
+        printf("Replaying Head: %.1f kb to %s\n", (double) ( sizeof(struct trans) * rlen ) / 1000, inet_ntoa(ip_addr));
     }
 
     //Replay blocks
@@ -1676,7 +1679,7 @@ void replayHead(const uint ip, const size_t len)
         fseek(f, 0, SEEK_END);
         const size_t len = ftell(f);
         
-        size_t end = len-(len*sizeof(struct trans)); //top len transactions
+        size_t end = len-(rlen*sizeof(struct trans)); //top len transactions
         struct trans t;
         for(size_t i = len-sizeof(struct trans); i > end; i -= sizeof(struct trans))
         {
@@ -1744,7 +1747,7 @@ void replayBlocks(const uint ip)
         const uint height = st.st_size;
         memcpy(ofs, &height, sizeof(uint));
         csend(ip, pc, 1+sizeof(uint));
-        //printf("Replaying Blocks: %.1f kb to %s\n", (double) ( sizeof(struct trans) * REPLAY_SIZE ) / 1000, inet_ntoa(ip_addr));
+        printf("Replaying Blocks: %.1f kb to %s\n", (double) ( sizeof(struct trans) * REPLAY_SIZE ) / 1000, inet_ntoa(ip_addr));
     }
 
     //Replay blocks
