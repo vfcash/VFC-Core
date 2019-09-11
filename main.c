@@ -4198,7 +4198,7 @@ int main(int argc , char *argv[])
             replay_allow[0] = tip;
             forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint) * MAX_RALLOW);
             csend(tip, "r", 1);
-            printf("\nThank you peer %s has been requested to replay it's blocks. Please make sure you are nor also running sync at this time as they will conflict.\n\n", argv[2]);
+            printf("\nThank you peer %s has been requested to replay it's blocks.\n\nPlease make sure you are nor also running sync at this time as they will conflict.\n\n", argv[2]);
             savemem();
             exit(0);
         }
