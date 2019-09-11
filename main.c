@@ -1091,7 +1091,7 @@ void printDifficultyVotes()
             const double diff = getPeerDiff(p);
 
             //Is it in the valid range
-            if(diff >= 0.030 && diff <= 0.240)
+            if(diff >= 0.030 && diff <= 0.241)
             {
                 const int ti = diff * 1000;
                 tally[ti]++;
@@ -1469,8 +1469,6 @@ void networkDifficulty()
             }
         }
     }
-    //network_difficulty += 0.24-(0.000078125 * countLivingPeers());
-    //divisor++;
     if(divisor > 1 && network_difficulty > 1)
         network_difficulty /= divisor;
 
