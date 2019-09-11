@@ -12,7 +12,7 @@ VFC is a private decentralised network, as-in you will need control of some curr
 
 Join us on Telegram [@vfcash](https://t.me/vfcash)
 
-# Installation & Running a Full Node
+# Installation & Running a Node
 
 **Linux Compile & Install Instructions (Full Node & Client Wallet):**
 ```
