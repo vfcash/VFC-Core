@@ -53,7 +53,7 @@ Generally your node should stay in sync, if it falls behind it is recommended th
 It is reccomend that users who do not have access to an IPv4 address to use a VPN service that offers port forwarding on IPv4 addresses, such as [AirVPN](https://airvpn.org/).
 
 # Denial-of-service Protection
-
+[#f03c15](Do not set this up by default unless you have bandwidth limits on your server that are being exceeded)
 We recommend configuring iptables to throttle incoming UDP packets on port 8787 to 7,133 every minute [~119 packets a second]. 
 
 This should be adequate for the maximum throughput of the entire network allowing 'leeway'.
