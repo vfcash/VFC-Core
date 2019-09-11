@@ -43,7 +43,11 @@ multi-threaded 1
 mmap 1
 replay-delay 1000
 ```
-This will set your node to use all CPU cores available for transaction processing, it will allow the use of memory mapping the blockchain file which will significantly increase transaction processing speed. Also the delay between sending transactions when other peers request a replay will be 1000 microseconds. Each transaction is 144 bytes on file or 147 bytes over the network and 143 bytes if it's a replay. With 1,000,000 microseconds in a second this means your node will send 1,000 replay transactions a second to each peer that requests a replay. That's a total of 1000 * 143 bytes a second or 143kb a second if you consider 1kb to be 1000 bytes rather than 1024 bytes.
+This will set your node to use all CPU cores available for transaction processing, it will allow the use of memory mapping the blockchain file which will significantly increase transaction processing speed.
+
+`replay-delay 1000` means that the delay between sending transactions when other peers request a replay will be 1,000 microseconds. Each transaction is 144 bytes on file or 147 bytes over the network and 143 bytes if it's a replay. With 1,000,000 microseconds in a second this means your node will send 1,000 replay transactions a second to each peer that requests a replay. That's a total of 1000 * 143 bytes a second or 143kb a second per requesting peer if you consider 1kb to be 1000 bytes rather than 1024 bytes.
+
+Generally your node should stay in sync, if it falls behind it is recommended that you run `vfc sync` in the background. This command can take an argument of how many peers to replay from e.g. `vfc sync 256` will attempt to replay from 256 peers. You should set the number of peers relative to the power of your server, if your flood your server with too many replay packets it will be too encumbered to process the regular network transactions.
 
 # No IPv4 address?
 It is reccomend that users who do not have access to an IPv4 address to use a VPN service that offers port forwarding on IPv4 addresses, such as [AirVPN](https://airvpn.org/).
