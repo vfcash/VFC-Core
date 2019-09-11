@@ -4193,8 +4193,12 @@ int main(int argc , char *argv[])
 
         if(strcmp(argv[1], "replaypeer") == 0)
         {
-            csend(inet_addr(argv[2]), "r", 1);
-            printf("\nThank you peer %s has been requested to replay it's blocks.\n\n", argv[2]);
+            const uint32_t tip = inet_addr(argv[2]);
+            memset(&replay_allow, 0, sizeof(uint) * MAX_RALLOW);
+            replay_allow[0] = tip;
+            forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint) * MAX_RALLOW);
+            csend(tip, "r", 1);
+            printf("\nThank you peer %s has been requested to replay it's blocks. Please make sure you are nor also running sync at this time as they will conflict.\n\n", argv[2]);
             savemem();
             exit(0);
         }
