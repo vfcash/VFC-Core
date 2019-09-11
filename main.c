@@ -100,7 +100,6 @@ const char master_ip[] = "198.204.248.26";
 #define PING_INTERVAL 270               // How often to ping the peers and see if they are still alive
 #define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this. [replay sends]
-#define MAX_RALLOW 256                  // Maximum amount of peers allowed to sync from at any one time            [replay requests]
 #define MAX_VOTES_PER_POSITION 18       // Maximum amount of votes per difficulty position between 0.031 and 0.240 | 18 = 3762 total positions / 3072 total peers
 
 //Generic Buffer Sizes
@@ -127,7 +126,7 @@ char mid[8];                         //Clients private identification code used 
 float node_difficulty = 0.031;       //Clients weighted contribution to the federated mining difficulty
 float network_difficulty = 0.031;    //Assumed or actual network difficulty (starts at lowest until known)
 ulong err = 0;                       //Global error count
-uint replay_allow[MAX_RALLOW];       //IP address of peer allowed to send replay blocks
+uint replay_allow[MAX_PEERS];       //IP address of peer allowed to send replay blocks
 uint replay_height = 0;              //Block Height of current peer authorized to receive a replay from
 char myrewardkey[MIN_LEN];           //client reward addr public key
 char myrewardkeyp[MIN_LEN];          //client reward addr private key
@@ -995,52 +994,24 @@ void triBroadcast(const char* dat, const size_t len, const uint multi)
 
 void resyncBlocks(const uint irnp)
 {
-#if MASTER_NODE == 0
-    //Resync from Master
-    csend(peers[0], "r", 1);
-#endif
-
     //Clear replay_allow
-    memset(&replay_allow, 0, sizeof(uint)*MAX_RALLOW);
+    memset(&replay_allow, 0, sizeof(uint)*MAX_PEERS);
 
-    //allow replay from x random peers
-    const uint rnp = irnp < MAX_RALLOW ? irnp : MAX_RALLOW;
-    for(uint i = 0; i < rnp; i++)
+    //allow replay from x peers at random offset
+    const uint rnp = irnp < num_peers ? irnp : num_peers; //Replay Num Peers
+    int i = 0;
+    int ri = 0;
+    if(num_peers-rnp != 0) //We have offset leeway
+        i = qRand(0, num_peers-rnp); //Select a random offset between 0 and leeway
+    //printf("Replay from %i peers, offset %i out of %u peers.\n\n", rnp, i, num_peers);
+    for(; i < rnp; i++, ri++) //Iterate RNP from i offset
     {
-        //Init
-        replay_allow[i] = 0;
-
-        //Select Peer
-        if(rnp > 1)
-        {
-            //Pick random peer
-            uint si = qRand(1, num_peers-1); // start from random offset
-            do // find next living peer from offset
-            {
-                if(isPeerAlive(si) == 0)
-                    break;
-                si++;
-            }
-            while(si < num_peers);
-
-            if(si == num_peers)
-                replay_allow[i] = peers[qRand(0, num_peers-1)];
-            else
-                replay_allow[i] = peers[si];
-        }
-        else if(rnp <= 1)
-        {
-            replay_allow[i] = peers[0];
-        }
-
-        //Finally ask this peer to replay to us
-        if(replay_allow[i] != 0)
-            csend(replay_allow[i], "r", 1);
-  
+        replay_allow[ri] = peers[i];
+        csend(peers[i], "r", 1);
     }
     
     //Set the file memory
-    forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_RALLOW);
+    forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_PEERS);
 }
 
 uint sendMaster(const char* dat, const size_t len)
@@ -2982,7 +2953,7 @@ void *generalThread(void *arg)
         savemem();
 
         //Load new replay allow value
-        forceRead(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_RALLOW);
+        forceRead(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_PEERS);
 
         //Recalculate network difficulty
 #if MASTER_NODE == 1
@@ -3527,7 +3498,7 @@ void *networkThread(void *arg)
             }
             else
             {
-                for(uint i = 0; replay_allow[i] != 0 && i < MAX_RALLOW; i++)
+                for(uint i = 0; replay_allow[i] != 0 && i < MAX_PEERS; i++)
                 {
                     if(client.sin_addr.s_addr == replay_allow[i])
                         allow = 1;
@@ -3555,7 +3526,7 @@ void *networkThread(void *arg)
             }
             else
             {
-                for(uint i = 0; replay_allow[i] != 0 && i < MAX_RALLOW; i++)
+                for(uint i = 0; replay_allow[i] != 0 && i < MAX_PEERS; i++)
                 {
                     if(client.sin_addr.s_addr == replay_allow[i])
                         allow = 1;
@@ -4128,8 +4099,8 @@ int main(int argc , char *argv[])
             loadmem();
 
             uint np = atoi(argv[2]);
-            if(np > MAX_RALLOW)
-                np = MAX_RALLOW;
+            if(np > MAX_PEERS)
+                np = MAX_PEERS;
             resyncBlocks(np);
             
             __off_t ls = 0;
@@ -4153,7 +4124,6 @@ int main(int argc , char *argv[])
                     tt = time(0) + 33;
                 }
 
-                forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_RALLOW);
                 forceRead(".vfc/rph.mem", &replay_height, sizeof(uint));
 
                 if(st.st_size > 0 && replay_height > 0)
@@ -4252,9 +4222,9 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "replaypeer") == 0)
         {
             const uint32_t tip = inet_addr(argv[2]);
-            memset(&replay_allow, 0, sizeof(uint) * MAX_RALLOW);
+            memset(&replay_allow, 0, sizeof(uint) * MAX_PEERS);
             replay_allow[0] = tip;
-            forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint) * MAX_RALLOW);
+            forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint) * MAX_PEERS);
             csend(tip, "r", 1);
             printf("\nThank you peer %s has been requested to replay it's blocks.\n\nPlease make sure you are not also running sync at this time as they will conflict.\n\n", argv[2]);
             savemem();
@@ -4656,7 +4626,6 @@ int main(int argc , char *argv[])
                     tt = time(0) + 33;
                 }
 
-                forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_RALLOW);
                 forceRead(".vfc/rph.mem", &replay_height, sizeof(uint));
 
                 if(st.st_size > 0 && replay_height > 0)
@@ -4694,8 +4663,7 @@ int main(int argc , char *argv[])
             makGenesis(); //Erases chain and resets it for a full resync
             setMasterNode();
             loadmem();
-            forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_RALLOW);
-            printf("Resync Executed.\n\n");
+            printf("Chain Reset.\n\n");
             exit(0);
         }
 
