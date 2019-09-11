@@ -355,7 +355,8 @@ void forceRead(const char* file, void* data, const size_t data_len)
         fc++;
         if(fc > 333)
         {
-            printf("ERROR: fread() in forceRead() has failed for '%s'.\n", file);
+            if(data_len != sizeof(uint)*MAX_PEERS) //Ignore rp.mem error
+                printf("ERROR: fread() in forceRead() has failed for '%s'.\n", file);
             err++;
             fclose(f);
             return;
