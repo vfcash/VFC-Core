@@ -34,6 +34,17 @@ For a Windows installation you can follow the steps above via the Ubuntu Console
 
 Each address is limited to one transaction every three seconds, once a transaction is made the sender cannot make another transaction to a different address for three seconds.
 
+# Running a serious node?
+All nodes by default will run in single threaded mode, and will use mmap if your platform is x86_64.
+
+If you intend to run a serious node on the network which uses a dedicated server it is recommend to create a vfc.cnf configuration file in `~/.vfc/` with the following settings
+```
+multi-threaded 1
+mmap 1
+replay-delay 1000
+```
+This will set your node to use all CPU cores available for transaction processing, it will allow the use of memory mapping the blockchain file which will significantly increase transaction processing speed. Also the delay between sending transactions when other peers request a replay will be 1000 microseconds. Each transaction is 144 bytes on file or 147 bytes over the network and 143 bytes if it's a replay. With 1,000,000 microseconds in a second this means your node will send 1,000 replay transactions a second to each peer that requests a replay. That's a total of 1000 * 143 bytes a second or 143kb a second if you consider 1kb to be 1000 bytes rather than 1024 bytes.
+
 # No IPv4 address?
 It is reccomend that users who do not have access to an IPv4 address to use a VPN service that offers port forwarding on IPv4 addresses, such as [AirVPN](https://airvpn.org/).
 
