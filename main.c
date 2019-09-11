@@ -4191,6 +4191,14 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
+        if(strcmp(argv[1], "replaypeer") == 0)
+        {
+            csend(inet_addr(argv[2]), "r", 1);
+            printf("\nThank you peer %s has been requested to replay it's blocks.\n\n", argv[2]);
+            savemem();
+            exit(0);
+        }
+
         if(strstr(argv[1], "in") != NULL)
         {
             addr a;
@@ -4289,6 +4297,7 @@ int main(int argc , char *argv[])
             printf("vfc reset_chain                  - Reset blockchain back to genesis state\n");
             printf("vfc scan                         - Scan for peers in the IPv4 range.\n");
             printf("-------------------------------\n");
+            printf("vfc replaypeer <peer ip address> - Manually replay from specific peer\n");
             printf("vfc addpeer <peer ip address>    - Manually add a peer\n");
             printf("vfc printtrans 1000 1010         - Print transactions[start,end] on chain\n");
             printf("vfc findtrans <transaction uid>  - Find a transaction by it's UID\n");
