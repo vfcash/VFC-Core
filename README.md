@@ -43,7 +43,7 @@ multi-threaded 1
 mmap 1
 replay-delay 1000
 ```
-This will set your node to use all CPU cores available for transaction processing, it will also allow the blockchain file to be mapped to memory via the use of `mmap()` which will significantly increase transaction processing speed.
+This will set your node to use all CPU cores available for transaction processing, it will also allow the blockchain file to be mapped to memory via the use of [mmap()](http://man7.org/linux/man-pages/man2/mmap.2.html) which will significantly increase transaction processing speed.
 
 `replay-delay 1000` means that the delay between sending transactions when other peers request a replay will be 1,000 microseconds. Each transaction is 144 bytes on file or 147 bytes over the network and 143 bytes if it's a replay. With 1,000,000 microseconds in a second this means your node will send 1,000 replay transactions a second to each peer that requests a replay. That's a total of 1000 * 143 bytes a second or 143kb a second per requesting peer if you consider 1kb to be 1000 bytes rather than 1024 bytes.
 
