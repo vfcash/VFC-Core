@@ -1294,7 +1294,10 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
 {
     //If amount is 0
     if(t->amount == 0)
+    {
+        //printf("zAM: %lu\n", t->uid);
         return 0; //Don't tell the other peers, pointless transaction
+    }
 
     //Do a quick unique check [realtime uid cache]
     if(memcmp(t->from.key, t->to.key, ECC_CURVE+1) == 0) //is auth trans
@@ -1304,13 +1307,19 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
     }
     else
     {
-        //The only kind of transaction a non-peer can send is a network auth
-        if(getPeer(iip) == -1 || getPeer(iipo) == -1)
+        //The only kind of transaction a non-peer can send is a network auth (replays specify both ip's as 0/null so there is exception for this)
+        if((iipo != 0 && getPeer(iip) == -1) || (iipo != 0 && getPeer(iipo) == -1) )
+        {
+            //printf("nP: %lu\n", t->uid);
             return 0;
+        }
 
         //Check it's not on the cache block
         if(has_uid(t->uid) == 1)
+        {
+            //printf("hUID: %lu\n", t->uid);
             return 0;
+        }
     }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1350,6 +1359,7 @@ pthread_mutex_unlock(&mutex5);
             //UID already in queue?
             if(tq[i].uid == t->uid)
             {
+                //printf("INQ: %lu\n", t->uid);
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if(single_threaded == 0)
 pthread_mutex_unlock(&mutex5);
@@ -1719,6 +1729,9 @@ void replayHead(const uint ip, const size_t rlen)
             ofs += sizeof(mval);
             memcpy(ofs, t.owner.key, ECC_CURVE*2);
             csend(ip, pc, len);
+
+            //Log
+            //printf("%s: %lu\n", inet_ntoa(ip_addr), t.uid);
 
             //Rate limit
             usleep(replay_rate);
@@ -3202,6 +3215,44 @@ pthread_mutex_unlock(&mutex2);
         //Process the transaction
         const int r = process_trans(t.uid, &t.from, &t.to, t.amount, &t.owner);
 
+        //Possible race condition
+        if(r == 1 || r == ERROR_UIDEXIST || r == ERROR_SIGFAIL)
+            add_uid(t.uid, 32400); //Block for nine hours
+
+        if(r == ERROR_NOFUNDS)
+            add_uid(t.uid, 540); //Probably spam, block for 9 minutes
+
+
+        // if(r == 1)
+        // {
+        //     if(lreplay == 0) //is replay
+        //         printf("p-OK: %lu\n", t.uid);
+        // }
+
+        // if(r == ERROR_NOFUNDS)
+        // {
+        //     if(lreplay == 0) //is replay
+        //         printf("p-NOFUNDS: %lu\n", t.uid);
+        // }
+
+        // if(r == ERROR_SIGFAIL)
+        // {
+        //     if(lreplay == 0) //is replay
+        //         printf("p-SIGFAIL: %lu\n", t.uid);
+        // }
+
+        // if(r == ERROR_UIDEXIST)
+        // {
+        //     if(lreplay == 0) //is replay
+        //         printf("p-UIDEXIST: %lu\n", t.uid);
+        // }
+
+        // if(r == ERROR_WRITE)
+        // {
+        //     if(lreplay == 0) //is replay
+        //         printf("p-ERROR-WRITE: %lu\n", t.uid);
+        // }
+
         // if(r == 1)
         // {
         //     FILE* f = fopen(".vfc/process_log.txt", "a");
@@ -3213,13 +3264,6 @@ pthread_mutex_unlock(&mutex2);
         //         fclose(f);
         //     }
         // }
-
-        //Possible race condition
-        if(r == 1 || r == ERROR_UIDEXIST || r == ERROR_SIGFAIL)
-            add_uid(t.uid, 32400); //Block for nine hours
-
-        if(r == ERROR_NOFUNDS)
-            add_uid(t.uid, 540); //Probably spam, block for 9 minutes
 
         // if(r == ERROR_NOFUNDS)
         // {
@@ -3268,7 +3312,6 @@ pthread_mutex_unlock(&mutex2);
         //         fclose(f);
         //     }
         // }
-
 
         //Good transaction!
         if(r == 1 && lreplay == 1)
@@ -3535,8 +3578,20 @@ void *networkThread(void *arg)
                 ofs += sizeof(mval);
                 memcpy(t.owner.key, ofs, ECC_CURVE*2);
 
+                //Log
+                // char pfrom[MIN_LEN];
+                // memset(pfrom, 0, sizeof(pfrom));
+                // char pto[MIN_LEN];
+                // memset(pto, 0, sizeof(pto));
+                // size_t len = MIN_LEN;
+                // b58enc(pfrom, &len, t.from.key, ECC_CURVE+1);
+                // len = MIN_LEN;
+                // b58enc(pto, &len, t.to.key, ECC_CURVE+1);
+                // printf("%s / p: %lu, %s, %s, %u\n", inet_ntoa(client.sin_addr), t.uid, pfrom, pto, t.amount);
+
                 //Alright process it, if it was a legitimate transaction we retain it in our chain.
                 aQue(&t, 0, 0, 0);
+                
             }
         }
 
@@ -4201,7 +4256,7 @@ int main(int argc , char *argv[])
             replay_allow[0] = tip;
             forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint) * MAX_RALLOW);
             csend(tip, "r", 1);
-            printf("\nThank you peer %s has been requested to replay it's blocks.\n\nPlease make sure you are nor also running sync at this time as they will conflict.\n\n", argv[2]);
+            printf("\nThank you peer %s has been requested to replay it's blocks.\n\nPlease make sure you are not also running sync at this time as they will conflict.\n\n", argv[2]);
             savemem();
             exit(0);
         }
