@@ -3681,8 +3681,20 @@ void truncate_at_error(const char* file, const size_t num)
 }
 
 
-//This is a quick hackup for a function that scans through the whole local chain, and removes duplicates
-//then saving the new chain to .vfc/cblocks.dat
+/*
+    This is a quick hackup for a function that scans through the whole local chain, and removes and list 'probable' duplicates
+    then saving the new chain to .vfc/cblocks.dat
+
+    Due to the use of a hashmap with collision potential, it is recommended that operators actually investigate if the reported
+    `pDUP`'s or `probably duplicate` results are actually really duplicated by using command such as `vfc out` and `vfc all`
+    for analysis.
+
+    If there is a significant amount of duplicate transactions, which is only a risk in multi-threaded mode, then you can
+    look at replacing blocks.dat with cblocks.dat and the running a `vfc sync 300` to resync the missing transactions that
+    where indeed unique.
+
+    Or manually replay them.
+*/
 void newClean()
 {
     uint8_t gpub[ECC_CURVE+1];
@@ -3701,11 +3713,6 @@ void newClean()
 }
 void cleanChain()
 {
-    //Pre-Verify ECDSA (we don't really need to do this because we never allow invalid signatures on chain)
-    // struct stat st;
-    // stat(CHAIN_FILE, &st);
-    // truncate_at_error(CHAIN_FILE, st.st_size);
-
     //Init hashmap
     init_sites(433024253); //3,464 mb = 54,128,031 sites = 18,042,677 transactions before unsafe collision potential
     
