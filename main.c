@@ -3754,7 +3754,7 @@ void cleanChain()
                     b58enc(sig, &len3, t.owner.key, ECC_CURVE*2);
 
                     setlocale(LC_NUMERIC, "");
-                    printf("pDUP: %d, %lu, %s, %s, %s, %.3f\n",(int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
+                    printf("pDUP: %lu, %s, %s, %s, %.3f\n", t.uid, from, to, sig, toDB(t.amount));
                     continue;
                 }
 
