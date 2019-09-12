@@ -2565,7 +2565,7 @@ uint rExi(uint64_t uid)
     if(free != -1)
     {
         uidlist[free] = uid;
-        uidtimes[free] = time(0) + 3; //We block for three seconds
+        uidtimes[free] = time(0) + 1; //We block for three seconds
         return 0;
     }
 
@@ -4920,42 +4920,24 @@ int main(int argc , char *argv[])
         memcpy(ofs, t.owner.key, ECC_CURVE*2);
 
         //Broadcast
-        sendMaster(pc, len);
         peersBroadcast(pc, len);
 
-#if MASTER_NODE == 1
-            //Send locally as a replay
-            len = 1+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
-            pc[0] = 'p'; //This is a re*P*lay
-            ofs = pc + 1;
-            memcpy(ofs, &t.uid, sizeof(uint64_t));
-            ofs += sizeof(uint64_t);
-            memcpy(ofs, t.from.key, ECC_CURVE+1);
-            ofs += ECC_CURVE+1;
-            memcpy(ofs, t.to.key, ECC_CURVE+1);
-            ofs += ECC_CURVE+1;
-            memcpy(ofs, &t.amount, sizeof(mval));
-            ofs += sizeof(mval);
-            memcpy(ofs, t.owner.key, ECC_CURVE*2);
-            csend(inet_addr("127.0.0.1"), pc, len);
-#endif
+        //Log
+        char howner[MIN_LEN];
+        memset(howner, 0, sizeof(howner));
+        size_t zlen = MIN_LEN;
+        b58enc(howner, &zlen, t.owner.key, ECC_CURVE);
 
-            //Log
-            char howner[MIN_LEN];
-            memset(howner, 0, sizeof(howner));
-            size_t zlen = MIN_LEN;
-            b58enc(howner, &zlen, t.owner.key, ECC_CURVE);
+        printf("\nPacket Size: %lu. %'.3f VFC. Sending Transaction...\n", len, (double)t.amount / 1000);
+        printf("%lu: %s > %s : %u : %s\n", t.uid, argv[1], argv[2], t.amount, howner);
+        printf("Transaction Sent.\n\n");
 
-            printf("\nPacket Size: %lu. %'.3f VFC. Sending Transaction...\n", len, (double)t.amount / 1000);
-            printf("%lu: %s > %s : %u : %s\n", t.uid, argv[1], argv[2], t.amount, howner);
-            printf("Transaction Sent.\n\n");
-
-            //Wait before getting balance again..
-            #if MASTER_NODE == 0
-                sleep(6);
-            #else
-                sleep(3);
-            #endif
+        //Wait before getting balance again..
+        #if MASTER_NODE == 0
+            sleep(6);
+        #else
+            sleep(3);
+        #endif
 
 //////////////////////////////////////////
 //Loop until send confirmed atleast locally
