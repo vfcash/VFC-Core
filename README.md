@@ -37,7 +37,7 @@ Each address is limited to one transaction every three seconds, once a transacti
 # Running a serious node?
 All nodes by default will run in single threaded mode, and will use mmap if the target platform is x86_64.
 
-If you intend to run a serious node on the network which uses a dedicated server it is recommend to create a vfc.cnf configuration file in `~/.vfc/` with the following settings
+If you intend to run a serious node on the network which uses a dedicated server it is recommend to create a `vfc.cnf` configuration file in `~/.vfc/` with the following settings
 ```
 multi-threaded 1
 mmap 1
