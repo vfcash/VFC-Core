@@ -2915,20 +2915,20 @@ uint isNodeRunning()
 
     int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if(s == -1)
-        return 0;
+        return 1;
 
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
     server.sin_port = htons(31963);
     
-    if(bind(s, (struct sockaddr*)&server, sizeof(server)) < 0)
+    if(bind(s, (struct sockaddr*)&server, sizeof(server)) == 0)
     {
         close(s);
-        return 1;
+        return 0;
     }
 
     close(s);
-    return 0;
+    return 1;
 }
 
 void *generalThread(void *arg)
@@ -3345,12 +3345,15 @@ void *networkThread(void *arg)
         return 0;
     }
 
-    //Allow the port to be reused
-    int reuse = 1; //mpromonet [stack overflow]
-    if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse)) < 0)
-        perror("setsockopt(SO_REUSEADDR) failed\n");
-    if(setsockopt(s, SOL_SOCKET, SO_REUSEPORT, (const char*)&reuse, sizeof(reuse)) < 0) 
-        perror("setsockopt(SO_REUSEPORT) failed\n");
+    //Allow the port to be reused if multi-threaded
+    if(single_threaded == 0)
+    {
+        int reuse = 1; //mpromonet [stack overflow]
+        if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse)) < 0)
+            perror("setsockopt(SO_REUSEADDR) failed\n");
+        if(setsockopt(s, SOL_SOCKET, SO_REUSEPORT, (const char*)&reuse, sizeof(reuse)) < 0) 
+            perror("setsockopt(SO_REUSEPORT) failed\n");
+    }
 
     //Prepare the sockaddr_in structure
     server.sin_family = AF_INET;
