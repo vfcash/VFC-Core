@@ -49,6 +49,11 @@ This will set your node to use all CPU cores available for transaction processin
 
 Generally your node should stay in sync, if it falls behind it is recommended that you run `vfc sync` in the background. This command can take an argument of how many peers to replay from e.g. `vfc sync 256` will attempt to replay from 256 peers. You should set the number of peers relative to the power of your server, if your flood your server with too many replay packets it will be too encumbered to process the regular network transactions.
 
+# Expose a gateway
+VF Cash is a private decentralised network, this mean the only people who get access to the network are node operators. The only way a regular client can access the network is by using one of the running nodes as a gateway to access the network.
+
+This is why it is important that you expose some kind of gatway for end-users, at minimum this would mean installing NGINX, PHP-FPM and exposing the [php rest api](https://github.com/vfcash/VFC-PHP-API/blob/master/rest.php) for public use by copying the rest.php file to `/var/www/html` the default configured nginx www/html path.
+
 # No IPv4 address?
 It is reccomend that users who do not have access to an IPv4 address to use a VPN service that offers port forwarding on IPv4 addresses, such as [AirVPN](https://airvpn.org/).
 
