@@ -1267,7 +1267,7 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
     //If amount is 0
     if(t->amount == 0)
     {
-        //printf("zAM: %lu\n", t->uid);
+        //printf("AMOUNT-ZERO: %lu\n", t->uid);
         return 0; //Don't tell the other peers, pointless transaction
     }
 
@@ -1282,14 +1282,14 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
         //The only kind of transaction a non-peer can send is a network auth (replays specify both ip's as 0/null so there is exception for this)
         if((iipo != 0 && getPeer(iip) == -1) || (iipo != 0 && getPeer(iipo) == -1) )
         {
-            //printf("nP: %lu\n", t->uid);
+            //printf("NOT-PEER: %lu\n", t->uid);
             return 0;
         }
 
         //Check it's not on the cache block
         if(has_uid(t->uid) == 1)
         {
-            //printf("hUID: %lu\n", t->uid);
+            //printf("HAS-UID: %lu\n", t->uid);
             return 0;
         }
     }
@@ -1331,7 +1331,7 @@ pthread_mutex_unlock(&mutex5);
             //UID already in queue?
             if(tq[i].uid == t->uid)
             {
-                //printf("INQ: %lu\n", t->uid);
+                //printf("ALREADY-IN-QUE: %lu\n", t->uid);
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if(single_threaded == 0)
 pthread_mutex_unlock(&mutex5);
@@ -1834,22 +1834,25 @@ pthread_mutex_unlock(&mutex1);
 
         //if peer has a smaller block height
         const int diff = my_heigh - peer_heigh;
-        if(diff <= REPLAY_SIZE &&  diff > 0) //Give peer the fast update
+        if(diff > 0)
         {
-            //Give the peer double the head they need, just to be sure !
-            replayHead(ip, diff*2);
-        }
-        else
-        {
-            if(peer_heigh < my_heigh)
+            if(diff <= REPLAY_SIZE) //Give peer the fast update
             {
-                //Give peer a random block because the peer is way behind
-                replayBlocks(ip);
+                //Give the peer double the head they need, just to be sure !
+                replayHead(ip, diff*2);
             }
             else
             {
-                //Just give the peer *some* head, because the peer is way ahead of us and only our latest graph ends are potentially useful
-                replayHead(ip, REPLAY_SIZE*3);
+                if(peer_heigh < my_heigh)
+                {
+                    //Give peer a random block because the peer is way behind
+                    replayBlocks(ip);
+                }
+                else
+                {
+                    //Just give the peer *some* head, because the peer is way ahead of us and only our latest graph ends are potentially useful
+                    replayHead(ip, REPLAY_SIZE*3);
+                }
             }
         }
     }
@@ -2562,7 +2565,7 @@ uint rExi(uint64_t uid)
     if(free != -1)
     {
         uidlist[free] = uid;
-        uidtimes[free] = time(0) + 1; //We block for one seconds
+        uidtimes[free] = time(0) + 3; //We block for three seconds
         return 0;
     }
 
@@ -2591,6 +2594,7 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
 
     //Add the sig now we know it's valid
     memcpy(t.owner.key, owner->key, ECC_CURVE*2);
+
 
 
     //Check this address has the required value for the transaction (and that UID is actually unique)
@@ -3722,9 +3726,27 @@ void cleanChain()
                 //Copy transaction
                 memcpy(&t, m+i, sizeof(struct trans));
 
-                if(has_uid(t.uid) == 1)
+                if(has_uid(t.uid) == 1) //Probable duplicate
                 {
                     printf("%lu uid exists\n", t.uid);
+
+                    char from[MIN_LEN];
+                    memset(from, 0, sizeof(from));
+                    size_t len = MIN_LEN;
+                    b58enc(from, &len, t.from.key, ECC_CURVE+1);
+
+                    char to[MIN_LEN];
+                    memset(to, 0, sizeof(from));
+                    size_t len2 = MIN_LEN;
+                    b58enc(to, &len2, t.to.key, ECC_CURVE+1);
+
+                    char sig[MIN_LEN];
+                    memset(sig, 0, sizeof(sig));
+                    size_t len3 = MIN_LEN;
+                    b58enc(sig, &len3, t.owner.key, ECC_CURVE*2);
+
+                    setlocale(LC_NUMERIC, "");
+                    printf("pDUP: %d,%lu,%s,%s,%s,%.3f\n",(int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
                     continue;
                 }
 
@@ -4820,7 +4842,7 @@ int main(int argc , char *argv[])
         exit(0);
     }
 
-    //Does user just wish to execute transaction?
+    //EXECT TRANS | EXECUTE TRANSACTION
     if(argc == 5)
     {
     //Force console to clear.
