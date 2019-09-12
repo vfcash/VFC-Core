@@ -3738,8 +3738,6 @@ void cleanChain()
 
                 if(has_uid(t.uid) == 1) //Probable duplicate
                 {
-                    printf("%lu uid exists\n", t.uid);
-
                     char from[MIN_LEN];
                     memset(from, 0, sizeof(from));
                     size_t len = MIN_LEN;
