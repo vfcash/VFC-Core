@@ -1836,7 +1836,7 @@ pthread_mutex_unlock(&mutex1);
         const int diff = my_heigh - peer_heigh;
         if(diff != 0)
         {
-            if(diff <= REPLAY_SIZE) //Give peer the fast update
+            if(diff <= REPLAY_SIZE && diff > 0) //Give peer the fast update
             {
                 //Give the peer double the head they need, just to be sure !
                 replayHead(ip, diff*2);
