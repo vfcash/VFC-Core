@@ -1834,7 +1834,7 @@ pthread_mutex_unlock(&mutex1);
 
         //if peer has a smaller block height
         const int diff = my_heigh - peer_heigh;
-        if(diff > 0)
+        if(diff != 0)
         {
             if(diff <= REPLAY_SIZE) //Give peer the fast update
             {
