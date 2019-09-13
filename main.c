@@ -3777,6 +3777,144 @@ void cleanChain()
         close(f);
     }
 }
+void cleanChainFull()
+{
+    int f = open(CHAIN_FILE, O_RDONLY);
+    if(f)
+    {
+        const size_t len = lseek(f, 0, SEEK_END);
+
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
+        {
+            close(f);
+
+            struct trans t;
+            for(size_t i = sizeof(struct trans); i < len; i += sizeof(struct trans))
+            {
+                //Copy transaction
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                // //Verify
+                // struct trans nt;
+                // memset(&nt, 0, sizeof(struct trans));
+                // nt.uid = t.uid;
+                // memcpy(nt.from.key, t.from.key, ECC_CURVE+1);
+                // memcpy(nt.to.key, t.to.key, ECC_CURVE+1);
+                // nt.amount = t.amount;
+                // uint8_t thash[ECC_CURVE];
+                // makHash(thash, &nt);
+                // if(ecdsa_verify(nt.from.key, thash, t.owner.key) == 0)
+                // {
+                //     printf("%lu: no verification\n", t.uid);
+                //     continue;
+                // }
+                // //
+                
+                //Check has balance and is unique
+                int hbr = 0;
+                int64_t rv = isSubGenesisAddress(t.from.key, 1);
+                f = open(".vfc/cfblocks.dat", O_RDONLY);
+                if(f)
+                {
+                    const size_t len = lseek(f, 0, SEEK_END);
+
+                    unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+                    if(m != MAP_FAILED)
+                    {
+                        close(f);
+
+                        struct trans tn;
+                        for(size_t i = 0; i < len; i += sizeof(struct trans))
+                        {
+                            if(tn.uid == t.uid)
+                            {
+                                hbr = ERROR_UIDEXIST;
+                                munmap(m, len);
+                                break;
+                            }
+                            memcpy(&tn, m+i, sizeof(struct trans));
+
+                            if(memcmp(&tn.to.key, &t.from.key, ECC_CURVE+1) == 0)
+                                rv += tn.amount;
+                            else if(memcmp(&tn.from.key, &t.from.key, ECC_CURVE+1) == 0)
+                                rv -= tn.amount;
+                        }
+
+                        munmap(m, len);
+                    }
+
+                    close(f);
+                }
+                if(hbr != ERROR_UIDEXIST)
+                {
+                    if(rv >= t.amount)
+                        hbr = 1;
+                    else
+                        hbr = 0;
+                }
+                if(hbr == 0)
+                {
+                    char from[MIN_LEN];
+                    memset(from, 0, sizeof(from));
+                    size_t len = MIN_LEN;
+                    b58enc(from, &len, t.from.key, ECC_CURVE+1);
+
+                    char to[MIN_LEN];
+                    memset(to, 0, sizeof(from));
+                    size_t len2 = MIN_LEN;
+                    b58enc(to, &len2, t.to.key, ECC_CURVE+1);
+
+                    char sig[MIN_LEN];
+                    memset(sig, 0, sizeof(sig));
+                    size_t len3 = MIN_LEN;
+                    b58enc(sig, &len3, t.owner.key, ECC_CURVE*2);
+
+                    setlocale(LC_NUMERIC, "");
+                    printf("noBalance: %lu, %s, %s, %s, %.3f\n", t.uid, from, to, sig, toDB(t.amount));
+                    continue;
+                }
+                else if(hbr < 0)
+                {
+                    char from[MIN_LEN];
+                    memset(from, 0, sizeof(from));
+                    size_t len = MIN_LEN;
+                    b58enc(from, &len, t.from.key, ECC_CURVE+1);
+
+                    char to[MIN_LEN];
+                    memset(to, 0, sizeof(from));
+                    size_t len2 = MIN_LEN;
+                    b58enc(to, &len2, t.to.key, ECC_CURVE+1);
+
+                    char sig[MIN_LEN];
+                    memset(sig, 0, sizeof(sig));
+                    size_t len3 = MIN_LEN;
+                    b58enc(sig, &len3, t.owner.key, ECC_CURVE*2);
+
+                    setlocale(LC_NUMERIC, "");
+                    printf("uidExists: %lu, %s, %s, %s, %.3f\n", t.uid, from, to, sig, toDB(t.amount));
+                    continue;
+                }
+                //
+
+                //Ok let's write the transaction to chain
+                if(memcmp(t.from.key, t.to.key, ECC_CURVE+1) != 0) //Only log if the user was not sending VFC to themselves.
+                {
+                    FILE* f = fopen(".vfc/cfblocks.dat", "a");
+                    if(f)
+                    {
+                        fwrite(&t, sizeof(struct trans), 1, f);
+                        fclose(f);
+                    }
+                }
+            }
+
+            munmap(m, len);
+        }
+
+        close(f);
+    }
+}
 
 
 
@@ -4368,8 +4506,9 @@ int main(int argc , char *argv[])
             printf("vfc dumpbad                      - List all detected double spend attempts\n");
             printf("vfc clearbad                     - Clear all detected double spend attempts\n");
             printf("-------------------------------\n\n");
-            printf("Scan blocks.dat for invalid transactions and truncate at first detected:\nvfc trunc <offset index>\n\n");
-            printf("Scan blocks.dat for invalid transactions and generates a cleaned output; cblocks.dat:\nvfc clean\n\n");
+            printf("Scan blocks.dat for invalid transactions and truncate at first detected:\nvfc trunc <offset from eof>\n\n");
+            printf("[Fast] Scan blocks.dat for duplicate transactions and generates a cleaned output; cblocks.dat:\nvfc clean\n\n");
+            printf("[Slow] Scan blocks.dat for invalid transactions and generates a cleaned output; cfblocks.dat:\nvfc cleanfull\n\n");
             printf("----------------\n");
             printf("vfc version      - Node version\n");
             printf("vfc agent        - Node user-agent\n");
@@ -4739,6 +4878,14 @@ int main(int argc , char *argv[])
         {
             newClean();
             cleanChain();
+            exit(0);
+        }
+
+        //Create a cleaned chain
+        if(strcmp(argv[1], "cleanfull") == 0)
+        {
+            newClean();
+            cleanChainFull();
             exit(0);
         }
 
