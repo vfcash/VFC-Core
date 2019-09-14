@@ -2779,7 +2779,7 @@ void makGenesis()
 /* ~ Console & Socket I/O
 */
 
-void loadConfig()
+void loadConfig(const uint stat)
 {
     FILE* f = fopen(CONFIG_FILE, "r");
     if(f)
@@ -2793,7 +2793,8 @@ void loadConfig()
             
             if(sscanf(line, "%63s %u", set, &val) == 2)
             {
-                printf("Setting Loaded: %s %u\n", set, val);
+                if(stat == 1)
+                    printf("Setting Loaded: %s %u\n", set, val);
 
                 if(strcmp(set, "mmap") == 0) //mmap is best disabled on arm devices with low memory
                     is8664 = val;
@@ -3959,7 +3960,7 @@ int main(int argc , char *argv[])
     }
 
     //Load the config file
-    loadConfig();
+    loadConfig(0);
     uint command_skip = 0;
 
     // < Peer arrays do not need initilisation > .. (apart from this one)
@@ -4512,6 +4513,7 @@ int main(int argc , char *argv[])
             printf("----------------\n");
             printf("vfc version      - Node version\n");
             printf("vfc agent        - Node user-agent\n");
+            printf("vfc config       - Node configuration\n");
             printf("vfc heigh        - Returns node [ blocks.dat size / num transactions ]\n");
             printf("vfc circulating  - Circulating supply\n");
             printf("vfc minted       - Minted supply\n");
@@ -4700,6 +4702,13 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "version") == 0)
         {
             printf("%s\n", version);
+            exit(0);
+        }
+
+        //config
+        if(strcmp(argv[1], "config") == 0)
+        {
+            loadConfig(1);
             exit(0);
         }
 
