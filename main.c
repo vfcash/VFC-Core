@@ -2810,7 +2810,9 @@ void loadConfig(const uint stat)
             }
         }
         fclose(f);
-        printf("\n");
+
+        if(stat == 1)
+            printf("\n");
     }
 }
 
