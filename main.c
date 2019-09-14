@@ -302,7 +302,7 @@ void forceWrite(const char* file, const void* data, const size_t data_len)
         fc++;
         if(fc > 333)
         {
-            printf("ERROR: fopen() in forceWrite() has failed.\n");
+            printf("ERROR: fopen() in forceWrite() has failed for '%s'.\n", file);
             err++;
             return;
         }
@@ -339,7 +339,7 @@ void forceRead(const char* file, void* data, const size_t data_len)
         fc++;
         if(fc > 333)
         {
-            printf("ERROR: fopen() in forceRead() has failed.\n");
+            printf("ERROR: fopen() in forceRead() has failed for '%s'.\n", file);
             err++;
             return;
         }
@@ -3984,9 +3984,6 @@ int main(int argc , char *argv[])
 #else
     mkdir(".vfc", 0700);
 #endif
-
-    //Load difficulty
-    forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
 
     //Create rewards address if it doesnt exist
     if(access(".vfc/public.key", F_OK) == -1)
