@@ -2781,6 +2781,9 @@ void makGenesis()
 
 void loadConfig(const uint stat)
 {
+    if(stat == 1)
+        printf("Configuration File: %s/.vfc/vfc.cnf\n", getHome());
+
     FILE* f = fopen(CONFIG_FILE, "r");
     if(f)
     {
