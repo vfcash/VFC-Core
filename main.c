@@ -1078,7 +1078,12 @@ float getPeerDiff(const uint id)
         return 0.031;
     }
     
-    return roundFloat(atof(cf));
+    float rv = atof(cf);
+    if(rv < 0.031)
+        rv = 0.031;
+    if(rv > 0.240)
+        rv = 0.240;
+    return roundFloat(rv);
 }
 
 void printDifficultyVotes()
