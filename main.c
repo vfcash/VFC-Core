@@ -1477,6 +1477,12 @@ void networkDifficulty()
     if(divisor > 1 && network_difficulty > 0)
         network_difficulty /= divisor;
 
+    //Limit
+    if(diff < 0.031)
+        network_difficulty = 0.031;
+    if(diff > 0.240)
+        network_difficulty = 0.240;
+
     //Correctly round the final value to three decimal places.
     network_difficulty = roundFloat(network_difficulty);
     node_difficulty = network_difficulty;
