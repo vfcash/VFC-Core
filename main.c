@@ -18,6 +18,9 @@
     Only Supports IPv4 addresses.
     Local storage in ~/.vfc
 
+    MASTER NODE = SEED NODE [Bitcoin has 4 Seed nodes, all p2p networks need a initial     ]
+                            [seed node, this does not mean the whole project is centralised]
+
     *** In it's current state we only track peer's who send a transaction to the server. ***
     *** Send a transaction to yourself, you wont see any address balance until verified ***
 
@@ -81,7 +84,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.61";
+const char version[]="0.62";
 const uint16_t gport = 8787;
 const char master_ip[] = "198.204.248.26";
 
@@ -100,7 +103,6 @@ const char master_ip[] = "198.204.248.26";
 #define PING_INTERVAL 270               // How often to ping the peers and see if they are still alive
 #define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this. [replay sends]
-#define MAX_VOTES_PER_POSITION 18       // Maximum amount of votes per difficulty position between 0.031 and 0.240 | 18 = 3762 total positions / 3072 total peers
 
 //Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
@@ -1426,6 +1428,9 @@ void networkDifficulty()
 {
 #if MASTER_NODE == 1
     remove(".vfc/netdiff.txt");
+    int MAX_VOTES_PER_POSITION = (countLivingPeers()*1.23)/209;
+    if(MAX_VOTES_PER_POSITION < 1)
+        MAX_VOTES_PER_POSITION = 1;
     network_difficulty = 0; //reset
     uint divisor = 0;
     double added[MAX_PEERS]; //max votes per position
@@ -2740,6 +2745,10 @@ void makAddr(addr* pub, addr* priv) //Loud
 {
     //Make key pair
     ecc_make_key(pub->key, priv->key);
+
+    //Make sure it's not a subG
+    while(isSubGenesisAddress(pub->key, 1) == 1)
+        ecc_make_key(pub->key, priv->key);
 
     //Dump Base58
     char bpub[MIN_LEN], bpriv[MIN_LEN];
@@ -4560,6 +4569,10 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "votes") == 0)
         {
             loadmem();
+            int vpp = (countLivingPeers()*1.23)/209;
+            if(vpp < 1)
+                vpp = 1;
+            printf("%u\n", vpp);
             printDifficultyVotes();
             exit(0);
         }
