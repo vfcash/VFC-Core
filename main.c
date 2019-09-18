@@ -1474,7 +1474,7 @@ void networkDifficulty()
             }
         }
     }
-    if(divisor > 1 && network_difficulty > 1)
+    if(divisor > 1)
         network_difficulty /= divisor;
 
     //Correctly round the final value to three decimal places.
