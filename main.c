@@ -3711,8 +3711,8 @@ void truncate_at_error(const char* file, const size_t num)
 
 
 /*
-    This is a quick hackup for a function that scans through the whole local chain, and removes and list 'probable' duplicates
-    then saving the new chain to .vfc/cblocks.dat
+    This is a function that scans through the whole local chain, and removes and list 'probable' duplicates then saving
+    the new chain to .vfc/cblocks.dat
 
     Due to the use of a hashmap with collision potential, it is recommended that operators actually investigate if the reported
     `pDUP`'s or `probably duplicate` results are actually really duplicated by using command such as `vfc out` and `vfc all`
