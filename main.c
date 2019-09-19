@@ -3719,14 +3719,14 @@ void truncate_at_error(const char* file, const size_t num)
     Or manually replay them.
 
     I should note that rather than freak out over the concept of duplicate transactions in multi-threaded mode, that this
-    release has been rigorously tested against duplicate writes to blocks.dat and to whuch none where recorded over a seven
+    release has been rigorously tested against duplicate writes to blocks.dat and to which none where recorded over a seven
     day period.
 
     Some tips to prevent accidentally creating race conditions:
     1. Do not fork this process after checking argv inputs and executing the runtime threads.
     2. Do not launch this process mutliple times, although the compile.sh creates a 6 minute cron as a "backup" this is
         a quick and dirty solution, if the isNodeRunning() function where to ever fail, which I cannot guarentee your
-        network adaptor will always play nicely using ports as a process mutex, generally speaking, you should be alright.
+        network adaptor will always play nicely using ports as a process mutex. Generally speaking ... you should be alright.
     3. Obviously lock and unlock where necessary.
 
     If still in doubt, here are the functions to perform the analysis which will allow you to identify if a transaction
