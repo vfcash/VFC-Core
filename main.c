@@ -1498,7 +1498,6 @@ void networkDifficulty()
 }
 
 
-
 //Get mined supply
 uint64_t getMinedSupply()
 {
@@ -2611,8 +2610,6 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
     //Add the sig now we know it's valid
     memcpy(t.owner.key, owner->key, ECC_CURVE*2);
 
-
-
     //Check this address has the required value for the transaction (and that UID is actually unique)
     const int hbr = hasbalance(uid, from, amount);
     if(hbr == 0)
@@ -2712,7 +2709,6 @@ pthread_mutex_unlock(&mutex3);
             }
         }
 
-
 // FILE* f = fopen("/var/www/html/p_good.txt", "a");
 // if(f)
 // {
@@ -2727,7 +2723,6 @@ pthread_mutex_unlock(&mutex3);
 
     }
     
-
     //Success
     return 1;
 }
@@ -2749,7 +2744,6 @@ void makAddrSeed(addr* pub, addr* priv, const uint64_t* seed) //Seeded [array of
     {
         printf("Seed failed to create a valid private key.\n");
     }
-    
 }
 
 void makAddr(addr* pub, addr* priv) //Loud
