@@ -47,7 +47,7 @@
       <property name="geometry">
        <rect>
         <x>360</x>
-        <y>40</y>
+        <y>30</y>
         <width>181</width>
         <height>25</height>
        </rect>
@@ -60,7 +60,7 @@
       <property name="geometry">
        <rect>
         <x>360</x>
-        <y>100</y>
+        <y>90</y>
         <width>181</width>
         <height>25</height>
        </rect>
@@ -320,7 +320,7 @@
       <property name="geometry">
        <rect>
         <x>360</x>
-        <y>70</y>
+        <y>60</y>
         <width>181</width>
         <height>25</height>
        </rect>
@@ -333,7 +333,7 @@
       <property name="geometry">
        <rect>
         <x>440</x>
-        <y>160</y>
+        <y>180</y>
         <width>101</width>
         <height>25</height>
        </rect>
@@ -346,7 +346,7 @@
       <property name="geometry">
        <rect>
         <x>360</x>
-        <y>160</y>
+        <y>180</y>
         <width>71</width>
         <height>26</height>
        </rect>
@@ -368,13 +368,26 @@
       <property name="geometry">
        <rect>
         <x>360</x>
-        <y>140</y>
+        <y>160</y>
         <width>161</width>
         <height>17</height>
        </rect>
       </property>
       <property name="text">
        <string>Minting Difficulty Vote:</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="start_node">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>120</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Start Node</string>
       </property>
      </widget>
     </widget>

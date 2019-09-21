@@ -43,5 +43,6 @@ private slots:
     void on_explore_combo_currentIndexChanged(int index);
     void on_newkey_clicked();
     void on_pushButton_13_clicked();
+    void on_start_node_clicked();
 };
 #endif // MAINWINDOW_H
