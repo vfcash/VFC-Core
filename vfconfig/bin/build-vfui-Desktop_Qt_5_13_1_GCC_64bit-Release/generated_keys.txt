@@ -1,7 +1,0 @@
-
-Made new Address / Key Pair
-
-Public: qznFX2zjr8CEg4BbN5qyMeJaTWhHAPbq8z2LhGfqpyy9
-
-Private: 9vUaddBPBB5NK73qggB9WiZ8pV3v4qmSKJkGHMMhGN1e
-
