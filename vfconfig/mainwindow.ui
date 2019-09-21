@@ -37,7 +37,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
@@ -544,6 +544,9 @@
         <width>401</width>
         <height>25</height>
        </rect>
+      </property>
+      <property name="text">
+       <string>foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ</string>
       </property>
      </widget>
      <widget class="QComboBox" name="explore_combo">

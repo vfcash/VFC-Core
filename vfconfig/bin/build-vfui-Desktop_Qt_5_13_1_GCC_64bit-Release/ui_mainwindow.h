@@ -220,7 +220,7 @@ public:
         label_13->setGeometry(QRect(10, 80, 231, 17));
         label = new QLabel(groupBox_4);
         label->setObjectName(QString::fromUtf8("label"));
-        label->setGeometry(QRect(280, 140, 211, 17));
+        label->setGeometry(QRect(280, 140, 251, 17));
         frank = new QLabel(tab_8);
         frank->setObjectName(QString::fromUtf8("frank"));
         frank->setGeometry(QRect(100, 210, 351, 321));
@@ -320,9 +320,10 @@ public:
         newkey->setText(QCoreApplication::translate("MainWindow", "Generate New Address / Key Pair", nullptr));
         frompriv->setText(QString());
         label_13->setText(QCoreApplication::translate("MainWindow", "From Private Key:", nullptr));
-        label->setText(QCoreApplication::translate("MainWindow", "Saves to `generated_keys.txt`", nullptr));
+        label->setText(QCoreApplication::translate("MainWindow", "Saves to `~/.vfc/generated_keys.txt`", nullptr));
         frank->setText(QString());
         tabWidget->setTabText(tabWidget->indexOf(tab_8), QCoreApplication::translate("MainWindow", "Wallet", nullptr));
+        explore_address->setText(QCoreApplication::translate("MainWindow", "foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ", nullptr));
         tabWidget->setTabText(tabWidget->indexOf(tab_7), QCoreApplication::translate("MainWindow", "Explore", nullptr));
         start_miner->setText(QCoreApplication::translate("MainWindow", "Start Mining", nullptr));
         list_unclaimed->setText(QCoreApplication::translate("MainWindow", "List Unclaimed", nullptr));
