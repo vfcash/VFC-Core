@@ -75,6 +75,9 @@ void MainWindow::updateStats()
 
     r = execCommand("vfc agent");
     ui->agent->setText("Your User-Agent: " + r);
+    QStringList sl = r.split(", ");
+    if(sl.length() > 4)
+        ui->setdiff->setValue(sl[4].toDouble());
 
     r = execCommand("vfc peers");
     QStringList pl = r.split("\n");
