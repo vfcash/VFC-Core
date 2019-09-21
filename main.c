@@ -4485,8 +4485,7 @@ int main(int argc , char *argv[])
             {
                 printf("Please pick a difficulty between 0.030 and 0.240\n\n");
             }
-            
-            sleep(3);
+
             exit(0);
         }
     }
