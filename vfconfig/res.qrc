@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/new/prefix1">
+        <file alias="favicon">favicon.png</file>
+        <file>frank.png</file>
+    </qresource>
+</RCC>

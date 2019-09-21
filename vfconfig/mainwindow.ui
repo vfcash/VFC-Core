@@ -1,0 +1,688 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>562</width>
+    <height>601</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>VF Cash Node / Qt</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="res.qrc">
+    <normaloff>:/new/prefix1/favicon</normaloff>:/new/prefix1/favicon</iconset>
+  </property>
+  <property name="toolTip">
+   <string/>
+  </property>
+  <property name="documentMode">
+   <bool>false</bool>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QTabWidget" name="tabWidget">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>561</width>
+      <height>601</height>
+     </rect>
+    </property>
+    <property name="currentIndex">
+     <number>0</number>
+    </property>
+    <widget class="QWidget" name="tab">
+     <attribute name="title">
+      <string>General</string>
+     </attribute>
+     <widget class="QPushButton" name="update_node_version">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>40</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Update Node Version</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="master_resync">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>100</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Master Resync</string>
+      </property>
+     </widget>
+     <widget class="QGroupBox" name="groupBox">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>290</y>
+        <width>331</width>
+        <height>271</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Configuration File / Editor</string>
+      </property>
+      <widget class="QTextEdit" name="config_edit">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>311</width>
+         <height>231</height>
+        </rect>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QGroupBox" name="groupBox_2">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>331</width>
+        <height>201</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Node Statistics</string>
+      </property>
+      <widget class="QLabel" name="total_transactions">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>311</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Total Transactions:</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="blockchain_size">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>50</y>
+         <width>311</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Blockchain Size:</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="num_peers">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>70</y>
+         <width>311</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Num Peers:</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="difficulty">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>90</y>
+         <width>311</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Difficulty:</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="rewards">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>150</y>
+         <width>311</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Rewards:</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="circulating">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>110</y>
+         <width>311</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Circulating Supply:</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="minted">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>130</y>
+         <width>311</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Minted Supply:</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="node_version">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>170</y>
+         <width>311</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Node Version:</string>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QGroupBox" name="groupBox_3">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>220</y>
+        <width>541</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Node Rewards Address / Public Key</string>
+      </property>
+      <widget class="QLineEdit" name="rewards_address">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>521</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="dragEnabled">
+        <bool>true</bool>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QPushButton" name="save_config">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>320</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Save Config</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="single_config">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>410</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Single-Threaded Config</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="multi_config">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>440</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Multi-Threaded Config</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="minimal_config">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>470</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Minimal Hardware Config</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="load_config">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>350</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Load Config</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_9">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>390</y>
+        <width>171</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Preset Configurations:</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="peers_sync">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>70</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Peers Sync</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="vote">
+      <property name="geometry">
+       <rect>
+        <x>440</x>
+        <y>160</y>
+        <width>101</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Vote</string>
+      </property>
+     </widget>
+     <widget class="QDoubleSpinBox" name="setdiff">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>160</y>
+        <width>71</width>
+        <height>26</height>
+       </rect>
+      </property>
+      <property name="decimals">
+       <number>3</number>
+      </property>
+      <property name="minimum">
+       <double>0.031000000000000</double>
+      </property>
+      <property name="maximum">
+       <double>0.240000000000000</double>
+      </property>
+      <property name="singleStep">
+       <double>0.001000000000000</double>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_12">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>140</y>
+        <width>161</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Minting Difficulty Vote:</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_8">
+     <attribute name="title">
+      <string>Wallet</string>
+     </attribute>
+     <widget class="QGroupBox" name="groupBox_4">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>541</width>
+        <height>181</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Send Transaction</string>
+      </property>
+      <widget class="QLineEdit" name="topub">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>50</y>
+         <width>331</width>
+         <height>25</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_10">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>231</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>To Address:</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_11">
+       <property name="geometry">
+        <rect>
+         <x>350</x>
+         <y>80</y>
+         <width>101</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Amount:</string>
+       </property>
+      </widget>
+      <widget class="QDoubleSpinBox" name="send_amount">
+       <property name="geometry">
+        <rect>
+         <x>350</x>
+         <y>100</y>
+         <width>121</width>
+         <height>26</height>
+        </rect>
+       </property>
+       <property name="decimals">
+        <number>3</number>
+       </property>
+       <property name="minimum">
+        <double>0.001000000000000</double>
+       </property>
+       <property name="maximum">
+        <double>4294967.294999999925494</double>
+       </property>
+       <property name="singleStep">
+        <double>0.001000000000000</double>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButton_13">
+       <property name="geometry">
+        <rect>
+         <x>480</x>
+         <y>100</y>
+         <width>51</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Send</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="newkey">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>140</y>
+         <width>251</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Generate New Address / Key Pair</string>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="frompriv">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>100</y>
+         <width>331</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_13">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>80</y>
+         <width>231</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>From Private Key:</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label">
+       <property name="geometry">
+        <rect>
+         <x>280</x>
+         <y>140</y>
+         <width>211</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Saves to `generated_keys.txt`</string>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QLabel" name="frank">
+      <property name="geometry">
+       <rect>
+        <x>100</x>
+        <y>210</y>
+        <width>351</width>
+        <height>321</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_7">
+     <attribute name="title">
+      <string>Explore</string>
+     </attribute>
+     <widget class="QLineEdit" name="explore_address">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>401</width>
+        <height>25</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="explore_combo">
+      <property name="geometry">
+       <rect>
+        <x>400</x>
+        <y>0</y>
+        <width>161</width>
+        <height>25</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QListWidget" name="explore_list">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>20</y>
+        <width>561</width>
+        <height>551</height>
+       </rect>
+      </property>
+      <property name="autoScroll">
+       <bool>false</bool>
+      </property>
+      <property name="dragEnabled">
+       <bool>false</bool>
+      </property>
+      <property name="isWrapping" stdset="0">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_5">
+     <attribute name="title">
+      <string>Miner</string>
+     </attribute>
+     <widget class="QPushButton" name="start_miner">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>540</y>
+        <width>101</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Start Mining</string>
+      </property>
+     </widget>
+     <widget class="QSpinBox" name="mine_threads">
+      <property name="geometry">
+       <rect>
+        <x>100</x>
+        <y>540</y>
+        <width>51</width>
+        <height>26</height>
+       </rect>
+      </property>
+      <property name="minimum">
+       <number>1</number>
+      </property>
+      <property name="maximum">
+       <number>256</number>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="list_unclaimed">
+      <property name="geometry">
+       <rect>
+        <x>200</x>
+        <y>540</y>
+        <width>161</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>List Unclaimed</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="claim_unclaimed">
+      <property name="geometry">
+       <rect>
+        <x>380</x>
+        <y>540</y>
+        <width>161</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Claim Unclaimed</string>
+      </property>
+     </widget>
+     <widget class="QListWidget" name="mined_list">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>561</width>
+        <height>541</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="tab_6">
+     <attribute name="title">
+      <string>Peers</string>
+     </attribute>
+     <widget class="QLineEdit" name="agent">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>550</y>
+        <width>561</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QListWidget" name="peers_list">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>561</width>
+        <height>551</height>
+       </rect>
+      </property>
+      <property name="autoScroll">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </widget>
+   </widget>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources>
+  <include location="res.qrc"/>
+ </resources>
+ <connections/>
+</ui>
