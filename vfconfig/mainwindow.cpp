@@ -249,7 +249,7 @@ void MainWindow::on_explore_combo_currentIndexChanged(int index)
 void MainWindow::on_newkey_clicked()
 {
     QProcess *qp = new QProcess;
-    qp->startDetached("xterm -e \"vfc new 2>&1 | tee -a generated_keys.txt; bash\"");
+    qp->startDetached("xterm -e \"vfc new 2>&1 | tee -a .vfc/generated_keys.txt; bash\"");
 }
 
 void MainWindow::on_pushButton_13_clicked()

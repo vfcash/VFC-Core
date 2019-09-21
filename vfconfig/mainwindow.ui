@@ -37,7 +37,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
@@ -509,12 +509,12 @@
         <rect>
          <x>280</x>
          <y>140</y>
-         <width>211</width>
+         <width>251</width>
          <height>17</height>
         </rect>
        </property>
        <property name="text">
-        <string>Saves to `generated_keys.txt`</string>
+        <string>Saves to `~/.vfc/generated_keys.txt`</string>
        </property>
       </widget>
      </widget>
