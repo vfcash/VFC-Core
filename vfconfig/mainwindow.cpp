@@ -95,7 +95,9 @@ void MainWindow::updateStats()
     if(file.open(QIODevice::ReadOnly))
     {
         QTextStream in(&file);
-        ui->rewards_address->setText(in.readAll());
+        QString rs = in.readAll();
+        ui->rewards_address->setText(rs);
+        ui->explore_address->setText(rs);
         file.close();
     }
 
