@@ -465,7 +465,7 @@
         <double>0.001000000000000</double>
        </property>
       </widget>
-      <widget class="QPushButton" name="pushButton_13">
+      <widget class="QPushButton" name="send_trans">
        <property name="geometry">
         <rect>
          <x>480</x>

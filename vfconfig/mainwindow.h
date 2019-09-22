@@ -18,12 +18,13 @@ public:
 private:
     void timerEvent(QTimerEvent *event);
     int timerId;
+    int timerId2;
 
 protected:
     Ui::MainWindow *ui;
 
     QString execCommand(QString cmd);
-    void updateStats();
+    void updateStats(const int full);
     void saveConfig();
     void loadConfig();
 
@@ -42,7 +43,7 @@ private slots:
     void on_claim_unclaimed_clicked();
     void on_explore_combo_currentIndexChanged(int index);
     void on_newkey_clicked();
-    void on_pushButton_13_clicked();
+    void on_send_trans_clicked();
     void on_start_node_clicked();
 };
 #endif // MAINWINDOW_H

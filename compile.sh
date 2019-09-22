@@ -4,6 +4,7 @@ apt --assume-yes update && upgrade
 apt install --assume-yes crontab
 apt install --assume-yes wget
 apt install --assume-yes gcc
+apt install --assume-yes xterm
 clear
 clear
 pkill vfc

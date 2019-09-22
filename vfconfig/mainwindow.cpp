@@ -47,7 +47,7 @@ QString MainWindow::execCommand(QString cmd)
     return process.readAllStandardOutput();
 }
 
-void MainWindow::updateStats()
+void MainWindow::updateStats(const int full)
 {
     QPixmap pm(":/new/prefix1/frank.png");
     ui->frank->setPixmap(pm);
@@ -62,10 +62,13 @@ void MainWindow::updateStats()
     r = execCommand("vfc difficulty");
     ui->difficulty->setText("Difficulty:                         " + r.split("Network Difficulty: ")[1]);
 
-    r = execCommand("vfc circulating");
-    ui->circulating->setText("Circulating Supply:       " + double_format(r.toDouble()));
-    r = execCommand("vfc minted");
-    ui->minted->setText("Minted Supply:               " + double_format(r.toDouble()));
+    if(full == 1)
+    {
+        r = execCommand("vfc circulating");
+        ui->circulating->setText("Circulating Supply:       " + double_format(r.toDouble()));
+        r = execCommand("vfc minted");
+        ui->minted->setText("Minted Supply:               " + double_format(r.toDouble()));
+    }
 
     r = execCommand("vfc reward");
     ui->rewards->setText("Reward:                            " + r.split("Final Balance: ")[1]);
@@ -126,9 +129,10 @@ MainWindow::MainWindow(QWidget *parent)
     QStringList list = (QStringList()<<"All"<<"Received"<<"Sent");
     ui->explore_combo->addItems(list);
 
-    timerId = startTimer(90000);
+    timerId = startTimer(9000);
+    timerId2 = startTimer(180000);
 
-    updateStats();
+    updateStats(1);
 }
 
 MainWindow::~MainWindow()
@@ -140,7 +144,9 @@ MainWindow::~MainWindow()
 void MainWindow::timerEvent(QTimerEvent *event)
 {
     if(event->timerId() == timerId)
-        updateStats();
+        updateStats(0);
+   else if(event->timerId() == timerId2)
+        updateStats(1);
 }
 
 void MainWindow::on_update_node_version_clicked()
@@ -257,7 +263,13 @@ void MainWindow::on_newkey_clicked()
     qp->startDetached("xterm -e \"vfc new 2>&1 | tee -a .vfc/generated_keys.txt; bash\"");
 }
 
-void MainWindow::on_pushButton_13_clicked()
+void MainWindow::on_start_node_clicked()
+{
+    QProcess *qp = new QProcess;
+    qp->startDetached("xterm -e \"vfc; bash\"");
+}
+
+void MainWindow::on_send_trans_clicked()
 {
     if(ui->topub->text() == "" || ui->frompriv->text() == "")
     {
@@ -271,10 +283,4 @@ void MainWindow::on_pushButton_13_clicked()
 
     QProcess *qp = new QProcess;
     qp->startDetached("xterm -e \"vfc " + frompub + " " + ui->topub->text() + " " + QString::number(ui->send_amount->value()) + " " + ui->frompriv->text() + "; bash\"");
-}
-
-void MainWindow::on_start_node_clicked()
-{
-    QProcess *qp = new QProcess;
-    qp->startDetached("xterm -e \"vfc; bash\"");
 }
