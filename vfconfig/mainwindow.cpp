@@ -284,3 +284,4 @@ void MainWindow::on_send_trans_clicked()
     QProcess *qp = new QProcess;
     qp->startDetached("xterm -e \"vfc " + frompub + " " + ui->topub->text() + " " + QString::number(ui->send_amount->value()) + " " + ui->frompriv->text() + "; bash\"");
 }
+

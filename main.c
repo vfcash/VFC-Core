@@ -2343,6 +2343,30 @@ uint64_t getBalanceLocal(addr* from)
                         continue;
                 }
 
+                
+#ifdef MASTER_NODE == 0
+                //re-enforce each transaction over network using sporadic distribution; limited to mmap() branch only
+                const uint32_t origin = 0;
+                const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+                char pc[MIN_LEN];
+                pc[0] = 't'; //send as a regular transaction, bypass replay allow blocking but will have double spend throttling
+                char* ofs = pc + 1;
+                memcpy(ofs, &origin, sizeof(uint32_t));
+                ofs += sizeof(uint32_t);
+                memcpy(ofs, &t.uid, sizeof(uint64_t));
+                ofs += sizeof(uint64_t);
+                memcpy(ofs, t.from.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, t.to.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, &t.amount, sizeof(mval));
+                ofs += sizeof(mval);
+                memcpy(ofs, t.owner.key, ECC_CURVE*2);
+                triBroadcast(pc, len, 3); //Just tell a random few peers or we will start triggering transaction duplication logs in badblocks 
+                //                        particularly on outgoing transactions. This is just to support the replay redundency at a minimal cost.
+#endif
+
+
                 if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
                     rv += t.amount;
                 if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
@@ -4514,7 +4538,7 @@ int main(int argc , char *argv[])
             printf("vfc reward                              - Your awarded or mined VFC\n");
             printf("-------------------------------\n");
             printf("vfc mine <optional num threads>  - CPU miner for VFC\n");
-            printf("vfc peers                        - List all locally indexed peers and info\n");
+            printf("vfc peers                        - List locally indexed peers\n");
             printf("vfc getpub <private key>         - Get Public Key from Private Key\n");
             printf("vfc issub <public key>           - Is supplied public address a subG address\n");
             printf("-------------------------------\n");
@@ -4889,6 +4913,12 @@ int main(int argc , char *argv[])
         //Scan for peers
         if(strcmp(argv[1], "scan") == 0)
         {
+            if(isNodeRunning() == 0)
+            {
+                printf("The VFC node needs to be running before you scan for peers.\n\n");
+                exit(0);
+            }
+
             loadmem();
             scanPeers();
             savemem();
