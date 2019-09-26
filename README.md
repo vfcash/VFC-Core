@@ -28,7 +28,8 @@ Then use the `vfc help` command in the console for a full command list or `vfui`
 
 [![Watch the video](https://raw.githubusercontent.com/vfcash/RELEASES/master/vfui.png)](https://raw.githubusercontent.com/vfcash/RELEASES/master/vfui.mp4)
 
-```> vfc help
+```
+> vfc help
 
 -----------------------------
 vfc update                    - Updates node
