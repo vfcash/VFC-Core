@@ -51,7 +51,7 @@ vfc claim <optional file path>          - Claims private keys to rewards addr
 vfc reward                              - Your awarded or mined VFC
 --------------------------------------
 vfc mine <optional num threads>  - CPU miner for VFC
-vfc peers                        - List all locally indexed peers and info
+vfc peers                        - List locally indexed peers
 vfc getpub <private key>         - Get Public Key from Private Key
 vfc issub <public key>           - Is supplied public address a subG address
 -------------------------------
