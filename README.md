@@ -66,7 +66,6 @@ vfc scan                         - Scan for peers in the IPv4 range.
 -------------------------------
 vfc replaypeer <peer ip address> - Manually replay from specific peer
 vfc addpeer <peer ip address>    - Manually add a peer
-vfc printtrans 1000 1010         - Print transactions[start,end] on chain
 vfc findtrans <transaction uid>  - Find a transaction by it's UID
 -------------------------------
 vfc dump                         - List all transactions on chain
