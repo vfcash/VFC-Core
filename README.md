@@ -28,6 +28,78 @@ Then use the `vfc help` command in the console for a full command list or `vfui`
 
 [![Watch the video](https://raw.githubusercontent.com/vfcash/RELEASES/master/vfui.png)](https://raw.githubusercontent.com/vfcash/RELEASES/master/vfui.mp4)
 
+```> vfc help
+
+-----------------------------
+vfc update                    - Updates node
+vfc <address public key>      - Get address balance
+vfc out <address public key>  - Gets sent transactions
+vfc in <address public key>   - Gets received transactions
+vfc all <address public key>  - Recv & Sent transactions
+-----------------------------
+
+Send a transaction:
+vfc <sender public key> <reciever public key> <amount> <sender private key>
+
+--------------------------------------
+vfc new <optional seed>                 - Create a new Address / Key-Pair
+vfc new <seed1> <seed2> <seed3> <seed4> - Four random seed(uint64), Key-Pair
+--------------------------------------
+vfc qsend <amount> <receiver address>   - Send transaction from rewards address
+vfc claim <optional file path>          - Claims private keys to rewards addr
+vfc reward                              - Your awarded or mined VFC
+-------------------------------
+vfc mine <optional num threads>  - CPU miner for VFC
+vfc peers                        - List all locally indexed peers and info
+vfc getpub <private key>         - Get Public Key from Private Key
+vfc issub <public key>           - Is supplied public address a subG address
+-------------------------------
+vfc votes                        - Map of difficulty votes
+vfc difficulty                   - Network mining difficulty
+vfc setdiff < 0.03 - 0.24 >      - Sets contribution to the net difficulty
+-------------------------------
+vfc sync <optional num peers>    - Trigger blockchain sync from your peers
+vfc master_resync                - Trigger blockchain resync from the master
+vfc reset_chain                  - Reset blockchain back to genesis state
+vfc scan                         - Scan for peers in the IPv4 range.
+-------------------------------
+vfc replaypeer <peer ip address> - Manually replay from specific peer
+vfc addpeer <peer ip address>    - Manually add a peer
+vfc printtrans 1000 1010         - Print transactions[start,end] on chain
+vfc findtrans <transaction uid>  - Find a transaction by it's UID
+-------------------------------
+vfc dump                         - List all transactions on chain
+vfc dumptop <num trans>          - List top x transactions on chain
+vfc dumpbad                      - List all detected double spend attempts
+vfc clearbad                     - Clear all detected double spend attempts
+-------------------------------
+
+Scan blocks.dat for invalid transactions and truncate at first detected:
+vfc trunc <offset from eof>
+
+[Fast] Scan blocks.dat for duplicate transactions and generates a cleaned output; cblocks.dat:
+vfc clean
+
+[Slow] Scan blocks.dat for invalid transactions and generates a cleaned output; cfblocks.dat:
+vfc cleanfull
+
+----------------
+vfc version      - Node version
+vfc agent        - Node user-agent
+vfc config       - Node configuration
+vfc heigh        - Returns node [ blocks.dat size / num transactions ]
+vfc circulating  - Circulating supply
+vfc minted       - Minted supply
+vfc unclaimed    - Lists all unclaimed addresses from your minted.priv
+vfc claim        - Claims the contents of minted.priv to your rewards address
+----------------
+vfc single       - Launches the VFC node as single threaded
+vfc multi        - Launches the VFC node as multi threaded
+----------------
+
+To get started running a dedicated node, execute ./vfc on a seperate screen.
+```
+
 By default your data-dir is ~/.vfc if you would like to set a custom path please set the envionment variable VFCDIR, for example if running as root choose a directory such as /srv
 
 **Windows Install Instructions (Full Node & Client Wallet):**
