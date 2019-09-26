@@ -24,7 +24,7 @@ vfc master_resync
 ```
 Then use the `vfc help` command in the console for a full command list or `vfui` if you are running a desktop environment and prefer a graphical user interface.
 
-[![Watch the video](https://i.imgur.com/vKb2F1B.png)](https://raw.githubusercontent.com/vfcash/RELEASES/master/vfui.mp4)
+[![Watch the video](https://raw.githubusercontent.com/vfcash/RELEASES/master/vfui.jpg)](https://raw.githubusercontent.com/vfcash/RELEASES/master/vfui.mp4)
 
 By default your data-dir is ~/.vfc if you would like to set a custom path please set the envionment variable VFCDIR, for example if running as root choose a directory such as /srv
 
