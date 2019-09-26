@@ -2344,7 +2344,7 @@ uint64_t getBalanceLocal(addr* from)
                 }
 
                 
-#ifdef MASTER_NODE == 0
+#if MASTER_NODE == 0
                 //re-enforce each transaction over network using sporadic distribution; limited to mmap() branch only
                 const uint32_t origin = 0;
                 const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
