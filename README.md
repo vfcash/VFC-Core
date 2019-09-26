@@ -49,7 +49,7 @@ vfc new <seed1> <seed2> <seed3> <seed4> - Four random seed(uint64), Key-Pair
 vfc qsend <amount> <receiver address>   - Send transaction from rewards address
 vfc claim <optional file path>          - Claims private keys to rewards addr
 vfc reward                              - Your awarded or mined VFC
--------------------------------
+--------------------------------------
 vfc mine <optional num threads>  - CPU miner for VFC
 vfc peers                        - List all locally indexed peers and info
 vfc getpub <private key>         - Get Public Key from Private Key
@@ -74,17 +74,6 @@ vfc dumptop <num trans>          - List top x transactions on chain
 vfc dumpbad                      - List all detected double spend attempts
 vfc clearbad                     - Clear all detected double spend attempts
 -------------------------------
-
-Scan blocks.dat for invalid transactions and truncate at first detected:
-vfc trunc <offset from eof>
-
-[Fast] Scan blocks.dat for duplicate transactions and generates a cleaned output; cblocks.dat:
-vfc clean
-
-[Slow] Scan blocks.dat for invalid transactions and generates a cleaned output; cfblocks.dat:
-vfc cleanfull
-
-----------------
 vfc version      - Node version
 vfc agent        - Node user-agent
 vfc config       - Node configuration
