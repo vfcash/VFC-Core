@@ -3172,7 +3172,7 @@ void *miningThread(void *arg)
             {
                 flockfile(f); //lock
 
-                fprintf(f, "%s (%.3f)\n", bpriv, toDB(r));
+                fprintf(f, "%s (%.3f) (%.3f VFC)\n", bpriv, isSubDiff(pub.key), toDB(r));
 
                 funlockfile(f); //unlock
                 fclose(f);
