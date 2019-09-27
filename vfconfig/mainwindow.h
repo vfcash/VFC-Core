@@ -51,5 +51,6 @@ private slots:
     void on_vfhome_clicked();
     void on_telegram_clicked();
     void on_discord_clicked();
+    void on_open_minted_clicked();
 };
 #endif // MAINWINDOW_H

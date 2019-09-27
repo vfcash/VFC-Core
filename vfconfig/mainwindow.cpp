@@ -118,6 +118,7 @@ void MainWindow::updateStats(const int full)
     }
 
     //Configure the peers table
+    ui->peers_table->clear();
     ui->peers_table->setRowCount(3072);
     ui->peers_table->setColumnCount(8);
     ui->peers_table->setColumnWidth(0, 160);
@@ -141,7 +142,7 @@ void MainWindow::updateStats(const int full)
 
     r = execCommand("vfc peers");
     QStringList pl = r.split("\n");
-    ui->peers_table->clearContents();
+    int pi = 0;
     foreach(QString v, pl)
     {
         if(v[0].isDigit())
@@ -151,13 +152,20 @@ void MainWindow::updateStats(const int full)
             {
                 QStringList p2 = p1[3].split(", ");
                 if(p2.count() >= 5)
-                    addPeer(0, p1[0], p1[1], p1[2], p2[0], p2[1], p2[2], p2[3], p2[4]);
+                {
+                    addPeer(pi, p1[0], p1[1], p1[2], p2[0], p2[1], p2[2], p2[3], p2[4]);
+                    pi++;
+                }
                 else
-                    addPeer(0, p1[0], p1[1], p1[2], "N/A", "N/A", "N/A", "N/A", "N/A");
+                {
+                    addPeer(pi, p1[0], p1[1], p1[2], "N/A", "N/A", "N/A", "N/A", "N/A");
+                    pi++;
+                }
             }
             else if(p1.count() == 3)
             {
-                addPeer(0, p1[0], p1[1], p1[2], "N/A", "N/A", "N/A", "N/A", "N/A");
+                addPeer(pi, p1[0], p1[1], p1[2], "N/A", "N/A", "N/A", "N/A", "N/A");
+                pi++;
             }
         }
 
@@ -358,4 +366,10 @@ void MainWindow::on_telegram_clicked()
 void MainWindow::on_discord_clicked()
 {
     QDesktopServices::openUrl(QUrl("https://discord.gg/VFa4A5v"));
+}
+
+void MainWindow::on_open_minted_clicked()
+{
+    QProcess *qp = new QProcess;
+    qp->startDetached("xterm -e \"cat ~/.vfc/minted.priv; bash\"");
 }
