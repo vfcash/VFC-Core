@@ -25,6 +25,7 @@ protected:
 
     QString execCommand(QString cmd);
     void updateStats(const int full);
+    void addPeer(const int i, QString ip, QString relayed, QString ping, QString heigh, QString version, QString cpu, QString machine, QString diff);
     void saveConfig();
     void loadConfig();
 
@@ -45,5 +46,10 @@ private slots:
     void on_newkey_clicked();
     void on_send_trans_clicked();
     void on_start_node_clicked();
+    void on_vgate_clicked();
+    void on_bihodl_clicked();
+    void on_vfhome_clicked();
+    void on_telegram_clicked();
+    void on_discord_clicked();
 };
 #endif // MAINWINDOW_H

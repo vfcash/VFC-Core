@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>562</width>
+    <width>781</width>
     <height>601</height>
    </rect>
   </property>
@@ -32,7 +32,7 @@
      <rect>
       <x>0</x>
       <y>0</y>
-      <width>561</width>
+      <width>781</width>
       <height>601</height>
      </rect>
     </property>
@@ -390,6 +390,84 @@
        <string>Start Node</string>
       </property>
      </widget>
+     <widget class="Line" name="line">
+      <property name="geometry">
+       <rect>
+        <x>550</x>
+        <y>30</y>
+        <width>20</width>
+        <height>521</height>
+       </rect>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="vgate">
+      <property name="geometry">
+       <rect>
+        <x>580</x>
+        <y>80</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>VGATE Exchange</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="bihodl">
+      <property name="geometry">
+       <rect>
+        <x>580</x>
+        <y>110</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Bihodl Exchange</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="vfhome">
+      <property name="geometry">
+       <rect>
+        <x>580</x>
+        <y>30</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>VF Cash Homepage</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="discord">
+      <property name="geometry">
+       <rect>
+        <x>580</x>
+        <y>190</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Discord</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="telegram">
+      <property name="geometry">
+       <rect>
+        <x>580</x>
+        <y>160</y>
+        <width>181</width>
+        <height>25</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Telegram</string>
+      </property>
+     </widget>
     </widget>
     <widget class="QWidget" name="tab_8">
      <attribute name="title">
@@ -398,10 +476,10 @@
      <widget class="QGroupBox" name="groupBox_4">
       <property name="geometry">
        <rect>
-        <x>10</x>
+        <x>40</x>
         <y>10</y>
-        <width>541</width>
-        <height>181</height>
+        <width>671</width>
+        <height>161</height>
        </rect>
       </property>
       <property name="title">
@@ -410,20 +488,20 @@
       <widget class="QLineEdit" name="topub">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>50</y>
-         <width>331</width>
-         <height>25</height>
+         <x>20</x>
+         <y>110</y>
+         <width>441</width>
+         <height>31</height>
         </rect>
        </property>
       </widget>
       <widget class="QLabel" name="label_10">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>30</y>
-         <width>231</width>
-         <height>17</height>
+         <x>20</x>
+         <y>90</y>
+         <width>221</width>
+         <height>20</height>
         </rect>
        </property>
        <property name="text">
@@ -433,8 +511,8 @@
       <widget class="QLabel" name="label_11">
        <property name="geometry">
         <rect>
-         <x>350</x>
-         <y>80</y>
+         <x>470</x>
+         <y>90</y>
          <width>101</width>
          <height>17</height>
         </rect>
@@ -446,10 +524,10 @@
       <widget class="QDoubleSpinBox" name="send_amount">
        <property name="geometry">
         <rect>
-         <x>350</x>
-         <y>100</y>
+         <x>470</x>
+         <y>110</y>
          <width>121</width>
-         <height>26</height>
+         <height>31</height>
         </rect>
        </property>
        <property name="decimals">
@@ -468,36 +546,23 @@
       <widget class="QPushButton" name="send_trans">
        <property name="geometry">
         <rect>
-         <x>480</x>
-         <y>100</y>
+         <x>600</x>
+         <y>110</y>
          <width>51</width>
-         <height>25</height>
+         <height>31</height>
         </rect>
        </property>
        <property name="text">
         <string>Send</string>
        </property>
       </widget>
-      <widget class="QPushButton" name="newkey">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>140</y>
-         <width>251</width>
-         <height>25</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Generate New Address / Key Pair</string>
-       </property>
-      </widget>
       <widget class="QLineEdit" name="frompriv">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>100</y>
-         <width>331</width>
-         <height>25</height>
+         <x>20</x>
+         <y>50</y>
+         <width>631</width>
+         <height>31</height>
         </rect>
        </property>
        <property name="text">
@@ -507,41 +572,41 @@
       <widget class="QLabel" name="label_13">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>80</y>
-         <width>231</width>
-         <height>17</height>
+         <x>20</x>
+         <y>30</y>
+         <width>221</width>
+         <height>20</height>
         </rect>
        </property>
        <property name="text">
         <string>From Private Key:</string>
        </property>
       </widget>
-      <widget class="QLabel" name="label">
-       <property name="geometry">
-        <rect>
-         <x>280</x>
-         <y>140</y>
-         <width>251</width>
-         <height>17</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Saves to `~/.vfc/generated_keys.txt`</string>
-       </property>
-      </widget>
      </widget>
      <widget class="QLabel" name="frank">
       <property name="geometry">
        <rect>
-        <x>100</x>
-        <y>210</y>
+        <x>210</x>
+        <y>230</y>
         <width>351</width>
         <height>321</height>
        </rect>
       </property>
       <property name="text">
        <string/>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="newkey">
+      <property name="geometry">
+       <rect>
+        <x>40</x>
+        <y>180</y>
+        <width>251</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Generate New Address / Key Pair</string>
       </property>
      </widget>
     </widget>
@@ -554,8 +619,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>401</width>
-        <height>25</height>
+        <width>601</width>
+        <height>31</height>
        </rect>
       </property>
       <property name="text">
@@ -565,10 +630,10 @@
      <widget class="QComboBox" name="explore_combo">
       <property name="geometry">
        <rect>
-        <x>400</x>
+        <x>600</x>
         <y>0</y>
-        <width>161</width>
-        <height>25</height>
+        <width>181</width>
+        <height>31</height>
        </rect>
       </property>
      </widget>
@@ -576,9 +641,9 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>20</y>
-        <width>561</width>
-        <height>551</height>
+        <y>30</y>
+        <width>781</width>
+        <height>541</height>
        </rect>
       </property>
       <property name="autoScroll">
@@ -628,7 +693,7 @@
      <widget class="QPushButton" name="list_unclaimed">
       <property name="geometry">
        <rect>
-        <x>200</x>
+        <x>330</x>
         <y>540</y>
         <width>161</width>
         <height>25</height>
@@ -641,7 +706,7 @@
      <widget class="QPushButton" name="claim_unclaimed">
       <property name="geometry">
        <rect>
-        <x>380</x>
+        <x>510</x>
         <y>540</y>
         <width>161</width>
         <height>25</height>
@@ -656,7 +721,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>561</width>
+        <width>781</width>
         <height>541</height>
        </rect>
       </property>
@@ -670,26 +735,26 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>550</y>
-        <width>561</width>
-        <height>25</height>
+        <y>540</y>
+        <width>781</width>
+        <height>31</height>
        </rect>
       </property>
       <property name="readOnly">
        <bool>true</bool>
       </property>
      </widget>
-     <widget class="QListWidget" name="peers_list">
+     <widget class="QTableWidget" name="peers_table">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
       <property name="geometry">
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>561</width>
-        <height>551</height>
+        <width>781</width>
+        <height>541</height>
        </rect>
-      </property>
-      <property name="autoScroll">
-       <bool>false</bool>
       </property>
      </widget>
     </widget>

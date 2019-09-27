@@ -5177,7 +5177,7 @@ while(1)
         if(bal0-bal1 <= 0)
         {
             printf("Transaction Sent, but unable to verify it's success. Refer to sent transactions for confirmation. Trying again..\n\n");
-            csend(inet_addr("127.0.0.1"), pc, len); //Will locally cache on non-master nodes at this point.
+            csend(inet_addr("127.0.0.1"), pc, len); //Will attempt local cache.
             sleep(1);
         }
         else

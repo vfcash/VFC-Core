@@ -4,6 +4,7 @@
 #include <QThread>
 #include <QTextStream>
 #include <QMessageBox>
+#include <QDesktopServices>
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
@@ -47,6 +48,18 @@ QString MainWindow::execCommand(QString cmd)
     return process.readAllStandardOutput();
 }
 
+void MainWindow::addPeer(const int i, QString ip, QString relayed, QString ping, QString heigh, QString version, QString cpu, QString machine, QString diff)
+{
+    ui->peers_table->setItem(i, 0, new QTableWidgetItem(ip));
+    ui->peers_table->setItem(i, 1, new QTableWidgetItem(relayed));
+    ui->peers_table->setItem(i, 2, new QTableWidgetItem(ping));
+    ui->peers_table->setItem(i, 3, new QTableWidgetItem(heigh));
+    ui->peers_table->setItem(i, 4, new QTableWidgetItem(version));
+    ui->peers_table->setItem(i, 5, new QTableWidgetItem(cpu));
+    ui->peers_table->setItem(i, 6, new QTableWidgetItem(machine));
+    ui->peers_table->setItem(i, 7, new QTableWidgetItem(diff));
+}
+
 void MainWindow::updateStats(const int full)
 {
     QPixmap pm(":/new/prefix1/frank.png");
@@ -82,17 +95,6 @@ void MainWindow::updateStats(const int full)
     if(sl.length() > 4)
         ui->setdiff->setValue(sl[4].toDouble());
 
-    r = execCommand("vfc peers");
-    QStringList pl = r.split("\n");
-    ui->peers_list->clear();
-    foreach(QString v, pl)
-    {
-        if(v[0].isDigit())
-            ui->peers_list->addItem(v);
-
-        if(v[0] == 'A' && v[1] == 'l')
-            ui->num_peers->setText("Num Peers:                      " + v.split(": ")[1] + " / 3072");
-    }
 
     QFile file(QDir::homePath() + "/.vfc/public.key");
     if(file.open(QIODevice::ReadOnly))
@@ -114,6 +116,55 @@ void MainWindow::updateStats(const int full)
 
         file3.close();
     }
+
+    //Configure the peers table
+    ui->peers_table->setRowCount(3072);
+    ui->peers_table->setColumnCount(8);
+    ui->peers_table->setColumnWidth(0, 160);
+    ui->peers_table->setColumnWidth(1, 80);
+    ui->peers_table->setColumnWidth(2, 100);
+    ui->peers_table->setColumnWidth(3, 120);
+    ui->peers_table->setColumnWidth(4, 80);
+    ui->peers_table->setColumnWidth(5, 60);
+    ui->peers_table->setColumnWidth(6, 100);
+    ui->peers_table->setColumnWidth(7, 60);
+    ui->peers_table->setHorizontalHeaderItem(0, new QTableWidgetItem("IP"));
+    ui->peers_table->setHorizontalHeaderItem(1, new QTableWidgetItem("RX"));
+    ui->peers_table->setHorizontalHeaderItem(2, new QTableWidgetItem("Ping"));
+    ui->peers_table->setHorizontalHeaderItem(3, new QTableWidgetItem("Heigh"));
+    ui->peers_table->setHorizontalHeaderItem(4, new QTableWidgetItem("Version"));
+    ui->peers_table->setHorizontalHeaderItem(5, new QTableWidgetItem("CPU"));
+    ui->peers_table->setHorizontalHeaderItem(6, new QTableWidgetItem("Machine"));
+    ui->peers_table->setHorizontalHeaderItem(7, new QTableWidgetItem("Diff"));
+    ui->peers_table->verticalHeader()->setVisible(0);
+    ui->peers_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    r = execCommand("vfc peers");
+    QStringList pl = r.split("\n");
+    ui->peers_table->clearContents();
+    foreach(QString v, pl)
+    {
+        if(v[0].isDigit())
+        {
+            QStringList p1 = v.split(" / ");
+            if(p1.count() >= 4)
+            {
+                QStringList p2 = p1[3].split(", ");
+                if(p2.count() >= 5)
+                    addPeer(0, p1[0], p1[1], p1[2], p2[0], p2[1], p2[2], p2[3], p2[4]);
+                else
+                    addPeer(0, p1[0], p1[1], p1[2], "N/A", "N/A", "N/A", "N/A", "N/A");
+            }
+            else if(p1.count() == 3)
+            {
+                addPeer(0, p1[0], p1[1], p1[2], "N/A", "N/A", "N/A", "N/A", "N/A");
+            }
+        }
+
+        if(v[0] == 'A' && v[1] == 'l')
+            ui->num_peers->setText("Num Peers:                      " + v.split(": ")[1] + " / 3072");
+    }
+
 
     loadConfig();
 
@@ -252,7 +303,6 @@ void MainWindow::on_explore_combo_currentIndexChanged(int index)
         t = "out";
     QString r = execCommand("vfc " + t + " " + ui->explore_address->text());
     QStringList pl = r.split("\n");
-    ui->peers_list->clear();
     foreach(QString v, pl)
         ui->explore_list->addItem(v);
 }
@@ -285,3 +335,27 @@ void MainWindow::on_send_trans_clicked()
     qp->startDetached("xterm -e \"vfc " + frompub + " " + ui->topub->text() + " " + QString::number(ui->send_amount->value()) + " " + ui->frompriv->text() + "; bash\"");
 }
 
+void MainWindow::on_vgate_clicked()
+{
+    QDesktopServices::openUrl(QUrl("https://x.vite.net/trade?symbol=VFC-000_BTC-000&category=BTC"));
+}
+
+void MainWindow::on_bihodl_clicked()
+{
+    QDesktopServices::openUrl(QUrl("https://bihodl.com/#/exchange/vfc_usdt"));
+}
+
+void MainWindow::on_vfhome_clicked()
+{
+    QDesktopServices::openUrl(QUrl("https://vfcash.uk"));
+}
+
+void MainWindow::on_telegram_clicked()
+{
+    QDesktopServices::openUrl(QUrl("https://t.me/vfcash"));
+}
+
+void MainWindow::on_discord_clicked()
+{
+    QDesktopServices::openUrl(QUrl("https://discord.gg/VFa4A5v"));
+}
