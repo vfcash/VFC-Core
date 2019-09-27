@@ -172,7 +172,10 @@ void MainWindow::updateStats(const int full)
         }
 
         if(v[0] == 'A' && v[1] == 'l')
+        {
             ui->num_peers->setText("Num Peers:                      " + v.split(": ")[1] + " / 3072");
+            ui->peers_table->setRowCount(v.split(": ")[1].toInt());
+        }
     }
 
 
