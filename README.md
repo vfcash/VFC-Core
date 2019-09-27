@@ -118,7 +118,7 @@ Generally your node should stay in sync, if it falls behind it is recommended th
 - **multi-threaded 1**  - Uses more CPU Cores
 - **multi-threaded 0**  - Uses only one CPU Core
 - **mmap 1**            - Uses more memory (RAM)
-- **mmap 0**            - Uses less memory and more CPU.
+- **mmap 0**            - Uses less memory and more CPU
 - **replay-delay 1000** - Uses less TX bandwidth
 - **replay-delay 0**    - Uses more TX bandwidth
 
