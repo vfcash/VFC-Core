@@ -476,7 +476,7 @@
      <widget class="QGroupBox" name="groupBox_4">
       <property name="geometry">
        <rect>
-        <x>40</x>
+        <x>50</x>
         <y>10</y>
         <width>671</width>
         <height>161</height>
@@ -586,10 +586,10 @@
      <widget class="QLabel" name="frank">
       <property name="geometry">
        <rect>
-        <x>210</x>
-        <y>230</y>
-        <width>351</width>
-        <height>321</height>
+        <x>460</x>
+        <y>320</y>
+        <width>261</width>
+        <height>231</height>
        </rect>
       </property>
       <property name="text">
@@ -599,8 +599,8 @@
      <widget class="QPushButton" name="newkey">
       <property name="geometry">
        <rect>
-        <x>40</x>
-        <y>180</y>
+        <x>50</x>
+        <y>320</y>
         <width>251</width>
         <height>31</height>
        </rect>
@@ -608,6 +608,103 @@
       <property name="text">
        <string>Generate New Address / Key Pair</string>
       </property>
+     </widget>
+     <widget class="QGroupBox" name="groupBox_5">
+      <property name="geometry">
+       <rect>
+        <x>50</x>
+        <y>180</y>
+        <width>671</width>
+        <height>121</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Quick Send (sends directly from your rewards address)</string>
+      </property>
+      <widget class="QLineEdit" name="qtopub">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>50</y>
+         <width>441</width>
+         <height>31</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_14">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>30</y>
+         <width>221</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>To Address:</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_15">
+       <property name="geometry">
+        <rect>
+         <x>470</x>
+         <y>30</y>
+         <width>101</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Amount:</string>
+       </property>
+      </widget>
+      <widget class="QDoubleSpinBox" name="qamount">
+       <property name="geometry">
+        <rect>
+         <x>470</x>
+         <y>50</y>
+         <width>121</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="decimals">
+        <number>3</number>
+       </property>
+       <property name="minimum">
+        <double>0.001000000000000</double>
+       </property>
+       <property name="maximum">
+        <double>4294967.294999999925494</double>
+       </property>
+       <property name="singleStep">
+        <double>0.001000000000000</double>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="qsend">
+       <property name="geometry">
+        <rect>
+         <x>600</x>
+         <y>50</y>
+         <width>51</width>
+         <height>31</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Send</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="rbal">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>90</y>
+         <width>441</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Your Balance: 0 VFC</string>
+       </property>
+      </widget>
      </widget>
     </widget>
     <widget class="QWidget" name="tab_7">

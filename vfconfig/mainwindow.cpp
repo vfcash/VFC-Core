@@ -85,6 +85,7 @@ void MainWindow::updateStats(const int full)
 
     r = execCommand("vfc reward");
     ui->rewards->setText("Reward:                            " + r.split("Final Balance: ")[1]);
+    ui->rbal->setText("Your Balance: " + r.split("Final Balance: ")[1]);
 
     r = execCommand("vfc version");
     ui->node_version->setText("Node Version:                 " + r);
@@ -372,4 +373,18 @@ void MainWindow::on_open_minted_clicked()
 {
     QProcess *qp = new QProcess;
     qp->startDetached("xterm -e \"cat ~/.vfc/minted.priv; bash\"");
+}
+
+void MainWindow::on_qsend_clicked()
+{
+    if(ui->qtopub->text() == "")
+    {
+        QMessageBox msgBox;
+        msgBox.setText("Please input to address.");
+        msgBox.exec();
+        return;
+    }
+
+    QProcess *qp = new QProcess;
+    qp->startDetached("xterm -e \"vfc qsend " + QString::number(ui->send_amount->value()) + " " + ui->qtopub->text() + "; bash\"");
 }
