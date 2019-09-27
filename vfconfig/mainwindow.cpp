@@ -124,8 +124,8 @@ void MainWindow::updateStats(const int full)
     ui->peers_table->setRowCount(3072);
     ui->peers_table->setColumnCount(8);
     ui->peers_table->setColumnWidth(0, 160);
-    ui->peers_table->setColumnWidth(1, 80);
-    ui->peers_table->setColumnWidth(2, 100);
+    ui->peers_table->setColumnWidth(1, 100);
+    ui->peers_table->setColumnWidth(2, 80);
     ui->peers_table->setColumnWidth(3, 120);
     ui->peers_table->setColumnWidth(4, 80);
     ui->peers_table->setColumnWidth(5, 60);
@@ -160,13 +160,13 @@ void MainWindow::updateStats(const int full)
                 }
                 else
                 {
-                    addPeer(pi, p1[0], p1[1], p1[2], "N/A", "N/A", "N/A", "N/A", "N/A");
+                    addPeer(pi, p1[0], p1[1], p1[2], "0", "0", "0", "0", "0");
                     pi++;
                 }
             }
             else if(p1.count() == 3)
             {
-                addPeer(pi, p1[0], p1[1], p1[2], "N/A", "N/A", "N/A", "N/A", "N/A");
+                addPeer(pi, p1[0], p1[1], p1[2], "0", "0", "0", "0", "0");
                 pi++;
             }
         }
@@ -191,7 +191,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->explore_combo->addItems(list);
 
     timerId = startTimer(9000);
-    timerId2 = startTimer(180000);
+    timerId2 = startTimer(680000);
 
     updateStats(1);
 }
