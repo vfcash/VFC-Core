@@ -386,6 +386,12 @@
         <height>25</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
       <property name="text">
        <string>Start Node</string>
       </property>
@@ -552,6 +558,12 @@
          <height>31</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
        <property name="text">
         <string>Send</string>
        </property>
@@ -604,6 +616,12 @@
         <width>251</width>
         <height>31</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
       </property>
       <property name="text">
        <string>Generate New Address / Key Pair</string>
@@ -688,6 +706,12 @@
          <height>31</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
        <property name="text">
         <string>Send</string>
        </property>
@@ -769,6 +793,12 @@
         <width>101</width>
         <height>25</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
       </property>
       <property name="text">
        <string>Start Mining</string>
@@ -861,6 +891,12 @@
         <width>781</width>
         <height>31</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
       </property>
       <property name="readOnly">
        <bool>true</bool>
