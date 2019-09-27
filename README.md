@@ -114,6 +114,14 @@ This will set your node to use all CPU cores available for transaction processin
 
 Generally your node should stay in sync, if it falls behind it is recommended that you run `vfc sync` in the background. This command can take an argument of how many peers to replay from e.g. `vfc sync 256` will attempt to replay from 256 peers. You should set the number of peers relative to the power of your server, if your flood your server with too many replay packets it will be too encumbered to process the regular network transactions.
 
+# Configuration File
+- **multi-threaded 1**  - Uses more CPU Cores
+- **multi-threaded 0**  - Uses only one CPU Core
+- **mmap 1**            - Uses more memory (RAM)
+- **mmap 0**            - Uses less memory and more CPU.
+- **replay-delay 1000** - Uses less TX bandwidth
+- **replay-delay 0**    - Uses more TX bandwidth
+
 # Expose a gateway
 VF Cash is a private decentralised network, this means that the only people who get access to the network are node operators. The only way a regular client can access the network is by using one of the running nodes as a gateway to access the network.
 
