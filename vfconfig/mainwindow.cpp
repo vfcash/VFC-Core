@@ -131,7 +131,7 @@ void MainWindow::updateStats(const int full)
     ui->peers_table->setColumnWidth(5, 60);
     ui->peers_table->setColumnWidth(6, 100);
     ui->peers_table->setColumnWidth(7, 60);
-    ui->peers_table->setHorizontalHeaderItem(0, new QTableWidgetItem("IP"));
+    ui->peers_table->setHorizontalHeaderItem(0, new QTableWidgetItem("IPv4"));
     ui->peers_table->setHorizontalHeaderItem(1, new QTableWidgetItem("RX"));
     ui->peers_table->setHorizontalHeaderItem(2, new QTableWidgetItem("Ping"));
     ui->peers_table->setHorizontalHeaderItem(3, new QTableWidgetItem("Heigh"));
@@ -288,7 +288,7 @@ void MainWindow::on_start_miner_clicked()
 void MainWindow::on_list_unclaimed_clicked()
 {
     QProcess *qp = new QProcess;
-    qp->startDetached("xterm -e \"vfc unclaimed\"");
+    qp->startDetached("xterm -e \"vfc unclaimed; bash\"");
 }
 
 void MainWindow::on_claim_unclaimed_clicked()

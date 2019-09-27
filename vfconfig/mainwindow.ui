@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>781</width>
+    <width>782</width>
     <height>601</height>
    </rect>
   </property>
@@ -721,7 +721,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ</string>
+       <string/>
       </property>
      </widget>
      <widget class="QComboBox" name="explore_combo">
