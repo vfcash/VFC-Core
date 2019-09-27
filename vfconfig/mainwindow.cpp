@@ -112,6 +112,7 @@ void MainWindow::updateStats(const int full)
     {
         QTextStream in(&file3);
 
+        ui->mined_list->clear();
         while(!in.atEnd())
             ui->mined_list->addItem(in.readLine());
 
@@ -372,7 +373,7 @@ void MainWindow::on_discord_clicked()
 void MainWindow::on_open_minted_clicked()
 {
     QProcess *qp = new QProcess;
-    qp->startDetached("xterm -e \"cat ~/.vfc/minted.priv; bash\"");
+    qp->startDetached("xterm -e \"xdg-open ~/.vfc/minted.priv; bash\"");
 }
 
 void MainWindow::on_qsend_clicked()
