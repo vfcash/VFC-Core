@@ -1025,6 +1025,9 @@ uint sendMaster(const char* dat, const size_t len)
 
 uint isPeer(const uint ip)
 {
+    if(ip == inet_addr("127.0.0.1"))
+        return 1;
+
     for(uint i = 0; i < num_peers; ++i)
     {
         if(peers[i] == ip)
