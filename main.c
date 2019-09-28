@@ -1291,7 +1291,7 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
     else
     {
         //The only kind of transaction a non-peer can send is a network auth (replays specify both ip's as 0/null so there is exception for this)
-        if((iipo != 0 && getPeer(iip) == -1) || (iipo != 0 && getPeer(iipo) == -1) )
+        if((iipo != 0 && isPeer(iip) == 0) || (iipo != 0 && isPeer(iipo) == 0) )
         {
             //printf("NOT-PEER: %lu\n", t->uid);
             return 0;
