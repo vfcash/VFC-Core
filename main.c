@@ -5052,6 +5052,9 @@ int main(int argc , char *argv[])
     //Does user just wish to get address balance?
     if(argc == 2 && command_skip == 0)
     {
+        //Load difficulty
+        forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
+
         //Get balance
         addr from;
         size_t len = ECC_CURVE+1;
