@@ -4193,6 +4193,7 @@ int main(int argc , char *argv[])
         //claim minted.priv
         if(strcmp(argv[1], "claim") == 0)
         {
+            forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
             printf("Please Wait...");
             fflush(stdout);
             FILE* f = fopen(argv[2], "r");
@@ -4660,6 +4661,7 @@ int main(int argc , char *argv[])
         //Fork unclaimed addresses from minted.priv
         if(strcmp(argv[1], "unclaimed") == 0)
         {
+            forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
             fflush(stdout);
             FILE* f = fopen(".vfc/minted.priv", "r");
             if(f)
@@ -4704,6 +4706,7 @@ int main(int argc , char *argv[])
         //claim minted.priv
         if(strcmp(argv[1], "claim") == 0)
         {
+            forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
             printf("Please Wait...");
             fflush(stdout);
             FILE* f = fopen(".vfc/minted.priv", "r");
