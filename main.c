@@ -3123,10 +3123,6 @@ void *miningThread(void *arg)
     uint64_t stc = 0;
     while(1)
     {
-        //Gen a new random addr
-        ecc_make_key(pub.key, priv.key);
-        r = isSubGenesisAddressMine(pub.key); //cast
-
         //Dump some rough h/s approximation
         if(time(0) > st)
         {
@@ -3140,9 +3136,15 @@ void *miningThread(void *arg)
             st = time(0) + 16;
         }
 
+        //Gen a new random addr
+        ecc_make_key(pub.key, priv.key);
+        const double adif = isSubDiff(pub.key);
+
         //Found subG?
-        if(r > 0)
+        if(adif <= 0.240)
         {
+            r = isSubGenesisAddressMine(pub.key); //cast
+
             time_t d = time(0)-lt;
             if(d < 0)
                 d = 0;
@@ -3158,15 +3160,21 @@ void *miningThread(void *arg)
             //To console
             printf("\nFound Sub-Genesis Address: \nPublic: %s\nPrivate: %s\n", bpub, bpriv);
 
+            //Load difficulty
+            forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
+
             //Autoclaim
-            pid_t fork_pid = fork();
-            if(fork_pid == 0)
+            if(adif <= network_difficulty)
             {
-                char cmd[1024];
-                sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
-                if(system(cmd) == -1)
-                    printf("ERROR: Failed to Execute Auto-Claim Transaction.\n");
-                exit(0);
+                pid_t fork_pid = fork();
+                if(fork_pid == 0)
+                {
+                    char cmd[1024];
+                    sprintf(cmd, "vfc %s%s %.3f %s > /dev/null", bpub, myrewardkey, toDB(r), bpriv);
+                    if(system(cmd) == -1)
+                        printf("ERROR: Failed to Execute Auto-Claim Transaction.\n");
+                    exit(0);
+                }
             }
 
             //Dump to file
