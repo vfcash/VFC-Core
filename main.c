@@ -3542,6 +3542,9 @@ void *networkThread(void *arg)
         //peer is sending it's user agent
         else if(rb[0] == 'a' && read_size >= 9)
         {
+            if(client.sin_addr.s_addr == peers[0])
+                printf("MASTER-UA-0: %s\n", rb);
+
             //Check this is a peer
             const int p = getPeer(client.sin_addr.s_addr);
             if(p != -1)
@@ -3549,7 +3552,7 @@ void *networkThread(void *arg)
                 if(p == 0)
                     printf("MASTER-UA: %s\n", rb);
 
-                printf("%s: %s\n", inet_ntoa(client.sin_addr), rb);
+                //printf("%s: %s\n", inet_ntoa(client.sin_addr), rb);
 
                 memset(peer_ua[p], 0, 64);
                 memcpy(&peer_ua[p], rb+1, read_size);
