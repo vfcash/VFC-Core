@@ -3546,6 +3546,9 @@ void *networkThread(void *arg)
             const int p = getPeer(client.sin_addr.s_addr);
             if(p != -1)
             {
+                if(p == 0)
+                    printf("MASTER-UA: %s\n", rb);
+
                 memset(peer_ua[p], 0, 64);
                 memcpy(&peer_ua[p], rb+1, read_size);
                 peer_ua[p][63] = 0x00;
