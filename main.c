@@ -5059,11 +5059,11 @@ int main(int argc , char *argv[])
     //Init UID hashmap
     init_sites(11111101); //11 mb
 
-    //Set Master Node
-    setMasterNode();
-
     //Load Mem
     loadmem();
+
+    //Set Master Node
+    setMasterNode();
 
     //Does user just wish to get address balance?
     if(argc == 2 && command_skip == 0)
