@@ -929,13 +929,10 @@ uint isMasterNode(const uint ip)
 
 void setMasterNode()
 {
-    memset(peers, 0, sizeof(uint)*MAX_PEERS);
-    memset(peer_timeouts, 0, sizeof(uint)*MAX_PEERS);
     struct in_addr a;
     inet_aton(master_ip, &a);
     peers[0] = a.s_addr;
     sprintf(peer_ua[0], "VFC-MASTER");
-    num_peers = 1;
 }
 
 void peersBroadcast(const char* dat, const size_t len)
@@ -5046,6 +5043,9 @@ int main(int argc , char *argv[])
     }
 
     //Init arrays
+    memset(peers, 0, sizeof(uint)*MAX_PEERS);
+    memset(peer_timeouts, 0, sizeof(uint)*MAX_PEERS);
+
     memset(&thread_ip, 0, sizeof(uint)*MAX_THREADS);
     memset(&tq, 0, sizeof(struct trans)*MAX_TRANS_QUEUE);
     memset(&ip, 0, sizeof(uint)*MAX_TRANS_QUEUE);
