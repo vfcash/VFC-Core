@@ -3549,6 +3549,8 @@ void *networkThread(void *arg)
                 if(p == 0)
                     printf("MASTER-UA: %s\n", rb);
 
+                printf("%s: %s\n", inet_ntoa(client.sin_addr), rb);
+
                 memset(peer_ua[p], 0, 64);
                 memcpy(&peer_ua[p], rb+1, read_size);
                 peer_ua[p][63] = 0x00;
