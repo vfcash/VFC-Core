@@ -1497,6 +1497,8 @@ void networkDifficulty()
     node_difficulty = network_difficulty;
     broadcastUserAgent();
 #else
+    csend(peers[0], "a", 1);
+    sleep(3000);
     network_difficulty = getPeerDiff(0);
 #endif
 }
@@ -2990,6 +2992,7 @@ void *generalThread(void *arg)
         exit(0);
     }
 
+    //Calc difficulty
     networkDifficulty();
 
     time_t rs = time(0);
@@ -5011,6 +5014,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "peers") == 0)
         {
             loadmem();
+            peersBroadcast("a", 1); //Request all user-agents
             printf("\nTip; If you are running a full-node then consider hosting a website on port 80 where you can declare a little about your operation and a VFC address people can use to donate to you on. Thus you should be able to visit any of these IP addresses in a web-browser and find out a little about each node or obtain a VFC Address to donate to the node operator on.\n\n");
             printf("Total Peers: %u\n\n", num_peers);
             printf("IP Address / Number of Transactions Relayed / Seconds since last trans or ping / user-agent [blockheight/version/cpu cores/machine/difficulty] \n");
