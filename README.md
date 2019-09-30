@@ -124,6 +124,8 @@ To increase the difficulty towards 0.240 pay VFC into:
 
 If the balance of **24KvoteVFC** is higher than **q15voteVFC** the difficulty will be 0.240, otherwise the difference between the balance of the two addresses will be used to reduce the difficulty from 0.240 to 0.031.
 
+```vfc difficulty``` for more information.
+
 # Configuration File
 - **multi-threaded 1**  - Uses more CPU Cores
 - **multi-threaded 0**  - Uses only one CPU Core
