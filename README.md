@@ -117,10 +117,10 @@ Generally your node should stay in sync, if it falls behind it is recommended th
 This function is fully decentralised, all nodes re-calculate the difficulty once an hour at exactly :00 UTC
 
 To increase the difficulty towards 0.031 pay VFC into:
-**q15voteVFC**f7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK (0.000 VFC)
+**q15voteVFC**f7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK
 
 To increase the difficulty towards 0.240 pay VFC into:
-**24KvoteVFC**7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3 (0.000 VFC)
+**24KvoteVFC**7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3
 
 If the balance of **24KvoteVFC** is higher than **q15voteVFC** the difficulty will be 0.240, otherwise the difference between the balance of the two addresses will be used to reduce the difficulty from 0.240 to 0.031.
 
