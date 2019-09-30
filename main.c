@@ -84,7 +84,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.62";
+const char version[]="0.63";
 const uint16_t gport = 8787;
 const char master_ip[] = "198.204.248.26";
 
@@ -1429,78 +1429,6 @@ int gQue()
 /* ~ Blockchain Transversal & Functions
 */
 
-
-void networkDifficulty()
-{
-#if MASTER_NODE == 1
-    remove(".vfc/netdiff.txt");
-    int MAX_VOTES_PER_POSITION = (countLivingPeers()*1.23)/209;
-    if(MAX_VOTES_PER_POSITION < 1)
-        MAX_VOTES_PER_POSITION = 1;
-    network_difficulty = 0; //reset
-    uint divisor = 0;
-    double added[MAX_PEERS]; //max votes per position
-    uint added_index = 0;
-    for(uint p = 1; p < MAX_PEERS; p++)
-    {
-        if(isPeerAlive(p) == 1)
-        {   
-            //Peer difficulty
-            const float diff = getPeerDiff(p);
-            //printf("DBG: %s - %.3f\n", cf, diff);
-
-            //check if difficulty already added
-            uint exists = 0;
-            for(uint i = 0; i < added_index; i++)
-            {
-                if(added[i] == diff)
-                {
-                    exists++;
-                    if(exists >= MAX_VOTES_PER_POSITION) //max votes per position
-                        break;
-                }
-            }
-
-            //Is it in the valid range
-            if(diff >= 0.030 && diff <= 0.240 && exists < MAX_VOTES_PER_POSITION)
-            {
-                added[added_index] = diff;
-                added_index++;
-                network_difficulty += diff;
-                divisor++;
-
-                struct in_addr ip_addr;
-                ip_addr.s_addr = peers[p];
-                FILE* f = fopen(".vfc/netdiff.txt", "a");
-                if(f)
-                {
-                    fprintf(f, "%s: %.3f\n", inet_ntoa(ip_addr), diff);
-                    fclose(f);
-                }
-            }
-        }
-    }
-    if(divisor > 1 && network_difficulty > 0)
-        network_difficulty /= divisor;
-
-    //Limit
-    if(network_difficulty < 0.031)
-        network_difficulty = 0.031;
-    if(network_difficulty > 0.240)
-        network_difficulty = 0.240;
-
-    //Correctly round the final value to three decimal places.
-    network_difficulty = roundFloat(network_difficulty);
-    node_difficulty = network_difficulty;
-    broadcastUserAgent();
-#else
-    csend(peers[0], "a", 1);
-    sleep(3000);
-    network_difficulty = getPeerDiff(0);
-#endif
-}
-
-
 //Get mined supply
 uint64_t getMinedSupply()
 {
@@ -2384,6 +2312,122 @@ uint64_t getBalanceLocal(addr* from)
         return 0;
     return rv;
 }
+
+
+float liveNetworkDifficulty()
+{
+    //Vote Less than 0.240                                                  [lb]
+    struct addr lpub;
+    size_t len = ECC_CURVE+1;
+    b58tobin(lpub.key, &len, "q15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK", 44);
+
+    //Vote 0.240                                                            [tb]
+    struct addr tpub;
+    len = ECC_CURVE+1;
+    b58tobin(tpub.key, &len, "24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3", 45);
+
+    //Get addr balances
+    const double lb = toDB(getBalanceLocal(&lpub)); // < 0.240 vote power in vfc
+    const double tb = toDB(getBalanceLocal(&tpub)); //    0.240 vote power in vfc
+
+    //Is higher for 0.240
+    float ndiff = 0.031;
+    if(tb > lb)
+    {
+        ndiff = 0.240;
+    }
+    else //otherwise drag down on 0.24 by the overflow balance of lb
+    {
+        if(lb != 0)
+            ndiff = ((1 / lb) * tb) * 0.24;
+    }
+
+    //Limit
+    if(ndiff < 0.031)
+        ndiff = 0.031;
+    if(ndiff > 0.240)
+        ndiff = 0.240;
+
+    //Round
+    return roundFloat(ndiff);
+}
+
+void networkDifficulty()
+{
+    network_difficulty = liveNetworkDifficulty();
+
+    //Broadcast for legacy nodes <= 0.62
+    node_difficulty = network_difficulty;
+    broadcastUserAgent();
+
+/*#if MASTER_NODE == 1
+    remove(".vfc/netdiff.txt");
+    int MAX_VOTES_PER_POSITION = (countLivingPeers()*1.23)/209;
+    if(MAX_VOTES_PER_POSITION < 1)
+        MAX_VOTES_PER_POSITION = 1;
+    network_difficulty = 0; //reset
+    uint divisor = 0;
+    double added[MAX_PEERS]; //max votes per position
+    uint added_index = 0;
+    for(uint p = 1; p < MAX_PEERS; p++)
+    {
+        if(isPeerAlive(p) == 1)
+        {   
+            //Peer difficulty
+            const float diff = getPeerDiff(p);
+            //printf("DBG: %s - %.3f\n", cf, diff);
+
+            //check if difficulty already added
+            uint exists = 0;
+            for(uint i = 0; i < added_index; i++)
+            {
+                if(added[i] == diff)
+                {
+                    exists++;
+                    if(exists >= MAX_VOTES_PER_POSITION) //max votes per position
+                        break;
+                }
+            }
+
+            //Is it in the valid range
+            if(diff >= 0.030 && diff <= 0.240 && exists < MAX_VOTES_PER_POSITION)
+            {
+                added[added_index] = diff;
+                added_index++;
+                network_difficulty += diff;
+                divisor++;
+
+                struct in_addr ip_addr;
+                ip_addr.s_addr = peers[p];
+                FILE* f = fopen(".vfc/netdiff.txt", "a");
+                if(f)
+                {
+                    fprintf(f, "%s: %.3f\n", inet_ntoa(ip_addr), diff);
+                    fclose(f);
+                }
+            }
+        }
+    }
+    if(divisor > 1 && network_difficulty > 0)
+        network_difficulty /= divisor;
+
+    //Limit
+    if(network_difficulty < 0.031)
+        network_difficulty = 0.031;
+    if(network_difficulty > 0.240)
+        network_difficulty = 0.240;
+
+    //Correctly round the final value to three decimal places.
+    network_difficulty = roundFloat(network_difficulty);
+    node_difficulty = network_difficulty;
+    broadcastUserAgent();
+#else
+    csend(peers[0], "a", 1);
+    sleep(3000);
+    network_difficulty = getPeerDiff(0);
+#endif*/
+}
+
 
 //Calculate if an address has the value required to make a transaction of x amount.
 int hasbalance(const uint64_t uid, addr* from, mval amount)
@@ -4505,7 +4549,25 @@ int main(int argc , char *argv[])
 
         if(strcmp(argv[1], "setdiff") == 0)
         {
-            const float d = atof(argv[2]);
+            //Vote Less than 0.240
+            struct addr lpub;
+            size_t len = ECC_CURVE+1;
+            b58tobin(lpub.key, &len, "q15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK", 44);
+
+            //Vote 0.240
+            struct addr tpub;
+            len = ECC_CURVE+1;
+            b58tobin(tpub.key, &len, "24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3", 45);
+
+            printf("\nVoting has changed.\n\n");
+            printf("You are now expected to pay vfc into one of two addresses that define the minting difficulty value between [0.031 - 0.240].\n\n");
+            printf("To increase the difficulty towards 0.031 pay VFC into:\nq15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK (%.3f VFC)\n", toDB(getBalanceLocal(&lpub)));
+            printf("To increase the difficulty towards 0.240 pay VFC into:\n24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3 (%.3f VFC)\n\n", toDB(getBalanceLocal(&tpub)));
+            printf("If the balance of 24K~ is higher than q15~ the difficulty will be 0.240, otherwise the difference between the balance of the two addresses will be used to reduce the difficulty from 0.240 to 0.031.\n\n");
+            printf("Next Network Difficulty: %.3f\n", liveNetworkDifficulty());
+            printf("Current Network Difficulty: %.3f\n\n", network_difficulty);
+
+            /*const float d = atof(argv[2]);
             if(d >= 0.03 && d <= 0.24)
             {
                 //Set node diff
@@ -4521,7 +4583,7 @@ int main(int argc , char *argv[])
             else
             {
                 printf("Please pick a difficulty between 0.030 and 0.240\n\n");
-            }
+            }*/
 
             exit(0);
         }
