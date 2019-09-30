@@ -147,7 +147,7 @@ pthread_mutex_t mutex5 = PTHREAD_MUTEX_INITIALIZER;
 
 //User-Configurable
 uint is8664 = 1;
-uint single_threaded = 1;
+uint single_threaded = 0;
 uint replay_packet_delay = 1000;
 
 ///////////////////////////////////////////////////////////////////////////
