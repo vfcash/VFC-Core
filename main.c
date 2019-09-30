@@ -5057,7 +5057,7 @@ int main(int argc , char *argv[])
     memset(&uidtimes, 0, sizeof(time_t)*MIN_LEN);
 
     //Init UID hashmap
-    init_sites(11111101); //11 mb
+    init_sites(MAX_SITES); //11 mb
 
     //Load Mem
     loadmem();
