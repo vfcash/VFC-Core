@@ -4549,25 +4549,8 @@ int main(int argc , char *argv[])
 
         if(strcmp(argv[1], "setdiff") == 0)
         {
-            //Vote Less than 0.240
-            struct addr lpub;
-            size_t len = ECC_CURVE+1;
-            b58tobin(lpub.key, &len, "q15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK", 44);
-
-            //Vote 0.240
-            struct addr tpub;
-            len = ECC_CURVE+1;
-            b58tobin(tpub.key, &len, "24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3", 45);
-
-            printf("\nVoting has changed.\n\n");
-            printf("You are now expected to pay vfc into one of two addresses that define the minting difficulty value between [0.031 - 0.240].\n\n");
-            printf("To increase the difficulty towards 0.031 pay VFC into:\nq15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK (%.3f VFC)\n", toDB(getBalanceLocal(&lpub)));
-            printf("To increase the difficulty towards 0.240 pay VFC into:\n24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3 (%.3f VFC)\n\n", toDB(getBalanceLocal(&tpub)));
-            printf("If the balance of 24K~ is higher than q15~ the difficulty will be 0.240, otherwise the difference between the balance of the two addresses will be used to reduce the difficulty from 0.240 to 0.031.\n\n");
-            printf("Next Network Difficulty: %.3f\n", liveNetworkDifficulty());
-            printf("Current Network Difficulty: %.3f\n\n", network_difficulty);
-
-            /*const float d = atof(argv[2]);
+            //run legacy
+            const float d = atof(argv[2]);
             if(d >= 0.03 && d <= 0.24)
             {
                 //Set node diff
@@ -4583,7 +4566,7 @@ int main(int argc , char *argv[])
             else
             {
                 printf("Please pick a difficulty between 0.030 and 0.240\n\n");
-            }*/
+            }
 
             exit(0);
         }
@@ -4680,6 +4663,25 @@ int main(int argc , char *argv[])
 #else
             printf("Average / Network Difficulty: %.3f\n", network_difficulty);
 #endif
+
+            //Vote Less than 0.240
+            struct addr lpub;
+            size_t len = ECC_CURVE+1;
+            b58tobin(lpub.key, &len, "q15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK", 44);
+
+            //Vote 0.240
+            struct addr tpub;
+            len = ECC_CURVE+1;
+            b58tobin(tpub.key, &len, "24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3", 45);
+
+            printf("\nVoting has changed.\n\n");
+            printf("You are now expected to pay vfc into one of two addresses that define the minting difficulty value between [0.031 - 0.240].\n\n");
+            printf("To increase the difficulty towards 0.031 pay VFC into:\nq15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK (%.3f VFC)\n", toDB(getBalanceLocal(&lpub)));
+            printf("To increase the difficulty towards 0.240 pay VFC into:\n24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3 (%.3f VFC)\n\n", toDB(getBalanceLocal(&tpub)));
+            printf("If the balance of 24K~ is higher than q15~ the difficulty will be 0.240, otherwise the difference between the balance of the two addresses will be used to reduce the difficulty from 0.240 to 0.031.\n\n");
+            printf("Next Network Difficulty: %.3f\n", liveNetworkDifficulty());
+            printf("Current Network Difficulty: %.3f\n\n", network_difficulty);
+            
             exit(0);
         }
 
