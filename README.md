@@ -57,7 +57,6 @@ vfc issub <public key>           - Is supplied public address a subG address
 -------------------------------
 vfc votes                        - Map of difficulty votes
 vfc difficulty                   - Network mining difficulty
-vfc setdiff < 0.03 - 0.24 >      - Sets contribution to the net difficulty
 -------------------------------
 vfc sync <optional num peers>    - Trigger blockchain sync from your peers
 vfc master_resync                - Trigger blockchain resync from the master
