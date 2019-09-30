@@ -33,7 +33,6 @@ private slots:
     void on_update_node_version_clicked();
     void on_peers_sync_clicked();
     void on_master_resync_clicked();
-    void on_vote_clicked();
     void on_save_config_clicked();
     void on_load_config_clicked();
     void on_single_config_clicked();

@@ -4547,29 +4547,6 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
-        if(strcmp(argv[1], "setdiff") == 0)
-        {
-            //run legacy
-            const float d = atof(argv[2]);
-            if(d >= 0.03 && d <= 0.24)
-            {
-                //Set node diff
-                forceWrite(".vfc/diff.mem", &d, sizeof(float));
-
-                //Tell peers our new user-agent
-                node_difficulty = d;
-                broadcastUserAgent();
-
-                //Output our set difficulty
-                printf("%.3f\n\n", d);
-            }
-            else
-            {
-                printf("Please pick a difficulty between 0.030 and 0.240\n\n");
-            }
-
-            exit(0);
-        }
     }
 
     //Some basic funcs
@@ -4602,7 +4579,6 @@ int main(int argc , char *argv[])
             printf("-------------------------------\n");
             printf("vfc votes                        - Map of difficulty votes\n");
             printf("vfc difficulty                   - Network mining difficulty\n");
-            printf("vfc setdiff < 0.03 - 0.24 >      - Sets contribution to the net difficulty\n");
             printf("-------------------------------\n");
             printf("vfc sync <optional num peers>    - Trigger blockchain sync from your peers\n");
             printf("vfc master_resync                - Trigger blockchain resync from the master\n");

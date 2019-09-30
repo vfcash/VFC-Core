@@ -90,13 +90,6 @@ void MainWindow::updateStats(const int full)
     r = execCommand("vfc version");
     ui->node_version->setText("Node Version:                 " + r);
 
-    r = execCommand("vfc agent");
-    ui->agent->setText("Your User-Agent: " + r);
-    QStringList sl = r.split(", ");
-    if(sl.length() > 4)
-        ui->setdiff->setValue(sl[4].toDouble());
-
-
     QFile file(QDir::homePath() + "/.vfc/public.key");
     if(file.open(QIODevice::ReadOnly))
     {
@@ -229,14 +222,6 @@ void MainWindow::on_master_resync_clicked()
 {
     QProcess *qp = new QProcess;
     qp->startDetached("xterm -e \"vfc master_resync; bash\"");
-}
-
-void MainWindow::on_vote_clicked()
-{
-    QString r = execCommand("vfc setdiff " + QString::number(ui->setdiff->value()) );
-    QMessageBox msgBox;
-    msgBox.setText("Your difficulty vote has been updated to " + QString::number(ui->setdiff->value()));
-    msgBox.exec();
 }
 
 void MainWindow::on_save_config_clicked()
