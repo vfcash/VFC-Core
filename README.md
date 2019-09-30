@@ -119,7 +119,7 @@ Generally your node should stay in sync, if it falls behind it is recommended th
 - **mmap 1**            - Uses more memory (RAM)
 - **mmap 0**            - Uses less memory and more CPU
 - **replay-delay 1000** - Uses less TX bandwidth
-- **replay-delay 0**    - Uses more TX bandwidth
+- **replay-delay 1**    - Uses more TX bandwidth
 
 # Expose a gateway
 VF Cash is a private decentralised network, this means that the only people who get access to the network are node operators. The only way a regular client can access the network is by using one of the running nodes as a gateway to access the network.
