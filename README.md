@@ -114,7 +114,7 @@ This will set your node to use all CPU cores available for transaction processin
 Generally your node should stay in sync, if it falls behind it is recommended that you run `vfc sync` in the background. This command can take an argument of how many peers to replay from e.g. `vfc sync 256` will attempt to replay from 256 peers. You should set the number of peers relative to the power of your server, if your flood your server with too many replay packets it will be too encumbered to process the regular network transactions.
 
 # Mining Difficulty
-This function is fully decentralised, all nodes re-calculate the difficulty once an hour at exactly :00 UTC
+All nodes re-calculate the difficulty once an hour at exactly 0 minutes UTC of the hour.
 
 To increase the difficulty towards 0.031 pay VFC into:
 - **q15voteVFC**f7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK
