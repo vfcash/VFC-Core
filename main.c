@@ -2980,10 +2980,6 @@ void loadmem()
         }
         fclose(f);
     }
-
-#if MASTER_NODE == 0
-    forceRead(".vfc/diff.mem", &node_difficulty, sizeof(float));
-#endif
 }
 
 void sigintHandler(int sig_num) 
@@ -4619,13 +4615,13 @@ int main(int argc , char *argv[])
         //get node user agent
         if(strcmp(argv[1], "agent") == 0)
         {
-            forceRead(".vfc/diff.mem", &node_difficulty, sizeof(float));
+            forceRead(".vfc/netdiff.mem", &node_difficulty, sizeof(float));
             struct stat st;
             stat(CHAIN_FILE, &st);
             struct utsname ud;
             uname(&ud);
             if(st.st_size > 0)
-                printf("%lu, %s, %u, %s, %.3f\n", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
+                printf("%lu, %s, %u, %s, %.3f\n", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, network_difficulty);
             exit(0);
         }
 
