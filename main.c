@@ -4061,13 +4061,13 @@ int main(int argc , char *argv[])
     }
 
     //is x86_64? only use mmap on x86_64
-    struct utsname ud;
-    uname(&ud);
-    if(strcmp(ud.machine, "x86_64") != 0)
-    {
-        is8664 = 0;
-        printf("Running without mmap() as system is not x86_64. Unless specified in ~vfc/vfc.cnf\n\n");
-    }
+    // struct utsname ud;
+    // uname(&ud);
+    // if(strcmp(ud.machine, "x86_64") != 0)
+    // {
+    //     is8664 = 0;
+    //     printf("Running without mmap() as system is not x86_64. Unless specified in ~vfc/vfc.cnf\n\n");
+    // }
 
     //Load the config file
     loadConfig(0);
