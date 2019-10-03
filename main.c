@@ -3051,7 +3051,6 @@ void *generalThread(void *arg)
         forceRead(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_PEERS);
 
         //Recalculate network difficulty
-#if MASTER_NODE == 1
         time_t lt = time(0);
         struct tm* tmi = gmtime(&lt);
         if(tmi->tm_min == 59 && tmi->tm_sec >= 47)
@@ -3069,9 +3068,6 @@ void *generalThread(void *arg)
             //It's time !!
             networkDifficulty(); //Recalculate the network difficulty
         }
-#else
-        networkDifficulty(); //Recalculate the network difficulty
-#endif
 
         //Let's execute a Sync every 3 mins
         // if(time(0) > rs)
@@ -4055,7 +4051,7 @@ int main(int argc , char *argv[])
     signal(SIGSEGV, exception_handler);
 
     //If never set difficulty before, let's set random
-    node_difficulty = qRandFloat(0.031, 0.240);
+    //node_difficulty = qRandFloat(0.031, 0.240);
 
     //set local working directory
     if(chdir(getHome()) == -1)
