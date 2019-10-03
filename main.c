@@ -86,7 +86,6 @@
 //Client Configuration
 const char version[]="0.63";
 const uint16_t gport = 8787;
-const char master_ip[] = "198.204.248.26";
 
 //Error Codes
 #define ERROR_NOFUNDS -1
@@ -930,7 +929,7 @@ uint isMasterNode(const uint ip)
 void setMasterNode()
 {
     struct in_addr a;
-    inet_aton(master_ip, &a);
+    inet_aton("198.204.248.26", &a);
     peers[0] = a.s_addr;
     sprintf(peer_ua[0], "VFC-SEED0");
 
@@ -4654,9 +4653,9 @@ int main(int argc , char *argv[])
             time_t lt = time(0);
             struct tm* tmi = gmtime(&lt);
 
-            setlocale(LC_NUMERIC, "");
             printf("\nVoting has changed.\n\n");
             printf("You are now expected to pay vfc into one of two addresses that define the minting difficulty value between [0.031 - 0.240].\n\n");
+            setlocale(LC_NUMERIC, "");
             printf("To increase the difficulty towards 0.031 pay VFC into:\nq15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK (%'.3f VFC)\n\n", toDB(getBalanceLocal(&lpub)));
             printf("To increase the difficulty towards 0.240 pay VFC into:\n24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3 (%'.3f VFC)\n\n", toDB(getBalanceLocal(&tpub)));
             printf("If the balance of 24K~ is higher than q15~ the difficulty will be 0.240, otherwise the difference between the balance of the two addresses will be used to reduce the difficulty from 0.240 to 0.031.\n\n");
