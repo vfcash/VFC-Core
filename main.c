@@ -932,7 +932,12 @@ void setMasterNode()
     struct in_addr a;
     inet_aton(master_ip, &a);
     peers[0] = a.s_addr;
-    sprintf(peer_ua[0], "VFC-MASTER");
+    sprintf(peer_ua[0], "VFC-SEED0");
+
+    inet_aton("207.180.252.56", &a);
+    peers[1] = a.s_addr;
+    peer_timeouts[1] =  time(0) + MAX_PEER_EXPIRE_SECONDS;
+    sprintf(peer_ua[0], "VFC-SEED1");
 }
 
 void peersBroadcast(const char* dat, const size_t len)
@@ -4941,9 +4946,22 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "master_resync") == 0)
         {
             remove("blocks.dat");
-            if(system("wget -O.vfc/master_blocks.dat http://198.204.248.26/sync/") != -1)
-                if(system("cp .vfc/master_blocks.dat .vfc/blocks.dat") != -1)
-                    printf("Resync from master complete.\n\n");
+
+            printf("Please select a mirror: 1 or 2: ");
+            char c;
+            if(scanf("%c", &c) > 0)
+            {
+                if(c == '1')
+                    if(system("wget -O.vfc/master_blocks.dat http://198.204.248.26/sync/") != -1)
+                        if(system("cp .vfc/master_blocks.dat .vfc/blocks.dat") != -1)
+                            printf("Resync from master complete.\n\n");
+
+                if(c == '2')
+                    if(system("wget -O.vfc/master_blocks.dat http://207.180.252.56:8000/master_blocks.dat") != -1)
+                        if(system("cp .vfc/master_blocks.dat .vfc/blocks.dat") != -1)
+                            printf("Resync from master complete.\n\n");
+            }
+
             exit(0);
         }
 
