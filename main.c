@@ -4581,7 +4581,7 @@ int main(int argc , char *argv[])
             printf("vfc difficulty                   - Network mining difficulty\n");
             printf("-------------------------------\n");
             printf("vfc sync <optional num peers>    - Trigger blockchain sync from your peers\n");
-            printf("vfc master_resync                - Trigger blockchain resync from the master\n");
+            printf("vfc cdn_resync                   - Trigger blockchain resync from the master\n");
             printf("vfc reset_chain                  - Reset blockchain back to genesis state\n");
             printf("vfc scan                         - Scan for peers in the IPv4 range.\n");
             printf("-------------------------------\n");
@@ -4625,7 +4625,7 @@ int main(int argc , char *argv[])
             struct utsname ud;
             uname(&ud);
             if(st.st_size > 0)
-                printf("%lu, %s, %u, %s, %.3f\n", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, network_difficulty);
+                printf("%lu, %s, %u, %s, %.3f\n", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
             exit(0);
         }
 
@@ -4633,12 +4633,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "difficulty") == 0)
         {
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
-#if MASTER_NODE == 1
-            if(system("cat .vfc/netdiff.txt") != -1)
-                printf("Average / Network Difficulty: %.3f\n", network_difficulty);
-#else
             printf("Average / Network Difficulty: %.3f\n", network_difficulty);
-#endif
 
             //Vote Less than 0.240
             struct addr lpub;
@@ -4942,7 +4937,7 @@ int main(int argc , char *argv[])
         }
 
         //master_resync
-        if(strcmp(argv[1], "master_resync") == 0)
+        if(strcmp(argv[1], "master_resync") == 0 || strcmp(argv[1], "cdn_resync") == 0)
         {
             remove("blocks.dat");
 
@@ -5093,8 +5088,8 @@ int main(int argc , char *argv[])
     //Let's make sure we're on the correct chain
     if(verifyChain(CHAIN_FILE) == 0)
     {
-        printf("Sorry you're not on the right chain. Please run ./vfc reset_chain & ./vfc sync or ./vfc master_resync\n\n");
-        if(system("vfc master_resync") == -1)
+        printf("Sorry you're not on the right chain. Please run ./vfc reset_chain & ./vfc sync or ./vfc cdn_resync\n\n");
+        if(system("vfc cdn_resync") == -1)
             exit(0);
         exit(0);
     }
