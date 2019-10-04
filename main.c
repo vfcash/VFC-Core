@@ -145,7 +145,6 @@ pthread_mutex_t mutex4 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex5 = PTHREAD_MUTEX_INITIALIZER;
 
 //User-Configurable
-uint is8664 = 1;
 uint single_threaded = 0;
 uint replay_packet_delay = 1000;
 
@@ -1437,46 +1436,35 @@ int gQue()
 uint64_t getMinedSupply()
 {
     uint64_t rv = 0;
-    FILE* f = fopen(CHAIN_FILE, "r");
+    int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
-        fseek(f, 0, SEEK_END);
-        const size_t len = ftell(f);
+        const size_t len = lseek(f, 0, SEEK_END);
 
-        struct trans t;
-        for(size_t i = sizeof(struct trans); i < len; i += sizeof(struct trans))
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
         {
-            fseek(f, i, SEEK_SET);
+            close(f);
 
-            uint fc = 0;
-            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
-                fclose(f);
-                f = fopen(CHAIN_FILE, "r");
-                fc++;
-                if(fc > 333)
-                {
-                    //printf("ERROR: fread() in getMinedSupply() has failed.\n");
-                    err++;
-                    fclose(f);
-                    return 0;
-                }
-                if(f == NULL)
-                    continue;
-            }
+                memcpy(&t, m+i, sizeof(struct trans));
 
-            if(memcmp(t.from.key, genesis_pub, ECC_CURVE+1) != 0)
-            {
-                const uint64_t w = isSubGenesisAddress(t.from.key, 1);
-                if(w > 0)
+                if(memcmp(t.from.key, genesis_pub, ECC_CURVE+1) != 0)
                 {
-                    rv += w;
+                    const uint64_t w = isSubGenesisAddress(t.from.key, 1);
+                    if(w > 0)
+                    {
+                        rv += w;
+                    }
                 }
             }
-            
+
+            munmap(m, len);
         }
 
-        fclose(f);
+        close(f);
     }
     return rv;
 }
@@ -1497,52 +1485,40 @@ uint64_t getCirculatingSupply()
     if(ift > 0)
         rv = (ift / 100) * 20; // 20% of the ift tax
     
-    FILE* f = fopen(CHAIN_FILE, "r");
+    int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
-        fseek(f, 0, SEEK_END);
-        const size_t len = ftell(f);
+        const size_t len = lseek(f, 0, SEEK_END);
 
-        struct trans t;
-        for(size_t i = sizeof(struct trans); i < len; i += sizeof(struct trans))
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
         {
-            fseek(f, i, SEEK_SET);
+            close(f);
 
-            uint fc = 0;
-            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
-                fclose(f);
-                f = fopen(CHAIN_FILE, "r");
-                fc++;
-                if(fc > 333)
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                //All the paid out subG address values
+                if(memcmp(t.from.key, genesis_pub, ECC_CURVE+1) != 0)
                 {
-                    printf("ERROR: fread() in getCirculatingSupply() has failed.\n");
-                    err++;
-                    fclose(f);
-                    return 0;
+                    const uint64_t w = isSubGenesisAddress(t.from.key, 1);
+                    if(w > 0)
+                    {
+                        rv += w;
+                    }
                 }
-                if(f == NULL)
-                    continue;
-            }
-            
-            //All the paid out subG address values
-            if(memcmp(t.from.key, genesis_pub, ECC_CURVE+1) != 0)
-            {
-                const uint64_t w = isSubGenesisAddress(t.from.key, 1);
-                if(w > 0)
+                else
                 {
-                    rv += w;
+                    rv += t.amount; //all of the transactions leaving the genesis key
                 }
             }
-            else
-            {
-                rv += t.amount; //all of the transactions leaving the genesis key
-            }
-            
-            
+
+            munmap(m, len);
         }
 
-        fclose(f);
+        close(f);
     }
     return rv;
 }
@@ -1850,338 +1826,218 @@ void launchReplayThread(const uint32_t ip)
 //dump all trans
 void dumptrans(const size_t offset)
 {
-    FILE* f = fopen(CHAIN_FILE, "r");
+    int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
-        fseek(f, 0, SEEK_END);
-        const size_t len = ftell(f);
+        const size_t len = lseek(f, 0, SEEK_END);
 
-        struct trans t;
-        for(size_t i = sizeof(struct trans)*offset; i < len; i += sizeof(struct trans))
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
         {
-            fseek(f, i, SEEK_SET);
+            close(f);
 
-            uint fc = 0;
-            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
-                fclose(f);
-                f = fopen(CHAIN_FILE, "r");
-                fc++;
-                if(fc > 333)
-                {
-                    printf("ERROR: fread() in dumptrans() has failed.\n");
-                    fclose(f);
-                    return;
-                }
-                if(f == NULL)
-                    continue;
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                char topub[MIN_LEN];
+                memset(topub, 0, sizeof(topub));
+                size_t len = MIN_LEN;
+                b58enc(topub, &len, t.to.key, ECC_CURVE+1);
+
+                char frompub[MIN_LEN];
+                memset(frompub, 0, sizeof(frompub));
+                len = MIN_LEN;
+                b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
+
+                setlocale(LC_NUMERIC, "");
+                printf("%lu: %s\n\t%s > %'.3f\n", t.uid, frompub, topub, toDB(t.amount));
             }
 
-            char topub[MIN_LEN];
-            memset(topub, 0, sizeof(topub));
-            size_t len = MIN_LEN;
-            b58enc(topub, &len, t.to.key, ECC_CURVE+1);
-
-            char frompub[MIN_LEN];
-            memset(frompub, 0, sizeof(frompub));
-            len = MIN_LEN;
-            b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
-
-            setlocale(LC_NUMERIC, "");
-            printf("%lu: %s\n\t%s > %'.3f\n", t.uid, frompub, topub, toDB(t.amount));
+            munmap(m, len);
         }
 
-        fclose(f);
+        close(f);
     }
 }
 
 //dump all bad trans
 void dumpbadtrans()
 {
-    FILE* f = fopen(BADCHAIN_FILE, "r");
+    int f = open(BADCHAIN_FILE, O_RDONLY);
     if(f)
     {
-        fseek(f, 0, SEEK_END);
-        const size_t len = ftell(f);
+        const size_t len = lseek(f, 0, SEEK_END);
 
-        struct trans t;
-        for(size_t i = 0; i < len; i += sizeof(struct trans))
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
         {
-            fseek(f, i, SEEK_SET);
+            close(f);
 
-            uint fc = 0;
-            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
-                fclose(f);
-                f = fopen(BADCHAIN_FILE, "r");
-                fc++;
-                if(fc > 333)
-                {
-                    printf("ERROR: fread() in dumpbadtrans() has failed.\n");
-                    fclose(f);
-                    return;
-                }
-                if(f == NULL)
-                    continue;
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                char topub[MIN_LEN];
+                memset(topub, 0, sizeof(topub));
+                size_t len = MIN_LEN;
+                b58enc(topub, &len, t.to.key, ECC_CURVE+1);
+
+                char frompub[MIN_LEN];
+                memset(frompub, 0, sizeof(frompub));
+                len = MIN_LEN;
+                b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
+
+                setlocale(LC_NUMERIC, "");
+                printf("%lu: %s > %s : %'.3f\n", t.uid, frompub, topub, toDB(t.amount));
             }
 
-            char topub[MIN_LEN];
-            memset(topub, 0, sizeof(topub));
-            size_t len = MIN_LEN;
-            b58enc(topub, &len, t.to.key, ECC_CURVE+1);
-
-            char frompub[MIN_LEN];
-            memset(frompub, 0, sizeof(frompub));
-            len = MIN_LEN;
-            b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
-
-            setlocale(LC_NUMERIC, "");
-            printf("%lu: %s > %s : %'.3f\n", t.uid, frompub, topub, toDB(t.amount));
-        
+            munmap(m, len);
         }
 
-        fclose(f);
-    }
-}
-
-void printtrans(uint fromR, uint toR)
-{
-    FILE* f = fopen(CHAIN_FILE, "r");
-    if(f)
-    {
-        fseek(f, 0, SEEK_END);
-        const size_t len = ftell(f);
-
-        struct trans t;
-        for(size_t i = fromR * sizeof(struct trans); i < len; i += sizeof(struct trans))
-        {
-            fseek(f, i, SEEK_SET);
-
-            uint fc = 0;
-            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
-            {
-                fclose(f);
-                f = fopen(CHAIN_FILE, "r");
-                fc++;
-                if(fc > 333)
-                {
-                    printf("ERROR: fread() in printIns() has failed.\n");
-                    fclose(f);
-                    return;
-                }
-                if(f == NULL)
-                    continue;
-            }
-
-            char from[MIN_LEN];
-            memset(from, 0, sizeof(from));
-            size_t len = MIN_LEN;
-            b58enc(from, &len, t.from.key, ECC_CURVE+1);
-
-            char to[MIN_LEN];
-            memset(to, 0, sizeof(from));
-            size_t len2 = MIN_LEN;
-            b58enc(to, &len2, t.to.key, ECC_CURVE+1);
-
-            char sig[MIN_LEN];
-            memset(sig, 0, sizeof(sig));
-            size_t len3 = MIN_LEN;
-            b58enc(sig, &len3, t.owner.key, ECC_CURVE*2);
-
-            setlocale(LC_NUMERIC, "");
-            printf("%d,%lu,%s,%s,%s,%.3f\n", (int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
-
-            if(i >= toR * sizeof(struct trans))
-            {
-                break;
-            }
-        }
-
-        fclose(f);
+        close(f);
     }
 }
 
 //print sent & recv transactions
 void printAll(addr* a)
 {
-    FILE* f = fopen(CHAIN_FILE, "r");
+    int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
-        fseek(f, 0, SEEK_END);
-        const size_t len = ftell(f);
+        const size_t len = lseek(f, 0, SEEK_END);
 
-        struct trans t;
-        for(size_t i = 0; i < len; i += sizeof(struct trans))
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
         {
-            fseek(f, i, SEEK_SET);
+            close(f);
 
-            uint fc = 0;
-            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
-                fclose(f);
-                f = fopen(CHAIN_FILE, "r");
-                fc++;
-                if(fc > 333)
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                if(memcmp(&t.from.key, a->key, ECC_CURVE+1) == 0)
                 {
-                    printf("ERROR: fread() in printAll() has failed.\n");
-                    fclose(f);
-                    return;
+                    char pub[MIN_LEN];
+                    memset(pub, 0, sizeof(pub));
+                    size_t len = MIN_LEN;
+                    b58enc(pub, &len, t.to.key, ECC_CURVE+1);
+                    setlocale(LC_NUMERIC, "");
+                    printf("OUT,%lu,%s,%'.3f\n", t.uid, pub, toDB(t.amount));
                 }
-                if(f == NULL)
-                    continue;
+                else if(memcmp(&t.to.key, a->key, ECC_CURVE+1) == 0)
+                {
+                    char pub[MIN_LEN];
+                    memset(pub, 0, sizeof(pub));
+                    size_t len = MIN_LEN;
+                    b58enc(pub, &len, t.from.key, ECC_CURVE+1);
+                    setlocale(LC_NUMERIC, "");
+                    printf("IN,%lu,%s,%'.3f\n", t.uid, pub, toDB(t.amount));
+                }
             }
 
-            if(memcmp(&t.from.key, a->key, ECC_CURVE+1) == 0)
-            {
-                char pub[MIN_LEN];
-                memset(pub, 0, sizeof(pub));
-                size_t len = MIN_LEN;
-                b58enc(pub, &len, t.to.key, ECC_CURVE+1);
-                setlocale(LC_NUMERIC, "");
-                printf("OUT,%lu,%s,%'.3f\n", t.uid, pub, toDB(t.amount));
-            }
-            else if(memcmp(&t.to.key, a->key, ECC_CURVE+1) == 0)
-            {
-                char pub[MIN_LEN];
-                memset(pub, 0, sizeof(pub));
-                size_t len = MIN_LEN;
-                b58enc(pub, &len, t.from.key, ECC_CURVE+1);
-                setlocale(LC_NUMERIC, "");
-                printf("IN,%lu,%s,%'.3f\n", t.uid, pub, toDB(t.amount));
-            }
-            
+            munmap(m, len);
         }
 
-        fclose(f);
+        close(f);
     }
 }
 
 //print received transactions
 void printIns(addr* a)
 {
-    FILE* f = fopen(CHAIN_FILE, "r");
+    int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
-        fseek(f, 0, SEEK_END);
-        const size_t len = ftell(f);
+        const size_t len = lseek(f, 0, SEEK_END);
 
-        struct trans t;
-        for(size_t i = 0; i < len; i += sizeof(struct trans))
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
         {
-            fseek(f, i, SEEK_SET);
+            close(f);
 
-            uint fc = 0;
-            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
-                fclose(f);
-                f = fopen(CHAIN_FILE, "r");
-                fc++;
-                if(fc > 333)
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                if(memcmp(&t.to.key, a->key, ECC_CURVE+1) == 0)
                 {
-                    printf("ERROR: fread() in printIns() has failed.\n");
-                    fclose(f);
-                    return;
+                    char pub[MIN_LEN];
+                    memset(pub, 0, sizeof(pub));
+                    size_t len = MIN_LEN;
+                    b58enc(pub, &len, t.from.key, ECC_CURVE+1);
+                    setlocale(LC_NUMERIC, "");
+                    //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
+                    printf("%s > %'.3f\n", pub, toDB(t.amount));
                 }
-                if(f == NULL)
-                    continue;
             }
 
-            if(memcmp(&t.to.key, a->key, ECC_CURVE+1) == 0)
-            {
-                char pub[MIN_LEN];
-                memset(pub, 0, sizeof(pub));
-                size_t len = MIN_LEN;
-                b58enc(pub, &len, t.from.key, ECC_CURVE+1);
-                setlocale(LC_NUMERIC, "");
-                //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
-                printf("%s > %'.3f\n", pub, toDB(t.amount));
-            }
-            
+            munmap(m, len);
         }
 
-        fclose(f);
+        close(f);
     }
 }
 
 //print sent transactions
 void printOuts(addr* a)
 {
-    FILE* f = fopen(CHAIN_FILE, "r");
+    int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
-        fseek(f, 0, SEEK_END);
-        const size_t len = ftell(f);
+        const size_t len = lseek(f, 0, SEEK_END);
 
-        struct trans t;
-        for(size_t i = 0; i < len; i += sizeof(struct trans))
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
         {
-            fseek(f, i, SEEK_SET);
+            close(f);
 
-            uint fc = 0;
-            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
-                fclose(f);
-                f = fopen(CHAIN_FILE, "r");
-                fc++;
-                if(fc > 333)
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                if(memcmp(&t.from.key, a->key, ECC_CURVE+1) == 0)
                 {
-                    printf("ERROR: fread() in printOuts() has failed.\n");
-                    fclose(f);
-                    return;
+                    char pub[MIN_LEN];
+                    memset(pub, 0, sizeof(pub));
+                    size_t len = MIN_LEN;
+                    b58enc(pub, &len, t.to.key, ECC_CURVE+1);
+                    setlocale(LC_NUMERIC, "");
+                    //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
+                    printf("%s > %'.3f\n", pub, toDB(t.amount));
                 }
-                if(f == NULL)
-                    continue;
             }
 
-            if(memcmp(&t.from.key, a->key, ECC_CURVE+1) == 0)
-            {
-                char pub[MIN_LEN];
-                memset(pub, 0, sizeof(pub));
-                size_t len = MIN_LEN;
-                b58enc(pub, &len, t.to.key, ECC_CURVE+1);
-                setlocale(LC_NUMERIC, "");
-                //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
-                printf("%s > %'.3f\n", pub, toDB(t.amount));
-            }
-            
+            munmap(m, len);
         }
 
-        fclose(f);
+        close(f);
     }
 }
 
-//find a specific transaction by UID
-void findTrans(const uint64_t uid)
+
+void printtrans(uint fromR, uint toR)
 {
-    FILE* f = fopen(CHAIN_FILE, "r");
+    int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
-        fseek(f, 0, SEEK_END);
-        const size_t len = ftell(f);
+        const size_t len = lseek(f, 0, SEEK_END);
 
-        struct trans t;
-        for(size_t i = 0; i < len; i += sizeof(struct trans))
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
         {
-            fseek(f, i, SEEK_SET);
+            close(f);
 
-            uint fc = 0;
-            while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
-                fclose(f);
-                f = fopen(CHAIN_FILE, "r");
-                fc++;
-                if(fc > 333)
-                {
-                    printf("ERROR: fread() in printOuts() has failed.\n");
-                    fclose(f);
-                    return;
-                }
-                if(f == NULL)
-                    continue;
-            }
+                memcpy(&t, m+i, sizeof(struct trans));
 
-            if(t.uid == uid)
-            {
                 char from[MIN_LEN];
                 memset(from, 0, sizeof(from));
                 size_t len = MIN_LEN;
@@ -2198,15 +2054,68 @@ void findTrans(const uint64_t uid)
                 b58enc(sig, &len3, t.owner.key, ECC_CURVE*2);
 
                 setlocale(LC_NUMERIC, "");
-                //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
-                printf("%d,%lu,%s,%s,%s,%.3f\n",(int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
+                printf("%d,%lu,%s,%s,%s,%.3f\n", (int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
 
-                return;
+                if(i >= toR * sizeof(struct trans))
+                {
+                    break;
+                }
             }
-            
+
+            munmap(m, len);
         }
 
-        fclose(f);
+        close(f);
+    }
+}
+
+//find a specific transaction by UID
+void findTrans(const uint64_t uid)
+{
+    int f = open(CHAIN_FILE, O_RDONLY);
+    if(f)
+    {
+        const size_t len = lseek(f, 0, SEEK_END);
+
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
+        {
+            close(f);
+
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
+            {
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                if(t.uid == uid)
+                {
+                    char from[MIN_LEN];
+                    memset(from, 0, sizeof(from));
+                    size_t len = MIN_LEN;
+                    b58enc(from, &len, t.from.key, ECC_CURVE+1);
+
+                    char to[MIN_LEN];
+                    memset(to, 0, sizeof(from));
+                    size_t len2 = MIN_LEN;
+                    b58enc(to, &len2, t.to.key, ECC_CURVE+1);
+
+                    char sig[MIN_LEN];
+                    memset(sig, 0, sizeof(sig));
+                    size_t len3 = MIN_LEN;
+                    b58enc(sig, &len3, t.owner.key, ECC_CURVE*2);
+
+                    setlocale(LC_NUMERIC, "");
+                    //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
+                    printf("%d,%lu,%s,%s,%s,%.3f\n",(int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
+
+                    return;
+                }
+            }
+
+            munmap(m, len);
+        }
+
+        close(f);
     }
     printf("Transaction could not be found.\n");
 }
@@ -2217,98 +2126,54 @@ uint64_t getBalanceLocal(addr* from)
     //Get local Balance
     int64_t rv = isSubGenesisAddress(from->key, 0);
 
-    if(is8664 == 1) // mmap() memory mapped version
+    int f = open(CHAIN_FILE, O_RDONLY);
+    if(f)
     {
-        int f = open(CHAIN_FILE, O_RDONLY);
-        if(f)
+        const size_t len = lseek(f, 0, SEEK_END);
+
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
         {
-            const size_t len = lseek(f, 0, SEEK_END);
-
-            unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-            if(m != MAP_FAILED)
-            {
-                close(f);
-
-                struct trans t;
-                for(size_t i = 0; i < len; i += sizeof(struct trans))
-                {
-                    memcpy(&t, m+i, sizeof(struct trans));
-
-#if MASTER_NODE == 0
-                    //re-enforce each transaction over network using sporadic distribution; limited to mmap() branch only
-                    const uint32_t origin = 0;
-                    const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
-                    char pc[MIN_LEN];
-                    pc[0] = 't'; //send as a regular transaction, bypass replay allow blocking but will have double spend throttling
-                    char* ofs = pc + 1;
-                    memcpy(ofs, &origin, sizeof(uint32_t));
-                    ofs += sizeof(uint32_t);
-                    memcpy(ofs, &t.uid, sizeof(uint64_t));
-                    ofs += sizeof(uint64_t);
-                    memcpy(ofs, t.from.key, ECC_CURVE+1);
-                    ofs += ECC_CURVE+1;
-                    memcpy(ofs, t.to.key, ECC_CURVE+1);
-                    ofs += ECC_CURVE+1;
-                    memcpy(ofs, &t.amount, sizeof(mval));
-                    ofs += sizeof(mval);
-                    memcpy(ofs, t.owner.key, ECC_CURVE*2);
-                    triBroadcast(pc, len, 3); //Just tell a random few peers or we will start triggering transaction duplication logs in badblocks 
-                    //                        particularly on outgoing transactions. This is just to support the replay redundency at a minimal cost.
-#endif
-
-                    if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
-                        rv += t.amount;
-                    else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
-                        rv -= t.amount;
-                }
-
-                munmap(m, len);
-            }
-
             close(f);
-        }
-    }
-    else // lower memory intensive version
-    {
-        FILE* f = fopen(CHAIN_FILE, "r");
-        if(f)
-        {
-            fseek(f, 0, SEEK_END);
-            const size_t len = ftell(f);
 
             struct trans t;
             for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
-                fseek(f, i, SEEK_SET);
+                memcpy(&t, m+i, sizeof(struct trans));
 
-                struct trans t;
-                uint fc = 0;
-                while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
-                {
-                    fclose(f);
-                    f = fopen(CHAIN_FILE, "r");
-                    fc++;
-                    if(fc > 333)
-                    {
-                        printf("ERROR: fread() in getBalanceLocal() has failed.\n");
-                        err++;
-                        fclose(f);
-                        return 0;
-                    }
-                    if(f == NULL)
-                        continue;
-                }
+#if MASTER_NODE == 0
+                //re-enforce each transaction over network using sporadic distribution; limited to mmap() branch only
+                const uint32_t origin = 0;
+                const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+                char pc[MIN_LEN];
+                pc[0] = 't'; //send as a regular transaction, bypass replay allow blocking but will have double spend throttling
+                char* ofs = pc + 1;
+                memcpy(ofs, &origin, sizeof(uint32_t));
+                ofs += sizeof(uint32_t);
+                memcpy(ofs, &t.uid, sizeof(uint64_t));
+                ofs += sizeof(uint64_t);
+                memcpy(ofs, t.from.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, t.to.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, &t.amount, sizeof(mval));
+                ofs += sizeof(mval);
+                memcpy(ofs, t.owner.key, ECC_CURVE*2);
+                triBroadcast(pc, len, 3); //Just tell a random few peers or we will start triggering transaction duplication logs in badblocks 
+                //                        particularly on outgoing transactions. This is just to support the replay redundency at a minimal cost.
+#endif
 
                 if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
                     rv += t.amount;
-                if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
                     rv -= t.amount;
             }
 
-            fclose(f);
+            munmap(m, len);
         }
+
+        close(f);
     }
-    
 
     if(rv < 0)
         return 0;
@@ -2434,127 +2299,61 @@ void networkDifficulty()
 //Calculate if an address has the value required to make a transaction of x amount.
 int hasbalance(const uint64_t uid, addr* from, mval amount)
 {
+    //Is subGenesis?
     int64_t rv = isSubGenesisAddress(from->key, 0);
 
-    if(is8664 == 1) //mmap on x86_64
+    //Try to open the chain file
+    int f = open(CHAIN_FILE, O_RDONLY);
+
+    //Too critical to fail
+    uint fc = 0;
+    while(f == -1)
     {
-        int f = open(CHAIN_FILE, O_RDONLY);
-
-        //Too critical to fail
-        uint fc = 0;
-        while(f == -1)
+        fc++;
+        if(fc > 333)
         {
-            fc++;
-            if(fc > 333)
-            {
-                printf("ERROR: open() in hasbalance() has failed.\n");
-                err++;
-                return ERROR_OPEN;
-            }
-
-            f = open(CHAIN_FILE, O_RDONLY);
+            printf("ERROR: open() in hasbalance() has failed.\n");
+            err++;
+            return ERROR_OPEN;
         }
 
-        //No need for this if really
-        if(f)
+        f = open(CHAIN_FILE, O_RDONLY);
+    }
+
+    //Look's like we have the file handle...
+    const size_t len = lseek(f, 0, SEEK_END);
+
+    unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+    if(m != MAP_FAILED)
+    {
+        close(f);
+
+        struct trans t;
+        for(size_t i = 0; i < len; i += sizeof(struct trans))
         {
-            const size_t len = lseek(f, 0, SEEK_END);
-
-            unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-            if(m != MAP_FAILED)
+            if(t.uid == uid)
             {
-                close(f);
-
-                struct trans t;
-                for(size_t i = 0; i < len; i += sizeof(struct trans))
-                {
-                    if(t.uid == uid)
-                    {
-                        munmap(m, len);
-                        // if(amount == 333)
-                        // {
-                        //     printf("hasbalance(): UID exists failed\n");
-                        //     printf("%lu = %lu\n", t.uid, uid);
-                        //     printf("%u = %u\n", t.amount, amount);
-                        // }
-                        return ERROR_UIDEXIST;
-                    }
-                    memcpy(&t, m+i, sizeof(struct trans));
-
-                    if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
-                        rv += t.amount;
-                    else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
-                        rv -= t.amount;
-                }
-
                 munmap(m, len);
+                // if(amount == 333)
+                // {
+                //     printf("hasbalance(): UID exists failed\n");
+                //     printf("%lu = %lu\n", t.uid, uid);
+                //     printf("%u = %u\n", t.amount, amount);
+                // }
+                return ERROR_UIDEXIST;
             }
+            memcpy(&t, m+i, sizeof(struct trans));
 
-            close(f);
+            if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
+                rv += t.amount;
+            else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                rv -= t.amount;
         }
+
+        munmap(m, len);
     }
-    else //Other devices use a lower memory intensive version
-    {
-        FILE* f = fopen(CHAIN_FILE, "r");
 
-        //Too critical to fail
-        uint fc = 0;
-        while(f == NULL)
-        {
-            fc++;
-            if(fc > 333)
-            {
-                printf("ERROR: fopen() in hasbalance() has failed.\n");
-                err++;
-                return ERROR_OPEN;
-            }
-
-            f = fopen(CHAIN_FILE, "r");
-        }
-
-        //No need for this if really
-        if(f)
-        {
-            fseek(f, 0, SEEK_END);
-            const size_t len = ftell(f);
-
-            struct trans t;
-            for(size_t i = 0; i < len; i += sizeof(struct trans))
-            {
-                fseek(f, i, SEEK_SET);
-
-                struct trans t;
-                uint fc = 0;
-                while(fread(&t, 1, sizeof(struct trans), f) != sizeof(struct trans))
-                {
-                    fclose(f);
-                    f = fopen(CHAIN_FILE, "r");
-                    fc++;
-                    if(fc > 333)
-                    {
-                        printf("ERROR: fread() in getBalanceLocal() has failed.\n");
-                        err++;
-                        fclose(f);
-                        return 0;
-                    }
-                    if(f == NULL)
-                        continue;
-                }
-
-                if(t.uid == uid)
-                {
-                    fclose(f);
-                    return ERROR_UIDEXIST;
-                }
-                if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
-                    rv += t.amount;
-                if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
-                    rv -= t.amount;
-            }
-
-            fclose(f);
-        }
-    }
+    close(f);
 
     if(rv >= amount)
         return 1;
@@ -2562,81 +2361,8 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
         return 0;
 }
 
-//Is transaction unique
-int isUnique(const uint64_t uid)
-{
-    if(is8664 == 1) //mmap on x86_64
-    {
-        int f = open(CHAIN_FILE, O_RDONLY);
-        if(f)
-        {
-            const size_t len = lseek(f, 0, SEEK_END);
 
-            unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-            if(m != MAP_FAILED)
-            {
-                close(f);
-
-                uint64_t tuid = 0;
-                for(size_t i = 0; i < len; i += sizeof(struct trans))
-                {
-                    memcpy(&tuid, m+i, sizeof(uint64_t));
-                    if(tuid == uid)
-                        return 0;
-                }
-
-                munmap(m, len);
-            }
-
-            close(f);
-        }
-    }
-    else //Other devices use a lower memory intensive version
-    {
-        FILE* f = fopen(CHAIN_FILE, "r");
-        if(f)
-        {
-            fseek(f, 0, SEEK_END);
-            const size_t len = ftell(f);
-
-            uint64_t tuid = 0;
-            for(size_t i = 0; i < len; i += sizeof(struct trans))
-            {
-                fseek(f, i, SEEK_SET);
-
-                uint64_t tuid = 0;
-                uint fc = 0;
-                while(fread(&tuid, 1, sizeof(uint64_t), f) != sizeof(uint64_t))
-                {
-                    fclose(f);
-                    f = fopen(CHAIN_FILE, "r");
-                    fc++;
-                    if(fc > 333)
-                    {
-                        printf("ERROR: fread() in getBalanceLocal() has failed.\n");
-                        err++;
-                        fclose(f);
-                        return 0;
-                    }
-                    if(f == NULL)
-                        continue;
-                }
-
-                if(tuid == uid)
-                    return 0;
-            }
-
-            fclose(f);
-        }
-    }
-
-    return 1;
-}
-
-
-//rExi check, last line of defense to prevent race conditions
-//I cannot explain why the mutex seems to fail at times without
-//this final check.
+//rExi check, last line of defense to prevent race conditions if the process mutex fails
 uint64_t uidlist[MAX_REXI_SIZE];
 time_t uidtimes[MAX_REXI_SIZE];
 uint rExi(uint64_t uid)
@@ -2886,14 +2612,14 @@ void loadConfig(const uint stat)
                 if(stat == 1)
                     printf("Setting Loaded: %s %u\n", set, val);
 
-                if(strcmp(set, "mmap") == 0) //mmap is best disabled on arm devices with low memory
-                    is8664 = val;
-
                 if(strcmp(set, "multi-threaded") == 0) //Single threaded is more stable.
                     single_threaded = val == 0 ? 1 : 0;
 
                 if(strcmp(set, "replay-delay") == 0) //Default 1,000, the higher the number the less bandwith used refer to notes in getReplatRate() function.
                     replay_packet_delay = val;
+
+                if(strcmp(set, "replay-threads") == 0) //Default is variable based on CPU core count, max is 512
+                    MAX_THREADS = val;
             }
         }
         fclose(f);
@@ -3067,7 +2793,7 @@ void *generalThread(void *arg)
             networkDifficulty(); //Recalculate the network difficulty
         }
 
-        //Let's execute a Sync every 3 mins
+        //Let's execute a Sync every 1 hour  /////  [ This should NEVER be automatic ]
         // if(time(0) > rs)
         // {
         //     //How many peers we sync off depends on the number of logical cores
@@ -3076,7 +2802,7 @@ void *generalThread(void *arg)
         //     else
         //         resyncBlocks(1);
             
-        //     rs = time(0) + 180;
+        //     rs = time(0) + 3600;
         // }
 
         //Check which of the peers are still alive, those that are, update their timestamps
@@ -3806,6 +3532,9 @@ void truncate_at_error(const char* file, const size_t num)
 
     If still in doubt, here are the functions to perform the analysis which will allow you to identify if a transaction
     has been saved to the blocks.dat more than once under the same UID.
+
+    cleanChain() - Fast pDUP check
+    cleanChainFull() - Slow but 100% accurate chain rebuild, single pass.
 */
 void newClean()
 {
@@ -4058,30 +3787,23 @@ int main(int argc , char *argv[])
         exit(0);
     }
 
-    //is x86_64? only use mmap on x86_64
-    // struct utsname ud;
-    // uname(&ud);
-    // if(strcmp(ud.machine, "x86_64") != 0)
-    // {
-    //     is8664 = 0;
-    //     printf("Running without mmap() as system is not x86_64. Unless specified in ~vfc/vfc.cnf\n\n");
-    // }
-
-    //Load the config file
-    loadConfig(0);
-    uint command_skip = 0;
-
-    // < Peer arrays do not need initilisation > .. (apart from this one)
-    for(uint i = 0; i < MAX_PEERS; i++)
-        peer_rm[i] = time(0);
-
     //Workout size of server for replay scaling
     num_processors = get_nprocs();
     nthreads = num_processors;
     if(nthreads > 2)
         MAX_THREADS = 8*(nthreads-2);
+
+    //Load the config file
+    loadConfig(0);
+    uint command_skip = 0;
+
+    //Make sure MAX_THREADS value is limited by the buff size
     if(MAX_THREADS > MAX_THREADS_BUFF)
         MAX_THREADS = MAX_THREADS_BUFF;
+
+    // < Peer arrays do not need initilisation > .. (apart from this one)
+    for(uint i = 0; i < MAX_PEERS; i++)
+        peer_rm[i] = time(0);
 
     //create vfc dir
 #if RUN_AS_ROOT == 1
