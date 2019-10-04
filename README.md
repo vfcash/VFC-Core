@@ -129,8 +129,7 @@ Use the command ```vfc difficulty``` for more information.
 # Configuration File
 - **multi-threaded 1**  - Uses more CPU Cores
 - **multi-threaded 0**  - Uses only one CPU Core
-- **mmap 1**            - Uses more memory (RAM)
-- **mmap 0**            - Uses less memory and more CPU
+- **replay-threads 32** - Replays blockchain data to a maximum of 32 peers simultaneously.
 - **replay-delay 1000** - Uses less TX bandwidth
 - **replay-delay 1**    - Uses more TX bandwidth
 
