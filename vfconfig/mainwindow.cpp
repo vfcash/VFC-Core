@@ -240,7 +240,7 @@ void MainWindow::on_single_config_clicked()
     if (file.open(QIODevice::WriteOnly))
     {
         QTextStream stream(&file);
-        stream << "multi-threaded 0\nmmap 1\nreplay-delay 1000\n";
+        stream << "multi-threaded 0\replay-threads 8\nreplay-delay 1000\n";
     }
     loadConfig();
 }
@@ -251,7 +251,7 @@ void MainWindow::on_multi_config_clicked()
     if (file.open(QIODevice::WriteOnly))
     {
         QTextStream stream(&file);
-        stream << "multi-threaded 1\nmmap 1\nreplay-delay 1000\n";
+        stream << "multi-threaded 1\nreplay-threads 32\nreplay-delay 1000\n";
     }
     loadConfig();
 }
@@ -262,7 +262,7 @@ void MainWindow::on_minimal_config_clicked()
     if (file.open(QIODevice::WriteOnly))
     {
         QTextStream stream(&file);
-        stream << "multi-threaded 0\nmmap 0\nreplay-delay 10000\n";
+        stream << "multi-threaded 0\nreplay-threads 3\nreplay-delay 10000\n";
     }
     loadConfig();
 }
