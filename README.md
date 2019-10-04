@@ -104,7 +104,7 @@ All nodes by default will run in single threaded mode, and will use mmap if the 
 If you intend to run a serious node on the network which uses a dedicated server it is recommend to create a `vfc.cnf` configuration file in `~/.vfc/` with the following settings
 ```
 multi-threaded 1
-mmap 1
+replay-threads 96
 replay-delay 1000
 ```
 This will set your node to use all CPU cores available for transaction processing, it will also allow the blockchain file to be mapped to memory via the use of [mmap()](http://man7.org/linux/man-pages/man2/mmap.2.html) which will significantly increase transaction processing speed.
