@@ -2217,7 +2217,7 @@ uint64_t getBalanceLocal(addr* from)
     //Get local Balance
     int64_t rv = isSubGenesisAddress(from->key, 0);
 
-    if(is8664 == 1) //mmap on x86_64
+    if(is8664 == 1) // mmap() memory mapped version
     {
         int f = open(CHAIN_FILE, O_RDONLY);
         if(f)
@@ -2234,6 +2234,28 @@ uint64_t getBalanceLocal(addr* from)
                 {
                     memcpy(&t, m+i, sizeof(struct trans));
 
+#if MASTER_NODE == 0
+                    //re-enforce each transaction over network using sporadic distribution; limited to mmap() branch only
+                    const uint32_t origin = 0;
+                    const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+                    char pc[MIN_LEN];
+                    pc[0] = 't'; //send as a regular transaction, bypass replay allow blocking but will have double spend throttling
+                    char* ofs = pc + 1;
+                    memcpy(ofs, &origin, sizeof(uint32_t));
+                    ofs += sizeof(uint32_t);
+                    memcpy(ofs, &t.uid, sizeof(uint64_t));
+                    ofs += sizeof(uint64_t);
+                    memcpy(ofs, t.from.key, ECC_CURVE+1);
+                    ofs += ECC_CURVE+1;
+                    memcpy(ofs, t.to.key, ECC_CURVE+1);
+                    ofs += ECC_CURVE+1;
+                    memcpy(ofs, &t.amount, sizeof(mval));
+                    ofs += sizeof(mval);
+                    memcpy(ofs, t.owner.key, ECC_CURVE*2);
+                    triBroadcast(pc, len, 3); //Just tell a random few peers or we will start triggering transaction duplication logs in badblocks 
+                    //                        particularly on outgoing transactions. This is just to support the replay redundency at a minimal cost.
+#endif
+
                     if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
                         rv += t.amount;
                     else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
@@ -2246,7 +2268,7 @@ uint64_t getBalanceLocal(addr* from)
             close(f);
         }
     }
-    else //Other devices use a lower memory intensive version
+    else // lower memory intensive version
     {
         FILE* f = fopen(CHAIN_FILE, "r");
         if(f)
@@ -2276,30 +2298,6 @@ uint64_t getBalanceLocal(addr* from)
                     if(f == NULL)
                         continue;
                 }
-
-                
-#if MASTER_NODE == 0
-                //re-enforce each transaction over network using sporadic distribution; limited to mmap() branch only
-                const uint32_t origin = 0;
-                const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
-                char pc[MIN_LEN];
-                pc[0] = 't'; //send as a regular transaction, bypass replay allow blocking but will have double spend throttling
-                char* ofs = pc + 1;
-                memcpy(ofs, &origin, sizeof(uint32_t));
-                ofs += sizeof(uint32_t);
-                memcpy(ofs, &t.uid, sizeof(uint64_t));
-                ofs += sizeof(uint64_t);
-                memcpy(ofs, t.from.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, t.to.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, &t.amount, sizeof(mval));
-                ofs += sizeof(mval);
-                memcpy(ofs, t.owner.key, ECC_CURVE*2);
-                triBroadcast(pc, len, 3); //Just tell a random few peers or we will start triggering transaction duplication logs in badblocks 
-                //                        particularly on outgoing transactions. This is just to support the replay redundency at a minimal cost.
-#endif
-
 
                 if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
                     rv += t.amount;
