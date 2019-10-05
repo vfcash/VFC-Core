@@ -44,6 +44,22 @@
     This client will try to broadcast all transactions through the master first
     and then the peer list.
 
+    ~? WHAT IS IF RUN AS MASTER_NODE = 1:
+
+    If you run the client in MASTER_NODE 1 mode, this is what will happen:
+    1. User directory will move from ~/.vfc to /srv/.vfc
+    2. Master node will exclude itself from some network send operations
+    3. Master node will track peers and log to file valid reward payment commands,
+        these commands can then later be executed in the bash terminal in-order
+        to pay out the rewards payments, or the file can be used to infer analytics.
+
+    When should you run the node as MASTER_NODE 1? When you are exposing a public
+    service such as the PHP REST API, in these cases it's best to run as a MASTER NODE
+    to reduce your TX output.
+        If you are just a regular user, using VFC privately exposing no web-services
+    it's much better to run as regular as running in MASTER_NODE 1 will disable important
+    user functionality for normal day-to-day operation as a user wallet.
+
     Distributed under the MIT software license, see the accompanying
     file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -95,7 +111,7 @@ const uint16_t gport = 8787;
 #define ERROR_OPEN -5
 
 //Node Settings
-#define MAX_TRANS_QUEUE 8192            // Maximum transaction backlog to keep in real-time (the lower the better tbh, only benefits from a higher number during block replays)
+#define MAX_TRANS_QUEUE 8192            // Maximum transaction backlog to keep in real-time [8192 / 3 = 2,730 TPS]
 #define MAX_REXI_SIZE MAX_TRANS_QUEUE   // Need to be atleast MAX_TRANS_QUEUE / 3
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
@@ -133,9 +149,8 @@ char myrewardkey[MIN_LEN];           //client reward addr public key
 char myrewardkeyp[MIN_LEN];          //client reward addr private key
 uint8_t genesis_pub[ECC_CURVE+1];    //genesis address public key
 uint thread_ip[MAX_THREADS_BUFF];    //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
-uint nthreads = 0;                   //number of mining threads
-uint threads = 0;                    //number of replay threads
-uint MAX_THREADS = 6;                //maximum number of replay threads
+uint nthreads = 0;                   //number of running mining threads
+uint threads = 0;                    //number of running replay threads
 uint num_processors = 1;             //number of logical processors on the device
 size_t MAX_SITES = 11111101;         //Maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes. [433024253 = 3,464 mb]
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
@@ -147,6 +162,7 @@ pthread_mutex_t mutex5 = PTHREAD_MUTEX_INITIALIZER;
 //User-Configurable
 uint single_threaded = 0;
 uint replay_packet_delay = 1000;
+uint max_replay_threads = 6;                //maximum number of replay threads
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
@@ -790,7 +806,6 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
     isPeer() - Check if peer already exists in list.
     
     peersBroadcast() - Broadcast a packet to the peers (skipping master)
-    sendMaster() - Only send packet to master
 
 */
 
@@ -1016,11 +1031,6 @@ void resyncBlocks(const uint irnp)
     
     //Set the file memory
     forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_PEERS);
-}
-
-uint sendMaster(const char* dat, const size_t len)
-{
-    return csend(peers[0], dat, len);
 }
 
 uint isPeer(const uint ip)
@@ -1410,13 +1420,6 @@ int gQue()
                 return i;
     }
     return -1;
-    // for(uint i = 0; i < MAX_TRANS_QUEUE; i++)
-    // {
-    //     if(tq[i].amount != 0)
-    //         if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
-    //             return i;
-    // }
-    // return -1;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1531,7 +1534,7 @@ uint32_t replay_peers[MAX_THREADS_BUFF];
 //Get replay peer
 uint32_t getRP()
 {
-    for(int i = 0; i < MAX_THREADS; ++i)
+    for(int i = 0; i < max_replay_threads; ++i)
     {
         if(replay_peers[i] != 0)
         {
@@ -1546,7 +1549,7 @@ uint32_t getRP()
 //Set replay peer ip
 void setRP(const uint32_t ip)
 {
-    for(int i = 0; i < MAX_THREADS; ++i)
+    for(int i = 0; i < max_replay_threads; ++i)
     {
         if(replay_peers[i] == 0)
         {
@@ -1786,7 +1789,7 @@ pthread_mutex_unlock(&mutex1);
     //End the thread
     pthread_mutex_lock(&mutex1);
     threads--;
-    for(int i = 0; i < MAX_THREADS; i++)
+    for(int i = 0; i < max_replay_threads; i++)
         if(thread_ip[i] == ip)
             thread_ip[i] = 0;
     pthread_mutex_unlock(&mutex1);
@@ -1797,12 +1800,12 @@ pthread_mutex_unlock(&mutex1);
 void launchReplayThread(const uint32_t ip)
 {
     //Are there enough thread slots left?
-    if(threads >= MAX_THREADS)
+    if(threads >= max_replay_threads)
         return;
 
     //Are we already replaying to this IP address?
     uint cp = 1;
-    for(uint i = 0; i < MAX_THREADS; i++)
+    for(uint i = 0; i < max_replay_threads; i++)
         if(thread_ip[i] == ip)
             cp = 0;
 
@@ -2221,78 +2224,12 @@ float liveNetworkDifficulty()
 
 void networkDifficulty()
 {
+    //Get the current network difficulty
     network_difficulty = liveNetworkDifficulty();
 
-    //Broadcast for legacy nodes <= 0.62
+    //Broadcast set as node difficulty and broadcast
     node_difficulty = network_difficulty;
     broadcastUserAgent();
-
-/*#if MASTER_NODE == 1
-    remove(".vfc/netdiff.txt");
-    int MAX_VOTES_PER_POSITION = (countLivingPeers()*1.23)/209;
-    if(MAX_VOTES_PER_POSITION < 1)
-        MAX_VOTES_PER_POSITION = 1;
-    network_difficulty = 0; //reset
-    uint divisor = 0;
-    double added[MAX_PEERS]; //max votes per position
-    uint added_index = 0;
-    for(uint p = 1; p < MAX_PEERS; p++)
-    {
-        if(isPeerAlive(p) == 1)
-        {   
-            //Peer difficulty
-            const float diff = getPeerDiff(p);
-            //printf("DBG: %s - %.3f\n", cf, diff);
-
-            //check if difficulty already added
-            uint exists = 0;
-            for(uint i = 0; i < added_index; i++)
-            {
-                if(added[i] == diff)
-                {
-                    exists++;
-                    if(exists >= MAX_VOTES_PER_POSITION) //max votes per position
-                        break;
-                }
-            }
-
-            //Is it in the valid range
-            if(diff >= 0.030 && diff <= 0.240 && exists < MAX_VOTES_PER_POSITION)
-            {
-                added[added_index] = diff;
-                added_index++;
-                network_difficulty += diff;
-                divisor++;
-
-                struct in_addr ip_addr;
-                ip_addr.s_addr = peers[p];
-                FILE* f = fopen(".vfc/netdiff.txt", "a");
-                if(f)
-                {
-                    fprintf(f, "%s: %.3f\n", inet_ntoa(ip_addr), diff);
-                    fclose(f);
-                }
-            }
-        }
-    }
-    if(divisor > 1 && network_difficulty > 0)
-        network_difficulty /= divisor;
-
-    //Limit
-    if(network_difficulty < 0.031)
-        network_difficulty = 0.031;
-    if(network_difficulty > 0.240)
-        network_difficulty = 0.240;
-
-    //Correctly round the final value to three decimal places.
-    network_difficulty = roundFloat(network_difficulty);
-    node_difficulty = network_difficulty;
-    broadcastUserAgent();
-#else
-    csend(peers[0], "a", 1);
-    sleep(3000);
-    network_difficulty = getPeerDiff(0);
-#endif*/
 }
 
 
@@ -2619,7 +2556,7 @@ void loadConfig(const uint stat)
                     replay_packet_delay = val;
 
                 if(strcmp(set, "replay-threads") == 0) //Default is variable based on CPU core count, max is 512
-                    MAX_THREADS = val;
+                    max_replay_threads = val;
             }
         }
         fclose(f);
@@ -2730,7 +2667,7 @@ uint isNodeRunning()
 
     int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if(s == -1)
-        return 1;
+        return 1; //Might be running, we can't risk it, say it's running
 
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
@@ -2739,11 +2676,11 @@ uint isNodeRunning()
     if(bind(s, (struct sockaddr*)&server, sizeof(server)) == 0)
     {
         close(s);
-        return 0;
+        return 0; //Bind success, we where not already running.
     }
 
     close(s);
-    return 1;
+    return 1; //Say it's running
 }
 
 void *generalThread(void *arg)
@@ -3418,8 +3355,9 @@ void *networkThread(void *arg)
         //master is requesting clients reward public key to make a payment
         else if(rb[0] == 'x' && read_size == 1)
         {
-            //Only the master can pay out rewards from the pre-mine
-            if(isMasterNode(client.sin_addr.s_addr) == 1)
+            //A peer is requesting your nodes rewards public key
+            const int p = getPeer(client.sin_addr.s_addr);
+            if(p != -1)
                 csend(client.sin_addr.s_addr, myrewardkey, strlen(myrewardkey));
         }
     
@@ -3791,15 +3729,15 @@ int main(int argc , char *argv[])
     num_processors = get_nprocs();
     nthreads = num_processors;
     if(nthreads > 2)
-        MAX_THREADS = 8*(nthreads-2);
+        max_replay_threads = 8*(nthreads-2);
 
     //Load the config file
     loadConfig(0);
     uint command_skip = 0;
 
-    //Make sure MAX_THREADS value is limited by the buff size
-    if(MAX_THREADS > MAX_THREADS_BUFF)
-        MAX_THREADS = MAX_THREADS_BUFF;
+    //Make sure max_replay_threads value is limited by the buff size
+    if(max_replay_threads > MAX_THREADS_BUFF)
+        max_replay_threads = MAX_THREADS_BUFF;
 
     // < Peer arrays do not need initilisation > .. (apart from this one)
     for(uint i = 0; i < MAX_PEERS; i++)
@@ -4814,7 +4752,7 @@ int main(int argc , char *argv[])
     memset(peers, 0, sizeof(uint)*MAX_PEERS);
     memset(peer_timeouts, 0, sizeof(uint)*MAX_PEERS);
 
-    memset(&thread_ip, 0, sizeof(uint)*MAX_THREADS);
+    memset(&thread_ip, 0, sizeof(uint)*max_replay_threads);
     memset(&tq, 0, sizeof(struct trans)*MAX_TRANS_QUEUE);
     memset(&ip, 0, sizeof(uint)*MAX_TRANS_QUEUE);
     memset(&ipo, 0, sizeof(uint)*MAX_TRANS_QUEUE);
@@ -5060,7 +4998,7 @@ while(1)
     time_t tt = time(0);
     while(1)
     {
-        printf("STAT: Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %llu\n", countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, MAX_THREADS, err);
+        printf("STAT: Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %llu\n", countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, max_replay_threads, err);
         tt = time(0);
         sleep(180);
     }
