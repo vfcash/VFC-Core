@@ -240,7 +240,7 @@ void MainWindow::on_single_config_clicked()
     if (file.open(QIODevice::WriteOnly))
     {
         QTextStream stream(&file);
-        stream << "multi-threaded 0\replay-threads 8\nreplay-delay 1000\n";
+        stream << "multi-threaded 0\nreplay-threads 8\nreplay-delay 1000\n";
     }
     loadConfig();
 }
