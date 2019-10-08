@@ -1202,7 +1202,6 @@ pthread_mutex_lock(&mutex4);
         {
 
             peer_timeouts[i] = time(0) + MAX_PEER_EXPIRE_SECONDS;
-            peer_tcount[i]++;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if(single_threaded == 0)
 pthread_mutex_unlock(&mutex4);
@@ -3198,6 +3197,7 @@ void *networkThread(void *arg)
                 memcpy(ofs, &t.amount, sizeof(mval));
                 ofs += sizeof(mval);
                 memcpy(ofs, t.owner.key, ECC_CURVE*2);
+                peer_tcount[getPeer(origin)]++; //race condition possible, but not mission critical statistic
 
                 if(qrv == 1) //Transaction Added to Que
                     triBroadcast(pc, trans_size, 3);
@@ -4025,6 +4025,19 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "trunc") == 0)
         {
             truncate_at_error(CHAIN_FILE, atoi(argv[2]));
+            exit(0);
+        }
+
+        //send raw transaction packet provided as base58 over udp
+        if(strcmp(argv[1], "stp") == 0)
+        {
+            setMasterNode();
+            loadmem();
+            
+            char packet[147];
+            size_t len = 147;
+            b58tobin(packet, &len, argv[2], strlen(argv[2]));
+            peersBroadcast(packet, 147);
             exit(0);
         }
 
