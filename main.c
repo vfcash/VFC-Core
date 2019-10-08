@@ -4800,6 +4800,37 @@ int main(int argc , char *argv[])
         exit(0);
     }
 
+    //GET TRANS HASH
+    if(argc == 6)
+    {
+        //Recover data from parameters
+        uint8_t from[ECC_CURVE+1];
+        uint8_t to[ECC_CURVE+1];
+        size_t blen = ECC_CURVE+1;
+        b58tobin(from, &blen, argv[1], strlen(argv[1]));
+        b58tobin(to, &blen, argv[2], strlen(argv[2]));
+        const mval sbal = fromDB(atof(argv[3]));
+        
+        //Construct Transaction
+        struct trans t;
+        memset(&t, 0, sizeof(struct trans));
+        memcpy(t.from.key, from, ECC_CURVE+1);
+        memcpy(t.to.key, to, ECC_CURVE+1);
+        t.amount = sbal;
+        t.uid = strtoull(argv[4], NULL, 10);
+
+        //Sign the block
+        uint8_t thash[ECC_CURVE];
+        makHash(thash, &t);
+
+        char bhash[MIN_LEN];
+        memset(bhash, 0, sizeof(bhash));
+        size_t zlen = MIN_LEN;
+        b58enc(bhash, &zlen, thash, ECC_CURVE);
+        printf("%s\n", bhash);
+        exit(0);
+    }
+
     //EXECT TRANS | EXECUTE TRANSACTION
     if(argc == 5)
     {

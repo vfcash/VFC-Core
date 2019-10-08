@@ -1,6 +1,7 @@
 #include <QProcess>
 #include <QLocale>
 #include <QDir>
+#include <QUrl>
 #include <QThread>
 #include <QTextStream>
 #include <QMessageBox>
@@ -195,6 +196,7 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     killTimer(timerId);
+    killTimer(timerId2);
     delete ui;
 }
 
