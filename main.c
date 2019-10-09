@@ -959,7 +959,7 @@ uint isMasterNode(const uint ip)
 
 void setMasterNode()
 {
-    peers[0] = HOSTtoIPv4("vfcash.uk");
+    peers[0] = HOSTtoIPv4("vfcash.co.uk");
     sprintf(peer_ua[0], "VFC-SEED");
 }
 
