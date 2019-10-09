@@ -86,6 +86,7 @@
 #include <signal.h> //SIGPIPE
 #include <pthread.h> //Threading
 #include <execinfo.h> //backtrace
+#include <netdb.h> //gethostbyname
 
 #include "ecc.h"
 #include "sha3.h"
@@ -435,6 +436,20 @@ int isPrivateAddress(const uint32_t iip)
         return 1;
 
     return 0;
+}
+
+//Only needs to support IPv4 as such using the depreciated gethostbyname() function over getaddrinfo()
+uint32_t HOSTtoIPv4(const char* ihost)
+{
+    struct hostent* host = gethostbyname(ihost);
+	if(host == NULL) 
+	    return 0;
+
+	struct in_addr** addr = (struct in_addr**)host->h_addr_list;
+	for(int i = 0; addr[i] != NULL; i++) 
+	    return addr[i]->s_addr;
+	
+	return 0;
 }
 
 uint getReplayRate()
@@ -944,15 +959,8 @@ uint isMasterNode(const uint ip)
 
 void setMasterNode()
 {
-    struct in_addr a;
-    inet_aton("198.204.248.26", &a);
-    peers[0] = a.s_addr;
-    sprintf(peer_ua[0], "VFC-SEED0");
-
-    inet_aton("207.180.252.56", &a);
-    peers[1] = a.s_addr;
-    peer_timeouts[1] =  time(0) + MAX_PEER_EXPIRE_SECONDS;
-    sprintf(peer_ua[0], "VFC-SEED1");
+    peers[0] = HOSTtoIPv4("vfcash.uk");
+    sprintf(peer_ua[0], "VFC-SEED");
 }
 
 void peersBroadcast(const char* dat, const size_t len)
