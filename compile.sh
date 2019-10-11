@@ -5,6 +5,7 @@ apt install --assume-yes crontab
 apt install --assume-yes wget
 apt install --assume-yes gcc
 apt install --assume-yes xterm
+apt install --assume-yes qt5-default
 clear
 clear
 pkill vfc
