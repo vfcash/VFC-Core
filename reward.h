@@ -17,6 +17,6 @@
 #define INFLATION_TAX 1000
 
 // Reward Command
-const char reward_command[]="vfc dDWmPjoUtMyvL7gtQwJxpFcE1VHCdY1ahVZpcFCSUfuK%s %u privatekey_removed > /dev/null";
+const char reward_command[]="vfc dDWmPjoUtMyvL7gtQwJxpFcE1VHCdY1ahVZpcFCSUfuK%s %.3f privatekey_removed > /dev/null";
 
 #endif
