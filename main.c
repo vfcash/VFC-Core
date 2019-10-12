@@ -2737,6 +2737,9 @@ void *generalThread(void *arg)
 
             //It's time !!
             networkDifficulty(); //Recalculate the network difficulty
+
+            //Now update master IP
+            setMasterNode();
         }
 
         //Let's execute a Sync every 1 hour  /////  [ This should NEVER be automatic ]
