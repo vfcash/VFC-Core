@@ -114,6 +114,7 @@ const uint16_t gport = 8787;
 #define ERROR_OPEN -5
 
 //Node Settings
+#define PEER_TRANSACTION_LIMIT_PER_MINUTE 3840 // 3840 = 64 transactions per second limit
 #define MAX_TRANS_QUEUE 8192            // Maximum transaction backlog to keep in real-time [8192 / 3 = 2,730 TPS]
 #define MAX_REXI_SIZE MAX_TRANS_QUEUE   // Need to be atleast MAX_TRANS_QUEUE / 3
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
@@ -831,6 +832,7 @@ uint peers[MAX_PEERS]; //Peer IPv4 addresses
 time_t peer_timeouts[MAX_PEERS]; //Peer timeout UNIX epoch stamps
 uint num_peers = 0; //Current number of indexed peers
 uint peer_tcount[MAX_PEERS]; //Amount of transactions relayed by peer
+uint peer_ltcount[MAX_PEERS]; //delta tcount
 char peer_ua[MAX_PEERS][64]; //Peer user agent
 time_t peer_rm[MAX_PEERS]; //Last time peer responded to a mid request
 
@@ -2706,7 +2708,8 @@ void *generalThread(void *arg)
     //Calc difficulty
     networkDifficulty();
 
-    time_t rs = time(0);
+    //time_t rs = time(0);
+    time_t sp = time(0);
     time_t nr = time(0);
     time_t pr = time(0);
     time_t aa = time(0);
@@ -2753,6 +2756,14 @@ void *generalThread(void *arg)
             
         //     rs = time(0) + 3600;
         // }
+
+        //Reset peer send limit ever minute
+        if(time(0) > sp)
+        {
+            for(uint i = 1; i < MAX_PEERS; i++) //Skip master
+                peer_ltcount[i] = 0;
+            sp = time(0) + 60;
+        }
 
         //Check which of the peers are still alive, those that are, update their timestamps
         if(time(0) > pr)
@@ -3174,48 +3185,52 @@ void *networkThread(void *arg)
             ofs += sizeof(mval);
             memcpy(t.owner.key, ofs, ECC_CURVE*2);
 
-            //Process Transaction (Threaded (using processThread()) not to jam up UDP relay)
-            const uint qrv = aQue(&t, client.sin_addr.s_addr, origin, 1);
-            if(qrv > 0)
+            //Transaction limiter
+            if(peer_ltcount[getPeer(client.sin_addr.s_addr)] < PEER_TRANSACTION_LIMIT_PER_MINUTE)
             {
-                //printf("Q: %u %lu %u\n", t.amount, t.uid, gQueSize());
+                //Process Transaction (Threaded (using processThread()) not to jam up UDP relay)
+                const uint qrv = aQue(&t, client.sin_addr.s_addr, origin, 1);
+                if(qrv > 0)
+                {
+                    //printf("Q: %u %lu %u\n", t.amount, t.uid, gQueSize());
 
-                //Log
-                // char pfrom[MIN_LEN];
-                // memset(pfrom, 0, sizeof(pfrom));
-                // char pto[MIN_LEN];
-                // memset(pto, 0, sizeof(pto));
-                // size_t len = MIN_LEN;
-                // b58enc(pfrom, &len, t.from.key, ECC_CURVE+1);
-                // len = MIN_LEN;
-                // b58enc(pto, &len, t.to.key, ECC_CURVE+1);
-                // printf("%s / t: %lu, %s, %s, %u\n", inet_ntoa(client.sin_addr), t.uid, pfrom, pto, t.amount);
+                    //Log
+                    // char pfrom[MIN_LEN];
+                    // memset(pfrom, 0, sizeof(pfrom));
+                    // char pto[MIN_LEN];
+                    // memset(pto, 0, sizeof(pto));
+                    // size_t len = MIN_LEN;
+                    // b58enc(pfrom, &len, t.from.key, ECC_CURVE+1);
+                    // len = MIN_LEN;
+                    // b58enc(pto, &len, t.to.key, ECC_CURVE+1);
+                    // printf("%s / t: %lu, %s, %s, %u\n", inet_ntoa(client.sin_addr), t.uid, pfrom, pto, t.amount);
 
 
-                //Broadcast to peers
-                origin = client.sin_addr.s_addr;
-                char pc[MIN_LEN];
-                pc[0] = 't';
-                char* ofs = pc + 1;
-                memcpy(ofs, &origin, sizeof(uint));
-                ofs += sizeof(uint);
-                memcpy(ofs, &t.uid, sizeof(uint64_t));
-                ofs += sizeof(uint64_t);
-                memcpy(ofs, t.from.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, t.to.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, &t.amount, sizeof(mval));
-                ofs += sizeof(mval);
-                memcpy(ofs, t.owner.key, ECC_CURVE*2);
+                    //Broadcast to peers
+                    origin = client.sin_addr.s_addr;
+                    char pc[MIN_LEN];
+                    pc[0] = 't';
+                    char* ofs = pc + 1;
+                    memcpy(ofs, &origin, sizeof(uint));
+                    ofs += sizeof(uint);
+                    memcpy(ofs, &t.uid, sizeof(uint64_t));
+                    ofs += sizeof(uint64_t);
+                    memcpy(ofs, t.from.key, ECC_CURVE+1);
+                    ofs += ECC_CURVE+1;
+                    memcpy(ofs, t.to.key, ECC_CURVE+1);
+                    ofs += ECC_CURVE+1;
+                    memcpy(ofs, &t.amount, sizeof(mval));
+                    ofs += sizeof(mval);
+                    memcpy(ofs, t.owner.key, ECC_CURVE*2);
 
-                peer_tcount[getPeer(origin)]++; //race condition possible, however this is not a mission critical statistic
+                    peer_tcount[getPeer(origin)]++; //race condition possible, however this is not a mission critical statistic
 
-                if(qrv == 1) //Transaction Added to Que
-                    triBroadcast(pc, trans_size, 3);
-                else
-                if(qrv == 2) //Double spend detected
-                    peersBroadcast(pc, trans_size); //triBroadcast(pc, trans_size, 9);
+                    if(qrv == 1) //Transaction Added to Que
+                        triBroadcast(pc, trans_size, 3);
+                    else
+                    if(qrv == 2) //Double spend detected
+                        peersBroadcast(pc, trans_size); //triBroadcast(pc, trans_size, 9);
+                }
             }
         }
 
