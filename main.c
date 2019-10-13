@@ -2770,7 +2770,7 @@ void *generalThread(void *arg)
         {
             peersBroadcast(mid, 8);
             peersBroadcast("a", 1); //Give us your user-agent too please
-            peer_timeouts[0] = time(0)+MAX_PEER_EXPIRE_SECONDS; //Reset master timeout
+            peer_timeouts[0] = time(0) + MAX_PEER_EXPIRE_SECONDS; //Reset master timeout
             pr = time(0) + PING_INTERVAL;
         }
 
@@ -3184,9 +3184,10 @@ void *networkThread(void *arg)
             memcpy(&t.amount, ofs, sizeof(mval));
             ofs += sizeof(mval);
             memcpy(t.owner.key, ofs, ECC_CURVE*2);
-
+            
             //Transaction limiter
-            if(peer_ltcount[getPeer(client.sin_addr.s_addr)] < PEER_TRANSACTION_LIMIT_PER_MINUTE)
+            const int gp = getPeer(client.sin_addr.s_addr);
+            if(++peer_ltcount[gp] < PEER_TRANSACTION_LIMIT_PER_MINUTE)
             {
                 //Process Transaction (Threaded (using processThread()) not to jam up UDP relay)
                 const uint qrv = aQue(&t, client.sin_addr.s_addr, origin, 1);
@@ -3223,7 +3224,7 @@ void *networkThread(void *arg)
                     ofs += sizeof(mval);
                     memcpy(ofs, t.owner.key, ECC_CURVE*2);
 
-                    peer_tcount[getPeer(origin)]++; //race condition possible, however this is not a mission critical statistic
+                    peer_tcount[gp]++; //race condition possible, however this is not a mission critical statistic
 
                     if(qrv == 1) //Transaction Added to Que
                         triBroadcast(pc, trans_size, 3);
