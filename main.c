@@ -19,7 +19,7 @@
 ~~
     PERFORMANCE:
 
-    Once CPU core can do on average 14 transactions per second, on a 16 thread machine
+    One CPU core can do on average 14 transactions per second, on a 16 thread machine
     that's roughly 224 transactions a second.
 
     The entire node is capped at 2,700 transactions per second reguardless of how many
