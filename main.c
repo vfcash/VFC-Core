@@ -3187,7 +3187,7 @@ void *networkThread(void *arg)
             
             //Transaction limiter
             const int gp = getPeer(client.sin_addr.s_addr);
-            if(++peer_ltcount[gp] < PEER_TRANSACTION_LIMIT_PER_MINUTE)
+            if(peer_ltcount[gp] < PEER_TRANSACTION_LIMIT_PER_MINUTE)
             {
                 //Process Transaction (Threaded (using processThread()) not to jam up UDP relay)
                 const uint qrv = aQue(&t, client.sin_addr.s_addr, origin, 1);
@@ -3225,6 +3225,7 @@ void *networkThread(void *arg)
                     memcpy(ofs, t.owner.key, ECC_CURVE*2);
 
                     peer_tcount[gp]++; //race condition possible, however this is not a mission critical statistic
+                    peer_ltcount[gp]++;
 
                     if(qrv == 1) //Transaction Added to Que
                         triBroadcast(pc, trans_size, 3);
