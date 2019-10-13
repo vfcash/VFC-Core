@@ -59,8 +59,8 @@
     service such as the PHP REST API, in these cases it's best to run as a MASTER NODE
     to reduce your TX output.
         If you are just a regular user, using VFC privately exposing no web-services
-    it's much better to run as regular as running in MASTER_NODE 1 will disable important
-    user functionality for normal day-to-day operation as a user wallet.
+    it's much better to run MASTER_NODE 0 as running in MASTER_NODE 1 will disable
+    important user functionality for normal day-to-day operation as a user wallet.
 
     Distributed under the MIT software license, see the accompanying
     file COPYING or http://www.opensource.org/licenses/mit-license.php.
