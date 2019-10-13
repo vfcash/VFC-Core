@@ -840,10 +840,10 @@ time_t peer_rm[MAX_PEERS]; //Last time peer responded to a mid request
 
 uint countPeers()
 {
-    uint c = 1;
+    uint c = 1; //skip the master, as some times master could end up as 0
     for(uint i = 1; i < MAX_PEERS; i++)
     {
-        if(peers[i] == 0)
+        if(peers[i] == 0) //in which case this will then prevent peers from listing
             return c;
         c++;
     }
@@ -861,9 +861,10 @@ uint isPeerAlive(const uint id)
     return 0;
 }
 
+//could optimize to prevent running the whole buffer len by terminating at peer[i] == 0 such as in countPeers()
 uint countLivingPeers()
 {
-    uint c = 1;
+    uint c = 1; //Assume master to always be alive
     for(uint i = 1; i < num_peers; i++)
     {
         if(isPeerAlive(i) == 1)
@@ -1414,7 +1415,7 @@ pthread_mutex_unlock(&mutex5);
 int gQue()
 {
     const uint mi = qRand(3, MAX_TRANS_QUEUE-3);
-    for(int i = mi; i >= 0; i--) //Check backwards first, que is stacked left to right
+    for(int i = mi; i >= 0; i--) //Check left first, que is stacked left to right
     {
         if(i < 0 || i >= MAX_TRANS_QUEUE) //just being sure
             break;
@@ -1423,7 +1424,7 @@ int gQue()
             if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
                 return i;
     }
-    for(int i = mi; i < MAX_TRANS_QUEUE; i++) //check into the distance
+    for(int i = mi; i < MAX_TRANS_QUEUE; i++) //now check to the right of random index
     {
         if(i < 0 || i >= MAX_TRANS_QUEUE) //just being sure
             break;
@@ -1484,7 +1485,6 @@ uint64_t getMinedSupply()
     }
     return rv;
 }
-
 
 //Get circulating supply
 uint64_t getCirculatingSupply()
@@ -2036,7 +2036,6 @@ void printOuts(addr* a)
     }
 }
 
-
 void printtrans(uint fromR, uint toR)
 {
     int f = open(CHAIN_FILE, O_RDONLY);
@@ -2196,7 +2195,6 @@ uint64_t getBalanceLocal(addr* from)
     return rv;
 }
 
-
 float liveNetworkDifficulty()
 {
     //Vote Less than 0.240                                                  [lb]
@@ -2244,7 +2242,6 @@ void networkDifficulty()
     node_difficulty = network_difficulty;
     broadcastUserAgent();
 }
-
 
 //Calculate if an address has the value required to make a transaction of x amount.
 int hasbalance(const uint64_t uid, addr* from, mval amount)
