@@ -16,9 +16,15 @@
     - CRC64.c - Salvatore Sanfilippo
     - Base58.c - Luke Dashjr
 
+~~
     PERFORMANCE:
+
     Once CPU core can do on average 14 transactions per second, on a 16 thread machine
     that's roughly 224 transactions a second.
+
+    The entire node is capped at 2,700 transactions per second reguardless of how many
+    threads your machine has available. 
+~~
 
     NOTES:
     Only Supports IPv4 addresses.
