@@ -114,7 +114,6 @@ const uint16_t gport = 8787;
 #define ERROR_OPEN -5
 
 //Node Settings
-#define PEER_TRANSACTION_LIMIT_PER_MINUTE 3840 // 3840 = 64 transactions per second limit
 #define MAX_TRANS_QUEUE 8192            // Maximum transaction backlog to keep in real-time [8192 / 3 = 2,730 TPS]
 #define MAX_REXI_SIZE MAX_TRANS_QUEUE   // Need to be atleast MAX_TRANS_QUEUE / 3
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
@@ -122,6 +121,9 @@ const uint16_t gport = 8787;
 #define PING_INTERVAL 270               // How often to ping the peers and see if they are still alive
 #define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this. [replay sends]
+
+//Peer flood protection
+#define PEER_TRANSACTION_LIMIT_PER_MINUTE 3840 // 3840 = 64 unique transactions per second limit
 
 //Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
@@ -147,7 +149,7 @@ char mid[8];                         //Clients private identification code used 
 float node_difficulty = 0.031;       //Clients weighted contribution to the federated mining difficulty
 float network_difficulty = 0.031;    //Assumed or actual network difficulty (starts at lowest until known)
 ulong err = 0;                       //Global error count
-uint replay_allow[MAX_PEERS];       //IP address of peer allowed to send replay blocks
+uint replay_allow[MAX_PEERS];        //IP address of peer allowed to send replay blocks
 uint replay_height = 0;              //Block Height of current peer authorized to receive a replay from
 char myrewardkey[MIN_LEN];           //client reward addr public key
 char myrewardkeyp[MIN_LEN];          //client reward addr private key
