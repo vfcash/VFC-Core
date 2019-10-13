@@ -16,6 +16,10 @@
     - CRC64.c - Salvatore Sanfilippo
     - Base58.c - Luke Dashjr
 
+    PERFORMANCE:
+    Once CPU core can do on average 14 transactions per second, on a 16 thread machine
+    that's roughly 224 transactions a second.
+
     NOTES:
     Only Supports IPv4 addresses.
     Local storage in ~/.vfc
@@ -123,7 +127,7 @@ const uint16_t gport = 8787;
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this. [replay sends]
 
 //Peer flood protection
-#define PEER_TRANSACTION_LIMIT_PER_MINUTE 3840 // 3840 = 64 unique transactions per second limit
+#define PEER_TRANSACTION_LIMIT_PER_MINUTE 840 // 840 = 14 unique transactions per second per peer limit
 
 //Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
