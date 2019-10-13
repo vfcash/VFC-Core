@@ -3225,7 +3225,7 @@ void *networkThread(void *arg)
                     memcpy(ofs, t.owner.key, ECC_CURVE*2);
 
                     peer_tcount[gp]++; //race condition possible, however this is not a mission critical statistic
-                    peer_ltcount[gp]++;
+                    peer_ltcount[gp]++; 
 
                     if(qrv == 1) //Transaction Added to Que
                         triBroadcast(pc, trans_size, 3);
