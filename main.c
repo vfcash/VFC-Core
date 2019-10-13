@@ -834,7 +834,7 @@ uint peers[MAX_PEERS]; //Peer IPv4 addresses
 time_t peer_timeouts[MAX_PEERS]; //Peer timeout UNIX epoch stamps
 uint num_peers = 0; //Current number of indexed peers
 uint peer_tcount[MAX_PEERS]; //Amount of transactions relayed by peer
-uint peer_ltcount[MAX_PEERS]; //delta tcount
+uint peer_ltcount[MAX_PEERS]; //delta tcount for flood protection / rate limiting
 char peer_ua[MAX_PEERS][64]; //Peer user agent
 time_t peer_rm[MAX_PEERS]; //Last time peer responded to a mid request
 
