@@ -2656,6 +2656,8 @@ void loadmem()
         }
         fclose(f);
     }
+
+    setMasterNode();
 }
 
 void sigintHandler(int sig_num) 
@@ -2741,7 +2743,7 @@ void *generalThread(void *arg)
             //It's time !!
             networkDifficulty(); //Recalculate the network difficulty
 
-            //Now update master IP
+            //Update master IPv4 from DNS
             setMasterNode();
         }
 
@@ -2757,11 +2759,14 @@ void *generalThread(void *arg)
         //     rs = time(0) + 3600;
         // }
 
-        //Reset peer send limit ever minute
+        //Reset peer send limit every minute
         if(time(0) > sp)
         {
             for(uint i = 0; i < MAX_PEERS; i++)
                 peer_ltcount[i] = 0;
+            
+            setMasterNode(); //Update master IPv4 from DNS
+
             sp = time(0) + 60;
         }
 
@@ -4060,7 +4065,6 @@ int main(int argc , char *argv[])
         //send raw transaction packet provided as base58 over udp
         if(strcmp(argv[1], "stp") == 0)
         {
-            setMasterNode();
             loadmem();
             
             char packet[147];
@@ -4073,7 +4077,6 @@ int main(int argc , char *argv[])
         //sync
         if(strcmp(argv[1], "sync") == 0)
         {
-            setMasterNode();
             loadmem();
 
             uint np = atoi(argv[2]);
@@ -4587,7 +4590,6 @@ int main(int argc , char *argv[])
         //sync
         if(strcmp(argv[1], "sync") == 0)
         {
-            setMasterNode();
             loadmem();
 
             resyncBlocks(33);
@@ -4661,7 +4663,6 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "reset_chain") == 0)
         {
             makGenesis(); //Erases chain and resets it for a full resync
-            setMasterNode();
             loadmem();
             printf("Chain Reset.\n\n");
             exit(0);
@@ -4762,7 +4763,6 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "peers") == 0)
         {
             loadmem();
-            setMasterNode();
             printf("\nTip; If you are running a full-node then consider hosting a website on port 80 where you can declare a little about your operation and a VFC address people can use to donate to you on. Thus you should be able to visit any of these IP addresses in a web-browser and find out a little about each node or obtain a VFC Address to donate to the node operator on.\n\n");
             printf("Total Peers: %u\n\n", num_peers);
             printf("IP Address / Number of Transactions Relayed / Seconds since last trans or ping / user-agent [blockheight/version/cpu cores/machine/difficulty] \n");
@@ -4811,9 +4811,6 @@ int main(int argc , char *argv[])
 
     //Load Mem
     loadmem();
-
-    //Set Master Node
-    setMasterNode();
 
     //Does user just wish to get address balance?
     if(argc == 2 && command_skip == 0)
