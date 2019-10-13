@@ -838,8 +838,8 @@ time_t peer_rm[MAX_PEERS]; //Last time peer responded to a mid request
 
 uint countPeers()
 {
-    uint c = 0;
-    for(uint i = 0; i < MAX_PEERS; i++)
+    uint c = 1;
+    for(uint i = 1; i < MAX_PEERS; i++)
     {
         if(peers[i] == 0)
             return c;
@@ -861,8 +861,8 @@ uint isPeerAlive(const uint id)
 
 uint countLivingPeers()
 {
-    uint c = 0;
-    for(uint i = 0; i < num_peers; i++)
+    uint c = 1;
+    for(uint i = 1; i < num_peers; i++)
     {
         if(isPeerAlive(i) == 1)
             c++;
@@ -4762,7 +4762,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "peers") == 0)
         {
             loadmem();
-            peersBroadcast("a", 1); //Request all user-agents
+            setMasterNode();
             printf("\nTip; If you are running a full-node then consider hosting a website on port 80 where you can declare a little about your operation and a VFC address people can use to donate to you on. Thus you should be able to visit any of these IP addresses in a web-browser and find out a little about each node or obtain a VFC Address to donate to the node operator on.\n\n");
             printf("Total Peers: %u\n\n", num_peers);
             printf("IP Address / Number of Transactions Relayed / Seconds since last trans or ping / user-agent [blockheight/version/cpu cores/machine/difficulty] \n");
