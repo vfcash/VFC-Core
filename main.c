@@ -2760,7 +2760,7 @@ void *generalThread(void *arg)
         //Reset peer send limit ever minute
         if(time(0) > sp)
         {
-            for(uint i = 1; i < MAX_PEERS; i++) //Skip master
+            for(uint i = 0; i < MAX_PEERS; i++)
                 peer_ltcount[i] = 0;
             sp = time(0) + 60;
         }
