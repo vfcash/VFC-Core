@@ -133,7 +133,7 @@ const uint16_t gport = 8787;
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this. [replay sends]
 
 //Peer flood protection
-#define PEER_TRANSACTION_LIMIT_PER_MINUTE 180 // 180 = 3 unique transactions per second per peer limit
+uint PEER_TRANSACTION_LIMIT_PER_MINUTE = 180; // 180 = 3 unique transactions per second per peer limit
 
 //Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
@@ -2577,6 +2577,9 @@ void loadConfig(const uint stat)
 
                 if(strcmp(set, "replay-threads") == 0) //Default is variable based on CPU core count, max is 512
                     max_replay_threads = val;
+
+                if(strcmp(set, "peer-trans-limit-per-min") == 0) //Default is 180
+                    PEER_TRANSACTION_LIMIT_PER_MINUTE = val;
             }
         }
         fclose(f);

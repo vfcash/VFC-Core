@@ -172,9 +172,6 @@ void MainWindow::updateStats(const int full)
         }
     }
 
-
-    loadConfig();
-
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -191,6 +188,7 @@ MainWindow::MainWindow(QWidget *parent)
     timerId2 = startTimer(680000);
 
     updateStats(1);
+    loadConfig();
 }
 
 MainWindow::~MainWindow()
