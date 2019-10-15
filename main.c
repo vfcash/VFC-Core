@@ -2154,6 +2154,7 @@ void findTrans(const uint64_t uid)
 //get balance
 void broadcastBalance(addr* from, const uint topx, const uint delay)
 {
+    uint bc = 0;
     int f = open(CHAIN_FILE, O_RDONLY);
     if(f)
     {
@@ -2164,32 +2165,38 @@ void broadcastBalance(addr* from, const uint topx, const uint delay)
         {
             close(f);
 
-            const size_t end = len-(topx*sizeof(struct trans)); //top len transactions
             struct trans t;
-            for(size_t i = len-sizeof(struct trans); i > end; i -= sizeof(struct trans))
+            for(size_t i = len-sizeof(struct trans); i > 0; i -= sizeof(struct trans))
             {
                 memcpy(&t, m+i, sizeof(struct trans));
 
-                const uint32_t origin = 0;
-                const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
-                char pc[MIN_LEN];
-                pc[0] = 't';
-                char* ofs = pc + 1;
-                memcpy(ofs, &origin, sizeof(uint32_t));
-                ofs += sizeof(uint32_t);
-                memcpy(ofs, &t.uid, sizeof(uint64_t));
-                ofs += sizeof(uint64_t);
-                memcpy(ofs, t.from.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, t.to.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, &t.amount, sizeof(mval));
-                ofs += sizeof(mval);
-                memcpy(ofs, t.owner.key, ECC_CURVE*2);
-                peersBroadcast(pc, len);
+                if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0 || memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                {
+                    const uint32_t origin = 0;
+                    const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+                    char pc[MIN_LEN];
+                    pc[0] = 't';
+                    char* ofs = pc + 1;
+                    memcpy(ofs, &origin, sizeof(uint32_t));
+                    ofs += sizeof(uint32_t);
+                    memcpy(ofs, &t.uid, sizeof(uint64_t));
+                    ofs += sizeof(uint64_t);
+                    memcpy(ofs, t.from.key, ECC_CURVE+1);
+                    ofs += ECC_CURVE+1;
+                    memcpy(ofs, t.to.key, ECC_CURVE+1);
+                    ofs += ECC_CURVE+1;
+                    memcpy(ofs, &t.amount, sizeof(mval));
+                    ofs += sizeof(mval);
+                    memcpy(ofs, t.owner.key, ECC_CURVE*2);
+                    peersBroadcast(pc, len);
+                    
+                    bc++;
+                    if(bc > topx)
+                        return;
 
-                if(delay != 0)
-                    sleep(delay); //prevent double-spend throttling
+                    if(delay != 0)
+                        sleep(delay); //prevent double-spend throttling
+                }
             }
 
             munmap(m, len);
@@ -2220,32 +2227,41 @@ uint64_t getBalanceLocal(addr* from)
             {
                 memcpy(&t, m+i, sizeof(struct trans));
 
-#if MASTER_NODE == 0
-                //re-enforce each transaction over network using sporadic distribution; limited to mmap() branch only
-                const uint32_t origin = 0;
-                const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
-                char pc[MIN_LEN];
-                pc[0] = 't'; //send as a regular transaction, bypass replay allow blocking but will have double spend throttling
-                char* ofs = pc + 1;
-                memcpy(ofs, &origin, sizeof(uint32_t));
-                ofs += sizeof(uint32_t);
-                memcpy(ofs, &t.uid, sizeof(uint64_t));
-                ofs += sizeof(uint64_t);
-                memcpy(ofs, t.from.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, t.to.key, ECC_CURVE+1);
-                ofs += ECC_CURVE+1;
-                memcpy(ofs, &t.amount, sizeof(mval));
-                ofs += sizeof(mval);
-                memcpy(ofs, t.owner.key, ECC_CURVE*2);
-                triBroadcast(pc, len, 3); //Just tell a random few peers or we will start triggering transaction duplication logs in badblocks 
-                //                        particularly on outgoing transactions. This is just to support the replay redundency at a minimal cost.
-#endif
+                uint64_t lrv = rv;
 
                 if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
+                {
                     rv += t.amount;
+                }
                 else if(memcmp(&t.from.key, from->key, ECC_CURVE+1) == 0)
+                {
                     rv -= t.amount;
+                }
+
+                if(lrv != rv)
+                {
+#if MASTER_NODE == 0
+                    //re-enforce each transaction over network using sporadic distribution; limited to mmap() branch only
+                    const uint32_t origin = 0;
+                    const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+                    char pc[MIN_LEN];
+                    pc[0] = 't'; //send as a regular transaction, bypass replay allow blocking but will have double spend throttling
+                    char* ofs = pc + 1;
+                    memcpy(ofs, &origin, sizeof(uint32_t));
+                    ofs += sizeof(uint32_t);
+                    memcpy(ofs, &t.uid, sizeof(uint64_t));
+                    ofs += sizeof(uint64_t);
+                    memcpy(ofs, t.from.key, ECC_CURVE+1);
+                    ofs += ECC_CURVE+1;
+                    memcpy(ofs, t.to.key, ECC_CURVE+1);
+                    ofs += ECC_CURVE+1;
+                    memcpy(ofs, &t.amount, sizeof(mval));
+                    ofs += sizeof(mval);
+                    memcpy(ofs, t.owner.key, ECC_CURVE*2);
+                    triBroadcast(pc, len, 3); //Just tell a random few peers or we will start triggering transaction duplication logs in badblocks 
+                    //                        particularly on outgoing transactions. This is just to support the replay redundency at a minimal cost.
+#endif
+                }
             }
 
             munmap(m, len);
@@ -4284,7 +4300,7 @@ int main(int argc , char *argv[])
             replay_allow[0] = tip;
             forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint) * MAX_PEERS);
             csend(tip, "r", 1);
-            printf("\nThank you peer %s has been requested to replay it's blocks.\n\nPlease make sure you are not also running sync at this time as they will conflict.\n\n", argv[2]);
+            printf("\nThank you peer %s has been requested to replay it's blocks.\n\nPlease make sure you are not also running sync at this time as they will conflict. (please ensure the VFC node is not running when you add new peers)\n\n", argv[2]);
             savemem();
             exit(0);
         }
