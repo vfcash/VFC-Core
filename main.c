@@ -113,7 +113,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.63";
+const char version[]="0.64";
 const uint16_t gport = 8787;
 
 //Error Codes
@@ -2151,7 +2151,7 @@ void findTrans(const uint64_t uid)
     printf("Transaction could not be found.\n");
 }
 
-//get balance
+//broadcast x top balance to all peers at the defined delay rate
 void broadcastBalance(addr* from, const uint topx, const uint delay)
 {
     uint bc = 0;
@@ -2227,7 +2227,7 @@ uint64_t getBalanceLocal(addr* from)
             {
                 memcpy(&t, m+i, sizeof(struct trans));
 
-                uint64_t lrv = rv;
+                const uint64_t lrv = rv;
 
                 if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
                 {
@@ -2289,7 +2289,7 @@ float liveNetworkDifficulty()
 
     //Get addr balances
     const double lb = toDB(getBalanceLocal(&lpub)); // < 0.240 vote power in vfc
-    const double tb = toDB(getBalanceLocal(&tpub)); //    0.240 vote power in vfc
+    const double tb = toDB(getBalanceLocal(&tpub)); //   0.240 vote power in vfc
 
     //Is higher for 0.240
     float ndiff = 0.031;
