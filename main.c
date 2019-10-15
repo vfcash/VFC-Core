@@ -2152,6 +2152,54 @@ void findTrans(const uint64_t uid)
 }
 
 //get balance
+void broadcastBalance(addr* from, const uint topx, const uint delay)
+{
+    int f = open(CHAIN_FILE, O_RDONLY);
+    if(f)
+    {
+        const size_t len = lseek(f, 0, SEEK_END);
+
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
+        {
+            close(f);
+
+            const size_t end = len-(topx*sizeof(struct trans)); //top len transactions
+            struct trans t;
+            for(size_t i = len-sizeof(struct trans); i > end; i -= sizeof(struct trans))
+            {
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                const uint32_t origin = 0;
+                const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+                char pc[MIN_LEN];
+                pc[0] = 't';
+                char* ofs = pc + 1;
+                memcpy(ofs, &origin, sizeof(uint32_t));
+                ofs += sizeof(uint32_t);
+                memcpy(ofs, &t.uid, sizeof(uint64_t));
+                ofs += sizeof(uint64_t);
+                memcpy(ofs, t.from.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, t.to.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, &t.amount, sizeof(mval));
+                ofs += sizeof(mval);
+                memcpy(ofs, t.owner.key, ECC_CURVE*2);
+                peersBroadcast(pc, len);
+
+                if(delay != 0)
+                    sleep(delay); //prevent double-spend throttling
+            }
+
+            munmap(m, len);
+        }
+
+        close(f);
+    }
+}
+
+//get balance
 uint64_t getBalanceLocal(addr* from)
 {
     //Get local Balance
@@ -2172,7 +2220,7 @@ uint64_t getBalanceLocal(addr* from)
             {
                 memcpy(&t, m+i, sizeof(struct trans));
 
-//#if MASTER_NODE == 0
+#if MASTER_NODE == 0
                 //re-enforce each transaction over network using sporadic distribution; limited to mmap() branch only
                 const uint32_t origin = 0;
                 const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
@@ -2192,7 +2240,7 @@ uint64_t getBalanceLocal(addr* from)
                 memcpy(ofs, t.owner.key, ECC_CURVE*2);
                 triBroadcast(pc, len, 3); //Just tell a random few peers or we will start triggering transaction duplication logs in badblocks 
                 //                        particularly on outgoing transactions. This is just to support the replay redundency at a minimal cost.
-//#endif
+#endif
 
                 if(memcmp(&t.to.key, from->key, ECC_CURVE+1) == 0)
                     rv += t.amount;
@@ -2748,6 +2796,17 @@ void *generalThread(void *arg)
         struct tm* tmi = gmtime(&lt);
         if(tmi->tm_min == 59 && tmi->tm_sec >= 47)
         {
+            //Broadcast the top 9 transactions of both difficulty addresses
+            // ensures propergation across all clients
+            struct addr lpub;
+            size_t len = ECC_CURVE+1;
+            b58tobin(lpub.key, &len, "q15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK", 44);
+            struct addr tpub;
+            len = ECC_CURVE+1;
+            b58tobin(tpub.key, &len, "24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3", 45);
+            broadcastBalance(&lpub, 9, 0);
+            broadcastBalance(&tpub, 9, 0);
+
             //Loop until perfect time to 1 ms accuracy
             while(tmi->tm_min == 59 && tmi->tm_min != 00)
             {
