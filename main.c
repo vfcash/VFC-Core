@@ -174,6 +174,7 @@ pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex4 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex5 = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex6 = PTHREAD_MUTEX_INITIALIZER;
 
 //User-Configurable
 uint single_threaded = 0;
@@ -1557,21 +1558,25 @@ uint32_t replay_peers[MAX_THREADS_BUFF];
 //Get replay peer
 uint32_t getRP()
 {
+    pthread_mutex_lock(&mutex6);
     for(int i = 0; i < max_replay_threads; ++i)
     {
         if(replay_peers[i] != 0)
         {
             const uint32_t r = replay_peers[i];
             replay_peers[i] = 0;
+            pthread_mutex_unlock(&mutex6);
             return r;
         }
     }
+    pthread_mutex_unlock(&mutex6);
     return 0;
 }
 
 //Set replay peer ip
 void setRP(const uint32_t ip)
 {
+    pthread_mutex_lock(&mutex6);
     for(int i = 0; i < max_replay_threads; ++i)
     {
         if(replay_peers[i] == 0)
@@ -1580,6 +1585,7 @@ void setRP(const uint32_t ip)
             break;
         } 
     }
+    pthread_mutex_unlock(&mutex6);
 }
 
 //Replay blocks to x address
