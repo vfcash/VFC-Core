@@ -22,7 +22,7 @@
     One CPU core can do on average 14 transactions per second, on a 16 thread machine
     that's roughly 224 transactions a second.
 
-    The entire node is capped at 2,700 transactions per second reguardless of how many
+    The node is capped at 2,700 transactions per second reguardless of how many
     threads your machine has available. 
 ~~
 
@@ -4052,9 +4052,10 @@ int main(int argc , char *argv[])
                     ecc_get_pubkey(subg_pub.key, subg_priv.key);
 
                     //Get balance of pub key
-                    const double bal = toDB(getBalanceLocal(&subg_pub));
+                    //const double bal = toDB(getBalanceLocal(&subg_pub));
+                    const double bal = toDB(isSubGenesisAddress(subg_pub.key, 0)); // little faster
 
-                    printf("\b.");
+                    printf(".");
                     fflush(stdout);
 
                     if(bal > 0)
@@ -4571,7 +4572,8 @@ int main(int argc , char *argv[])
                     ecc_get_pubkey(subg_pub.key, subg_priv.key);
 
                     //Get balance of pub key
-                    const double bal = toDB(getBalanceLocal(&subg_pub));
+                    //const double bal = toDB(getBalanceLocal(&subg_pub));
+                    const double bal = toDB(isSubGenesisAddress(subg_pub.key, 0)); // little faster
 
                     printf(".");
                     fflush(stdout);
