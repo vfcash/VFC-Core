@@ -12,9 +12,13 @@ pkill vfc
 rm vfc
 rm /usr/bin/vfc
 rm /usr/bin/vfui
+rm /usr/bin/vfwallet
+rm /usr/bin/cminer
 gcc -std=gnu99 -Ofast -pthread base58.c crc64.c ecc.c sha3.c main.c -lm -o vfc
 cp vfc /usr/bin/vfc
 cp bin/vfui /usr/bin/vfui
+cp bin/vfwallet /usr/bin/vfwallet
+cp bin/cminer /usr/bin/cminer
 chmod 0777 /usr/bin/vfc
 crontab -l > ncron
 if grep -qxF '*/6 * * * * /usr/bin/vfc' ncron; then
