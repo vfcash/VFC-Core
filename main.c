@@ -5073,7 +5073,7 @@ while(1)
         }
         else
         {
-            printf("VFC Sent: %'.3f VFC\n\n", toDB(bal0-bal1));
+            printf("VFC Sent: %'.3f VFC\n\n", toDB(t.amount));
             break;
         }
 }
