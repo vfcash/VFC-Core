@@ -4052,8 +4052,8 @@ int main(int argc , char *argv[])
                     ecc_get_pubkey(subg_pub.key, subg_priv.key);
 
                     //Get balance of pub key
-                    //const double bal = toDB(getBalanceLocal(&subg_pub));
-                    const double bal = toDB(isSubGenesisAddress(subg_pub.key, 0)); // little faster
+                    const double bal = toDB(getBalanceLocal(&subg_pub));
+                    //const double bal = toDB(isSubGenesisAddress(subg_pub.key, 0)); // little faster
 
                     printf(".");
                     fflush(stdout);
@@ -4572,8 +4572,8 @@ int main(int argc , char *argv[])
                     ecc_get_pubkey(subg_pub.key, subg_priv.key);
 
                     //Get balance of pub key
-                    //const double bal = toDB(getBalanceLocal(&subg_pub));
-                    const double bal = toDB(isSubGenesisAddress(subg_pub.key, 0)); // little faster
+                    const double bal = toDB(getBalanceLocal(&subg_pub));
+                    //const double bal = toDB(isSubGenesisAddress(subg_pub.key, 0)); // little faster
 
                     printf(".");
                     fflush(stdout);

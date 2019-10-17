@@ -6,6 +6,7 @@ apt install --assume-yes wget
 apt install --assume-yes gcc
 apt install --assume-yes xterm
 apt install --assume-yes qt5-default
+apt install --assume-yes libsdl2-2.0-0
 clear
 clear
 pkill vfc
