@@ -1508,6 +1508,15 @@ uint64_t getCirculatingSupply()
         ift = (uint64_t)st.st_size / sizeof(struct trans);
     ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
 
+    //Difficulty burning addresses
+    struct addr lpub;
+    size_t len = ECC_CURVE+1;
+    b58tobin(lpub.key, &len, "q15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK", 44);
+    struct addr tpub;
+    len = ECC_CURVE+1;
+    b58tobin(tpub.key, &len, "24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3", 45);
+
+    //IFT
     uint64_t rv = 0;
     if(ift > 0)
         rv = (ift / 100) * 20; // 20% of the ift tax
@@ -1526,6 +1535,10 @@ uint64_t getCirculatingSupply()
             for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
                 memcpy(&t, m+i, sizeof(struct trans));
+
+                //Negate payments to difficulty burn addresses
+                if(memcmp(t.to.key, lpub.key, ECC_CURVE+1) == 0 || memcmp(t.to.key, tpub.key, ECC_CURVE+1) == 0)
+                    rv -= t.amount;
 
                 //All the paid out subG address values
                 if(memcmp(t.from.key, genesis_pub, ECC_CURVE+1) != 0)
