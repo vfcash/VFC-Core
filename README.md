@@ -98,21 +98,6 @@ For a Windows installation you can follow the steps above via the Ubuntu Console
 
 Each address is limited to one transaction every three seconds, once a transaction is made the sender cannot make another transaction to a different address for three seconds.
 
-# Running a serious node?
-All nodes by default will run in single threaded mode, and will use mmap if the target platform is x86_64.
-
-If you intend to run a serious node on the network which uses a dedicated server it is recommend to create a `vfc.cnf` configuration file in `~/.vfc/` with the following settings
-```
-multi-threaded 1
-replay-threads 96
-replay-delay 1000
-```
-This will set your node to use all CPU cores available for transaction processing and provide blockchain resync data to 96 peers simultaneously.
-
-`replay-delay 1000` means that the delay between sending transactions when other peers request a replay will be 1,000 microseconds. Each transaction is 144 bytes on file or 147 bytes over the network and 143 bytes if it's a replay. With 1,000,000 microseconds in a second this means your node will send 1,000 replay transactions a second to each peer that requests a replay. That's a total of 1000 * 143 bytes a second or 143kb a second per requesting peer if you consider 1kb to be 1000 bytes rather than 1024 bytes.
-
-Generally your node should stay in sync, if it falls behind it is recommended that you run `vfc sync` in the background. This command can take an argument of how many peers to replay from e.g. `vfc sync 256` will attempt to replay from 256 peers. You should set the number of peers relative to the power of your server, if your flood your server with too many replay packets it will be too encumbered to process the regular network transactions.
-
 # Mining Difficulty
 All nodes re-calculate the difficulty once an hour at exactly 0 minutes UTC of the hour.
 
@@ -132,37 +117,12 @@ Use the command ```vfc difficulty``` for more information.
 - **replay-threads 32** - Replays blockchain data to a maximum of 32 peers simultaneously.
 - **replay-delay 1000** - Uses less TX bandwidth
 - **replay-delay 1**    - Uses more TX bandwidth
+- **peer-trans-limit-per-min 180** - Limits the amount of transactions a peer can send per minute, by default this value is 180, it is not recommended to set this value lower than 60.
 
 # Expose a gateway
 VF Cash is a private decentralised network, this means that the only people who get access to the network are node operators. The only way a regular client can access the network is by using one of the running nodes as a gateway to access the network.
 
 This is why it is important that you expose some kind of gatway for end-users, at minimum this would mean installing NGINX, PHP-FPM and exposing the [php rest api](https://github.com/vfcash/VFC-PHP-API/blob/master/rest.php) for public use by copying the rest.php file to `/var/www/html` the default configured nginx www/html path.
-
-# No IPv4 address?
-It is reccomend that users who do not have access to an IPv4 address to use a VPN service that offers port forwarding on IPv4 addresses, such as [AirVPN](https://airvpn.org/).
-
-# Denial-of-service Protection
-```diff
-- Do not set this up by default unless you have bandwidth limits on your server that are being exceeded
-```
-We recommend configuring iptables to throttle incoming UDP packets on port 8787 to 7,133 every minute [~119 packets a second]. 
-
-This should be adequate for the maximum throughput of the entire network allowing 'leeway'.
-
-- **Block Replay:** 10 tps [max]
-- **Valid Transactions:** 85 tps [max]
-- **Remainder / Utility Requests:** 24 tps
-
-Utility requests such as balance checks, pings, reward payments and user-agent requests have no defined limit like how the Block Replay is always limited to 10 tps and the valid processable transactions of each client is limited to 85 tps. Thus, when both of these services are at their max throughput remainder services will only get 24 tps when using the following iptables configuration;
-
-```
-iptables -I INPUT -p udp -i eth0 --dport 8787 -m state --state NEW -m recent --update --seconds 2 --hitcount 255 -j DROP
-```
-
-# Additional Software
-
-- [Supervisord](http://supervisord.org/) - Supervisor is a client/server system that allows its users to monitor and control a number of processes on UNIX-like operating systems. A good tool that can relaunch important processes if they happen to crash.
-
 
 # Third-Party Dependencies
 
