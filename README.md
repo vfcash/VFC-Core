@@ -19,7 +19,7 @@ git clone https://github.com/vfcash/VFC-Core && cd VFC-Core
 chmod 0777 compile.sh
 ./compile.sh
 
-vfc master_resync
+vfc cdn_resync
 ```
 Then use the `vfc help` command in the console for a full command list or `vfui` if you are running a desktop environment and prefer a graphical user interface.
 
@@ -48,7 +48,7 @@ vfc new <seed1> <seed2> <seed3> <seed4> - Four random seed(uint64), Key-Pair
 vfc qsend <amount> <receiver address>   - Send transaction from rewards address
 vfc claim <optional file path>          - Claims private keys to rewards addr
 vfc reward                              - Your awarded or mined VFC
---------------------------------------
+-------------------------------
 vfc mine <optional num threads>  - CPU miner for VFC
 vfc peers                        - List locally indexed peers
 vfc getpub <private key>         - Get Public Key from Private Key
@@ -58,12 +58,13 @@ vfc votes                        - Map of difficulty votes
 vfc difficulty                   - Network mining difficulty
 -------------------------------
 vfc sync <optional num peers>    - Trigger blockchain sync from your peers
-vfc master_resync                - Trigger blockchain resync from the master
+vfc cdn_resync                   - Trigger blockchain resync from the master
 vfc reset_chain                  - Reset blockchain back to genesis state
 vfc scan                         - Scan for peers in the IPv4 range.
 -------------------------------
 vfc replaypeer <peer ip address> - Manually replay from specific peer
 vfc addpeer <peer ip address>    - Manually add a peer
+vfc printtrans 1000 1010         - Print transactions[start,end] on chain
 vfc findtrans <transaction uid>  - Find a transaction by it's UID
 -------------------------------
 vfc dump                         - List all transactions on chain
@@ -71,6 +72,17 @@ vfc dumptop <num trans>          - List top x transactions on chain
 vfc dumpbad                      - List all detected double spend attempts
 vfc clearbad                     - Clear all detected double spend attempts
 -------------------------------
+
+Scan blocks.dat for invalid transactions and truncate at first detected:
+vfc trunc <offset from eof>
+
+[Fast] Scan blocks.dat for duplicate transactions and generates a cleaned output; cblocks.dat:
+vfc clean
+
+[Slow] Scan blocks.dat for invalid transactions and generates a cleaned output; cfblocks.dat:
+vfc cleanfull
+
+----------------
 vfc version      - Node version
 vfc agent        - Node user-agent
 vfc config       - Node configuration
@@ -85,6 +97,7 @@ vfc multi        - Launches the VFC node as multi threaded
 ----------------
 
 To get started running a dedicated node, execute ./vfc on a seperate screen.
+
 ```
 
 By default your data-dir is ~/.vfc if you would like to set a custom path please set the envionment variable VFCDIR, for example if running as root choose a directory such as /srv
