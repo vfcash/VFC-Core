@@ -27,6 +27,10 @@ Then use the `vfc help` command in the console for a full command list or `vfui`
 
 [![Watch the video](https://raw.githubusercontent.com/vfcash/RELEASES/master/vfui.png)](https://raw.githubusercontent.com/vfcash/RELEASES/master/vfui.mp4)
 
+```> vfwallet```
+
+![VF Wallet](https://github.com/vfcash/RELEASES/blob/master/vfwallet.jpg)
+
 ```
 > vfc help
 
@@ -97,7 +101,6 @@ vfc multi        - Launches the VFC node as multi threaded
 ----------------
 
 To get started running a dedicated node, execute ./vfc on a seperate screen.
-
 ```
 
 By default your data-dir is ~/.vfc if you would like to set a custom path please set the envionment variable VFCDIR, for example if running as root choose a directory such as /srv
