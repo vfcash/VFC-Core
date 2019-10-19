@@ -6,9 +6,8 @@ The project started on the 23rd of April 2019. It has no Proof-of-Work (POW) rat
 Divisible to three decimal places, mineable, written in C, compiled with GCC, 256-bit key length.
 
 Transactions are free, there is no charge for making a transaction on the network.
-However transactions can optionally create inflation of the currency which is partly paid back to the node operators as rewards.
 
-VFC is a private decentralised network, as-in you will need control of some currency before the rest of the network considers your dedicated node viable for indexing. The usual method is to mine some. Also you can transfer VFC to your node's reward address `vfc reward` will identify your reward public key / address and as such your node will automatically verify itself within the hour.
+VFC is a private decentralised network, consequently you will need control of some currency before the rest of the network considers your node viable for indexing. The usual method is to mine some VFC using the `vfc mine` command. Also you can transfer VFC to your node's reward address `vfc reward` will identify your reward public key / address and as such your node will automatically verify itself within the hour.
 
 Join us on Telegram [@vfcash](https://t.me/vfcash)
 
