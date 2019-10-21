@@ -113,7 +113,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.64";
+const char version[]="0.65";
 const uint16_t gport = 8787;
 
 //Error Codes
@@ -1121,8 +1121,8 @@ float getPeerDiff(const uint id)
     float rv = atof(cf);
     if(rv < 0.031)
         rv = 0.031;
-    if(rv > 0.240)
-        rv = 0.240;
+    if(rv > 0.180)
+        rv = 0.180;
     return roundFloat(rv);
 }
 
@@ -2290,25 +2290,25 @@ uint64_t getBalanceLocal(addr* from)
 
 float liveNetworkDifficulty()
 {
-    //Vote Less than 0.240                                                  [lb]
+    //Vote Less than 0.180                                                  [lb]
     struct addr lpub;
     size_t len = ECC_CURVE+1;
     b58tobin(lpub.key, &len, "q15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK", 44);
 
-    //Vote 0.240                                                            [tb]
+    //Vote 0.180                                                            [tb]
     struct addr tpub;
     len = ECC_CURVE+1;
     b58tobin(tpub.key, &len, "24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3", 45);
 
     //Get addr balances
-    const double lb = toDB(getBalanceLocal(&lpub)); // < 0.240 vote power in vfc
-    const double tb = toDB(getBalanceLocal(&tpub)); //   0.240 vote power in vfc
+    const double lb = toDB(getBalanceLocal(&lpub)); // < 0.180 vote power in vfc
+    const double tb = toDB(getBalanceLocal(&tpub)); //   0.180 vote power in vfc
 
-    //Is higher for 0.240
+    //Is higher for 0.180
     float ndiff = 0.031;
     if(tb > lb)
     {
-        ndiff = 0.240;
+        ndiff = 0.180;
     }
     else //otherwise drag down on 0.24 by the overflow balance of lb
     {
@@ -2319,8 +2319,8 @@ float liveNetworkDifficulty()
     //Limit
     if(ndiff < 0.031)
         ndiff = 0.031;
-    if(ndiff > 0.240)
-        ndiff = 0.240;
+    if(ndiff > 0.180)
+        ndiff = 0.180;
 
     //Round
     return roundFloat(ndiff);
@@ -2976,7 +2976,7 @@ void *miningThread(void *arg)
         const double adif = isSubDiff(pub.key);
 
         //Found subG?
-        if(adif <= 0.240)
+        if(adif <= 0.180)
         {
             r = isSubGenesisAddressMine(pub.key); //cast
 
@@ -3859,7 +3859,7 @@ int main(int argc , char *argv[])
     signal(SIGSEGV, exception_handler);
 
     //If never set difficulty before, let's set random
-    //node_difficulty = qRandFloat(0.031, 0.240);
+    //node_difficulty = qRandFloat(0.031, 0.180);
 
     //set local working directory
     if(chdir(getHome()) == -1)
@@ -4444,12 +4444,12 @@ int main(int argc , char *argv[])
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
             printf("Average / Network Difficulty: %.3f\n", network_difficulty);
 
-            //Vote Less than 0.240
+            //Vote Less than 0.180
             struct addr lpub;
             size_t len = ECC_CURVE+1;
             b58tobin(lpub.key, &len, "q15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK", 44);
 
-            //Vote 0.240
+            //Vote 0.180
             struct addr tpub;
             len = ECC_CURVE+1;
             b58tobin(tpub.key, &len, "24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3", 45);
@@ -4458,11 +4458,11 @@ int main(int argc , char *argv[])
             struct tm* tmi = gmtime(&lt);
 
             printf("\nVoting has changed.\n\n");
-            printf("You are now expected to pay vfc into one of two addresses that define the minting difficulty value between [0.031 - 0.240].\n\n");
+            printf("You are now expected to pay vfc into one of two addresses that define the minting difficulty value between [0.031 - 0.180].\n\n");
             setlocale(LC_NUMERIC, "");
             printf("To increase the difficulty towards 0.031 pay VFC into:\nq15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK (%'.3f VFC)\n\n", toDB(getBalanceLocal(&lpub)));
-            printf("To increase the difficulty towards 0.240 pay VFC into:\n24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3 (%'.3f VFC)\n\n", toDB(getBalanceLocal(&tpub)));
-            printf("If the balance of 24K~ is higher than q15~ the difficulty will be 0.240, otherwise the difference between the balance of the two addresses will be used to reduce the difficulty from 0.240 to 0.031.\n\n");
+            printf("To increase the difficulty towards 0.180 pay VFC into:\n24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3 (%'.3f VFC)\n\n", toDB(getBalanceLocal(&tpub)));
+            printf("If the balance of 24K~ is higher than q15~ the difficulty will be 0.180, otherwise the difference between the balance of the two addresses will be used to reduce the difficulty from 0.180 to 0.031.\n\n");
             printf("Next Network Difficulty: %.3f in %u minutes\n", liveNetworkDifficulty(), 60 - tmi->tm_min);
             printf("Current Network Difficulty: %.3f\n\n", network_difficulty);
             
