@@ -124,6 +124,7 @@ const uint16_t gport = 8787;
 #define ERROR_OPEN -5
 
 //Node Settings
+#define MIN_DIFFICULTY 0.180            // Easiest minting difficulty.
 #define MAX_TRANS_QUEUE 8192            // Maximum transaction backlog to keep in real-time [8192 / 3 = 2,730 TPS]
 #define MAX_REXI_SIZE MAX_TRANS_QUEUE   // Need to be atleast MAX_TRANS_QUEUE / 3
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
@@ -665,7 +666,7 @@ uint64_t isSubGenesisAddressMine(uint8_t *a)
     const double a4 = gNa(&v[1], &v[4]);
 
     //All normal angles a1-a4 must be under this value
-    const double min = 0.180;
+    const double min = MIN_DIFFICULTY;
     
     //Was it a straight hit?
     if(a1 < min && a2 < min && a3 < min && a4 < min)
@@ -1121,8 +1122,8 @@ float getPeerDiff(const uint id)
     float rv = atof(cf);
     if(rv < 0.031)
         rv = 0.031;
-    if(rv > 0.180)
-        rv = 0.180;
+    if(rv > MIN_DIFFICULTY)
+        rv = MIN_DIFFICULTY;
     return roundFloat(rv);
 }
 
@@ -2290,37 +2291,37 @@ uint64_t getBalanceLocal(addr* from)
 
 float liveNetworkDifficulty()
 {
-    //Vote Less than 0.180                                                  [lb]
+    //Vote Less than MIN_DIFFICULTY                                                  [lb]
     struct addr lpub;
     size_t len = ECC_CURVE+1;
     b58tobin(lpub.key, &len, "q15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK", 44);
 
-    //Vote 0.180                                                            [tb]
+    //Vote MIN_DIFFICULTY                                                            [tb]
     struct addr tpub;
     len = ECC_CURVE+1;
     b58tobin(tpub.key, &len, "24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3", 45);
 
     //Get addr balances
-    const double lb = toDB(getBalanceLocal(&lpub)); // < 0.180 vote power in vfc
-    const double tb = toDB(getBalanceLocal(&tpub)); //   0.180 vote power in vfc
+    const double lb = toDB(getBalanceLocal(&lpub)); // < MIN_DIFFICULTY vote power in vfc
+    const double tb = toDB(getBalanceLocal(&tpub)); //   MIN_DIFFICULTY vote power in vfc
 
-    //Is higher for 0.180
+    //Is higher for MIN_DIFFICULTY
     float ndiff = 0.031;
     if(tb > lb)
     {
-        ndiff = 0.180;
+        ndiff = MIN_DIFFICULTY;
     }
-    else //otherwise drag down on 0.180 by the overflow balance of lb
+    else //otherwise drag down on MIN_DIFFICULTY by the overflow balance of lb
     {
         if(lb != 0)
-            ndiff = ((1 / lb) * tb) * 0.180;
+            ndiff = ((1 / lb) * tb) * MIN_DIFFICULTY;
     }
 
     //Limit
     if(ndiff < 0.031)
         ndiff = 0.031;
-    if(ndiff > 0.180)
-        ndiff = 0.180;
+    if(ndiff > MIN_DIFFICULTY)
+        ndiff = MIN_DIFFICULTY;
 
     //Round
     return roundFloat(ndiff);
@@ -2976,7 +2977,7 @@ void *miningThread(void *arg)
         const double adif = isSubDiff(pub.key);
 
         //Found subG?
-        if(adif <= 0.180)
+        if(adif <= MIN_DIFFICULTY)
         {
             r = isSubGenesisAddressMine(pub.key); //cast
 
@@ -3859,7 +3860,7 @@ int main(int argc , char *argv[])
     signal(SIGSEGV, exception_handler);
 
     //If never set difficulty before, let's set random
-    //node_difficulty = qRandFloat(0.031, 0.180);
+    //node_difficulty = qRandFloat(0.031, MIN_DIFFICULTY);
 
     //set local working directory
     if(chdir(getHome()) == -1)
@@ -4107,7 +4108,7 @@ int main(int argc , char *argv[])
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
 
             nthreads = atoi(argv[2]);
-            printf("%i Threads launched..\nMining Difficulty: 0.180\nNetwork Difficulty: %.3f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
+            printf("%i Threads launched..\nMining Difficulty: %.3f\nNetwork Difficulty: %.3f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, MIN_DIFFICULTY, getMiningDifficulty());
 
             //Launch mining threads
             for(int i = 0; i < nthreads; i++)
@@ -4285,7 +4286,7 @@ int main(int argc , char *argv[])
             //Dump Public Key as Base58
             const double diff = isSubDiff(p_publicKey);
 
-            if(diff < 0.180)
+            if(diff < MIN_DIFFICULTY)
                 printf("subG: %s (%.3f DIFF) (%.3f VFC)\n\n", argv[2], diff, toDB(isSubGenesisAddress(p_publicKey, 1)));
             else
                 printf("This is not a subGenesis (subG) Address.\n");
@@ -4444,12 +4445,12 @@ int main(int argc , char *argv[])
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
             printf("Average / Network Difficulty: %.3f\n", network_difficulty);
 
-            //Vote Less than 0.180
+            //Vote Less than MIN_DIFFICULTY
             struct addr lpub;
             size_t len = ECC_CURVE+1;
             b58tobin(lpub.key, &len, "q15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK", 44);
 
-            //Vote 0.180
+            //Vote MIN_DIFFICULTY
             struct addr tpub;
             len = ECC_CURVE+1;
             b58tobin(tpub.key, &len, "24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3", 45);
@@ -4458,11 +4459,11 @@ int main(int argc , char *argv[])
             struct tm* tmi = gmtime(&lt);
 
             printf("\nVoting has changed.\n\n");
-            printf("You are now expected to pay vfc into one of two addresses that define the minting difficulty value between [0.031 - 0.180].\n\n");
+            printf("You are now expected to pay vfc into one of two addresses that define the minting difficulty value between [0.031 - %.3f].\n\n", MIN_DIFFICULTY);
             setlocale(LC_NUMERIC, "");
             printf("To increase the difficulty towards 0.031 pay VFC into:\nq15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK (%'.3f VFC)\n\n", toDB(getBalanceLocal(&lpub)));
-            printf("To increase the difficulty towards 0.180 pay VFC into:\n24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3 (%'.3f VFC)\n\n", toDB(getBalanceLocal(&tpub)));
-            printf("If the balance of 24K~ is higher than q15~ the difficulty will be 0.180, otherwise the difference between the balance of the two addresses will be used to reduce the difficulty from 0.180 to 0.031.\n\n");
+            printf("To increase the difficulty towards %.3f. pay VFC into:\n24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3 (%'.3f VFC)\n\n", MIN_DIFFICULTY, toDB(getBalanceLocal(&tpub)));
+            printf("If the balance of 24K~ is higher than q15~ the difficulty will be %.3f, otherwise the difference between the balance of the two addresses will be used to reduce the difficulty from %.3f to 0.031.\n\n", MIN_DIFFICULTY, MIN_DIFFICULTY);
             printf("Next Network Difficulty: %.3f in %u minutes\n", liveNetworkDifficulty(), 60 - tmi->tm_min);
             printf("Current Network Difficulty: %.3f\n\n", network_difficulty);
             
@@ -4664,7 +4665,7 @@ int main(int argc , char *argv[])
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
 
             nthreads = get_nprocs();
-            printf("%i CPU Cores detected..\nMining Difficulty: 0.180\nNetwork Difficulty: %.3f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
+            printf("%i CPU Cores detected..\nMining Difficulty: %.3f\nNetwork Difficulty: %.3f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, MIN_DIFFICULTY, getMiningDifficulty());
             
 
             //Launch mining threads
