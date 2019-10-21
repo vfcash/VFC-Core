@@ -6,9 +6,8 @@ The project started on the 23rd of April 2019. It has no Proof-of-Work (POW) rat
 Divisible to three decimal places, mineable, written in C, compiled with GCC, 256-bit key length.
 
 Transactions are free, there is no charge for making a transaction on the network.
-However transactions can optionally create inflation of the currency which is partly paid back to the node operators as rewards.
 
-VFC is a private decentralised network, as-in you will need control of some currency before the rest of the network considers your dedicated node viable for indexing. The usual method is to mine some. Also you can transfer VFC to your node's reward address `vfc reward` will identify your reward public key / address and as such your node will automatically verify itself within the hour.
+VFC is a private decentralised network, consequently you will need control of some currency before the rest of the network considers your node viable for indexing. The usual method is to mine some VFC using the `vfc mine` command. Also you can transfer VFC to your node's reward address `vfc reward` will identify your reward public key / address once your reward address has some VFC your node will automatically verify itself within the hour.
 
 Join us on Telegram [@vfcash](https://t.me/vfcash)
 
@@ -20,13 +19,17 @@ git clone https://github.com/vfcash/VFC-Core && cd VFC-Core
 chmod 0777 compile.sh
 ./compile.sh
 
-vfc master_resync
+vfc cdn_resync
 ```
 Then use the `vfc help` command in the console for a full command list or `vfui` if you are running a desktop environment and prefer a graphical user interface.
 
 ```> vfui```
 
 [![Watch the video](https://raw.githubusercontent.com/vfcash/RELEASES/master/vfui.png)](https://raw.githubusercontent.com/vfcash/RELEASES/master/vfui.mp4)
+
+```> vfwallet```
+
+![VF Wallet](https://github.com/vfcash/RELEASES/blob/master/vfwallet.jpg)
 
 ```
 > vfc help
@@ -49,7 +52,7 @@ vfc new <seed1> <seed2> <seed3> <seed4> - Four random seed(uint64), Key-Pair
 vfc qsend <amount> <receiver address>   - Send transaction from rewards address
 vfc claim <optional file path>          - Claims private keys to rewards addr
 vfc reward                              - Your awarded or mined VFC
---------------------------------------
+-------------------------------
 vfc mine <optional num threads>  - CPU miner for VFC
 vfc peers                        - List locally indexed peers
 vfc getpub <private key>         - Get Public Key from Private Key
@@ -59,12 +62,13 @@ vfc votes                        - Map of difficulty votes
 vfc difficulty                   - Network mining difficulty
 -------------------------------
 vfc sync <optional num peers>    - Trigger blockchain sync from your peers
-vfc master_resync                - Trigger blockchain resync from the master
+vfc cdn_resync                   - Trigger blockchain resync from the master
 vfc reset_chain                  - Reset blockchain back to genesis state
 vfc scan                         - Scan for peers in the IPv4 range.
 -------------------------------
 vfc replaypeer <peer ip address> - Manually replay from specific peer
 vfc addpeer <peer ip address>    - Manually add a peer
+vfc printtrans 1000 1010         - Print transactions[start,end] on chain
 vfc findtrans <transaction uid>  - Find a transaction by it's UID
 -------------------------------
 vfc dump                         - List all transactions on chain
@@ -72,6 +76,17 @@ vfc dumptop <num trans>          - List top x transactions on chain
 vfc dumpbad                      - List all detected double spend attempts
 vfc clearbad                     - Clear all detected double spend attempts
 -------------------------------
+
+Scan blocks.dat for invalid transactions and truncate at first detected:
+vfc trunc <offset from eof>
+
+[Fast] Scan blocks.dat for duplicate transactions and generates a cleaned output; cblocks.dat:
+vfc clean
+
+[Slow] Scan blocks.dat for invalid transactions and generates a cleaned output; cfblocks.dat:
+vfc cleanfull
+
+----------------
 vfc version      - Node version
 vfc agent        - Node user-agent
 vfc config       - Node configuration
