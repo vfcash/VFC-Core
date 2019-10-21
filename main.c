@@ -665,7 +665,7 @@ uint64_t isSubGenesisAddressMine(uint8_t *a)
     const double a4 = gNa(&v[1], &v[4]);
 
     //All normal angles a1-a4 must be under this value
-    const double min = 0.24;
+    const double min = 0.180;
     
     //Was it a straight hit?
     if(a1 < min && a2 < min && a3 < min && a4 < min)
@@ -1126,7 +1126,7 @@ float getPeerDiff(const uint id)
     return roundFloat(rv);
 }
 
-void printDifficultyVotes()
+void printDifficultyVotes() //Legacy, remove in future
 {
     uint tally[256];
     memset(tally, 0, sizeof(uint)*256);
@@ -2310,10 +2310,10 @@ float liveNetworkDifficulty()
     {
         ndiff = 0.180;
     }
-    else //otherwise drag down on 0.24 by the overflow balance of lb
+    else //otherwise drag down on 0.180 by the overflow balance of lb
     {
         if(lb != 0)
-            ndiff = ((1 / lb) * tb) * 0.24;
+            ndiff = ((1 / lb) * tb) * 0.180;
     }
 
     //Limit
@@ -4107,7 +4107,7 @@ int main(int argc , char *argv[])
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
 
             nthreads = atoi(argv[2]);
-            printf("%i Threads launched..\nMining Difficulty: 0.24\nNetwork Difficulty: %.3f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
+            printf("%i Threads launched..\nMining Difficulty: 0.180\nNetwork Difficulty: %.3f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
 
             //Launch mining threads
             for(int i = 0; i < nthreads; i++)
@@ -4285,7 +4285,7 @@ int main(int argc , char *argv[])
             //Dump Public Key as Base58
             const double diff = isSubDiff(p_publicKey);
 
-            if(diff < 0.24)
+            if(diff < 0.180)
                 printf("subG: %s (%.3f DIFF) (%.3f VFC)\n\n", argv[2], diff, toDB(isSubGenesisAddress(p_publicKey, 1)));
             else
                 printf("This is not a subGenesis (subG) Address.\n");
@@ -4664,7 +4664,7 @@ int main(int argc , char *argv[])
             forceRead(".vfc/netdiff.mem", &network_difficulty, sizeof(float));
 
             nthreads = get_nprocs();
-            printf("%i CPU Cores detected..\nMining Difficulty: 0.24\nNetwork Difficulty: %.3f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
+            printf("%i CPU Cores detected..\nMining Difficulty: 0.180\nNetwork Difficulty: %.3f\nSaving mined private keys to .vfc/minted.priv\n\nMining please wait...\n\n", nthreads, getMiningDifficulty());
             
 
             //Launch mining threads
