@@ -1044,7 +1044,7 @@ void resyncBlocks(const uint irnp)
     memset(&replay_allow, 0, sizeof(uint)*MAX_PEERS);
 
     //allow replay from x peers at random offset
-    const uint rnp = irnp < num_peers ? irnp : num_peers; //Replay Num Peers
+    const uint rnp = irnp < num_peers ? irnp : num_peers-1; //Replay Num Peers
     int i = 0;
     int ri = 0;
     if(num_peers-rnp != 0) //We have offset leeway
@@ -1327,7 +1327,7 @@ uint aQue(struct trans *t, const uint iip, const uint iipo, const unsigned char 
     else
     {
         //The only kind of transaction a non-peer can send is a network auth (replays specify both ip's as 0/null so there is exception for this)
-        if((iipo != 0 && isPeer(iip) == 0) || (iipo != 0 && isPeer(iipo) == 0) )
+        if( (iipo != 0 && isPeer(iip) == 0) || (iipo != 0 && isPeer(iipo) == 0) )
         {
             //printf("NOT-PEER: %lu\n", t->uid);
             return 0;
