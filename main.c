@@ -2079,7 +2079,7 @@ void printtrans(uint fromR, uint toR)
             close(f);
 
             struct trans t;
-            for(size_t i = 0; i < len; i += sizeof(struct trans))
+            for(size_t i = fromR * sizeof(struct trans); i < len; i += sizeof(struct trans))
             {
                 memcpy(&t, m+i, sizeof(struct trans));
 
@@ -4374,6 +4374,8 @@ int main(int argc , char *argv[])
             printf("-----------------------------\n\n");
             printf("Send a transaction:\n");
             printf("vfc <sender public key> <reciever public key> <amount> <sender private key>\n\n");
+            printf("vfc makeonly <sender public key> <reciever public key> <amount> <sender private key>\n\n");
+            printf("vfc sendRaw <uid> <sender public key> <reciever public key> <amount> <sig>\n\n");
             printf("--------------------------------------\n");
             printf("vfc new <optional seed>                 - Create a new Address / Key-Pair\n");
             printf("vfc new <seed1> <seed2> <seed3> <seed4> - Four random seed(uint64), Key-Pair\n");
@@ -4948,6 +4950,134 @@ int main(int argc , char *argv[])
         printf("The Balance for Address: %s\nTime Taken %li Milliseconds (%li ns).\n\nFinal Balance: %'.3f VFC\n\n", argv[1], td, (e.tv_nsec - s.tv_nsec), toDB(bal));
         exit(0);
     }
+
+    if(argc == 6)
+    {
+        // ./vfc makeonly <sender public key> <reciever public key> <amount> <sender private key>
+        if(strcmp(argv[1], "makeonly") == 0)
+        {
+            uint8_t from[ECC_CURVE+1];
+            uint8_t to[ECC_CURVE+1];
+            uint8_t priv[ECC_CURVE];
+            //
+            size_t blen = ECC_CURVE+1;
+            b58tobin(from, &blen, argv[2], strlen(argv[2]));
+            b58tobin(to, &blen, argv[3], strlen(argv[3]));
+            blen = ECC_CURVE;
+            b58tobin(priv, &blen, argv[5], strlen(argv[5]));
+
+            const mval sbal = fromDB(atof(argv[4]));
+
+            //Construct Transaction
+            struct trans t;
+            memset(&t, 0, sizeof(struct trans));
+            //
+            memcpy(t.from.key, from, ECC_CURVE+1);
+            memcpy(t.to.key, to, ECC_CURVE+1);
+            t.amount = sbal;
+            //Too low amount?
+            if(t.amount < 0.001)
+            {
+                printf("Sorry the amount you provided was too low, please try 0.001 VFC or above.\n\n");
+                exit(0);
+            }
+            //UID Based on timestamp & signature
+            time_t ltime = time(NULL);
+            char suid[MIN_LEN];
+            snprintf(suid, sizeof(suid), "%s/%s", asctime(localtime(&ltime)), argv[2]); //timestamp + base58 from public key
+            t.uid = crc64(0, (unsigned char*)suid, strlen(suid));
+
+            //Sign the block
+            uint8_t thash[ECC_CURVE];
+            makHash(thash, &t);
+            if(ecdsa_sign(priv, thash, t.owner.key) == 0)
+            {
+                printf("\nSorry you're client failed to sign the Transaction.\n\n");
+                exit(0);
+            }
+
+            char sig[MIN_LEN];
+            memset(sig, 0, sizeof(sig));
+            size_t len3 = MIN_LEN;
+            b58enc(sig, &len3, t.owner.key, ECC_CURVE*2);
+
+            setlocale(LC_NUMERIC, "");
+            //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
+            printf("Success.\nUid: %lu\nFrom: %s\nTo: %s\nOwner: %s\nAmount: %.3f\n", t.uid, argv[2], argv[3], sig, toDB(t.amount));
+
+            exit(0);
+        }
+    }
+
+    if(argc == 7)
+    {
+        // ./vfc sendRaw <uid> <sender public key> <reciever public key> <amount> <sig>
+        if(strcmp(argv[1], "sendRaw") == 0)
+        {
+
+            uint8_t from[ECC_CURVE+1];
+            uint8_t to[ECC_CURVE+1];
+            uint8_t owner[ECC_CURVE*2];
+            //
+            size_t blen = ECC_CURVE+1;
+            b58tobin(from, &blen, argv[3], strlen(argv[3]));
+            b58tobin(to, &blen, argv[4], strlen(argv[4]));
+            size_t slen = ECC_CURVE*2;
+            b58tobin(owner, &slen, argv[6], strlen(argv[6]));
+
+            const mval sbal = fromDB(atof(argv[5]));
+
+            //Construct Transaction
+            struct trans t;
+            memset(&t, 0, sizeof(struct trans));
+            //
+            memcpy(t.from.key, from, ECC_CURVE+1);
+            memcpy(t.to.key, to, ECC_CURVE+1);
+            t.amount = sbal;
+            //Too low amount?
+            if(t.amount < 0.001)
+            {
+                printf("Sorry the amount you provided was too low, please try 0.001 VFC or above.\n\n");
+                exit(0);
+            }
+            sscanf(argv[2], "%lu", &t.uid);
+
+            //Sign the block
+            uint8_t thash[ECC_CURVE];
+            makHash(thash, &t);
+            if(ecdsa_verify(t.from.key, thash, owner) == 0)
+            {
+                printf("\nFailed to verify the Transaction.\n\n");
+                exit(0);
+            }
+
+            memcpy(t.owner.key, owner, ECC_CURVE*2);
+            //Generate Packet (pc)
+            const uint origin = 0;
+            size_t len = 1+sizeof(uint)+sizeof(uint64_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
+            char pc[MIN_LEN];
+            pc[0] = 't';
+            char* ofs = pc + 1;
+            memcpy(ofs, &origin, sizeof(uint));
+            ofs += sizeof(uint);
+            memcpy(ofs, &t.uid, sizeof(uint64_t));
+            ofs += sizeof(uint64_t);
+            memcpy(ofs, from, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, to, ECC_CURVE+1);
+            ofs += ECC_CURVE+1;
+            memcpy(ofs, &t.amount, sizeof(mval));
+            ofs += sizeof(mval);
+            memcpy(ofs, t.owner.key, ECC_CURVE*2);
+
+            //Broadcast
+            peersBroadcast(pc, len);
+
+            printf("Success.\n");
+            exit(0);
+        }
+    }
+
 
     //GET TRANS HASH
     if(argc == 6)
