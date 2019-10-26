@@ -22,7 +22,7 @@
     One CPU core can do on average 14 transactions per second, on a 16 thread machine
     that's roughly 224 transactions a second.
 
-    The node is capped at 2,700 transactions per second reguardless of how many
+    The node is capped at 2,700 transactions per second regardless of how many
     threads your machine has available. 
 ~~
 
@@ -30,16 +30,13 @@
     Only Supports IPv4 addresses.
     Local storage in ~/.vfc
 
-    MASTER NODE = SEED NODE [Bitcoin has 4 Seed nodes, all p2p networks need a initial     ]
+    MASTER NODE = SEED NODE [Bitcoin has 4 Seed nodes, all p2p networks need an initial    ]
                             [seed node, this does not mean the whole project is centralised]
 
-    *** In it's current state we only track peer's who send a transaction to the server. ***
+    *** In the current state we only track peer's who send a transaction to the server. ***
     *** Send a transaction to yourself, you wont see any address balance until verified ***
 
-    There is a small UDP transaction queue and a processing thread to make sure normal
-    UDP transmissions do not get particularly blocked up.
-
-    Peers are aware of each other by referal, passing the origin ip of a
+    Peers are aware of each other by referral, passing the origin ip of a
     transaction across the network makes this possible, but this also exposes
     the IP address of the clients operating specific transactions. This is fine if
     you are behind a VPN but otherwise, this is generally bad for accountability.
@@ -50,11 +47,10 @@
 
     Peers can only be part of the network by proving they control VFC currency in a
     given VFC address. This is done by making a transaction from the same IP as the
-    node running the full time VFC daemon. Only then will the local VFC daemon
-    recieve all transactions broadcast around the VFC p2p network.
-
-    This client will try to broadcast all transactions through the master first
-    and then the peer list.
+    node running the full time VFC daemon. This transaction has to be a transaction
+    to itself [a transaction from the same address it is sent to].
+        Only then will the local VFC daemon receive all transactions broadcast
+    around the VFC p2p network.
 
     ~? WHAT IS IF RUN AS MASTER_NODE = 1:
 
@@ -2586,7 +2582,7 @@ void makAddrSeed(addr* pub, addr* priv, const uint64_t* seed) //Seeded [array of
     }
 }
 
-void makAddr(addr* pub, addr* priv) //Loud
+void makAddr(addr* pub, addr* priv, const uint silent)
 {
     //Make key pair
     ecc_make_key(pub->key, priv->key);
@@ -2602,7 +2598,8 @@ void makAddr(addr* pub, addr* priv) //Loud
     size_t len = MIN_LEN;
     b58enc(bpub, &len, pub->key, ECC_CURVE+1);
     b58enc(bpriv, &len, priv->key, ECC_CURVE);
-    printf("\nMade new Address / Key Pair\n\nPublic: %s\n\nPrivate: %s\n\n", bpub, bpriv);
+    if(silent == 0)
+        printf("\nMade new Address / Key Pair\n\nPublic: %s\n\nPrivate: %s\n\n", bpub, bpriv);
 }
 
 void makGenesis()
@@ -3898,7 +3895,7 @@ int main(int argc , char *argv[])
     if(access(".vfc/public.key", F_OK) == -1)
     {
         addr pub, priv;
-        makAddr(&pub, &priv);
+        makAddr(&pub, &priv, 1);
 
         char bpub[MIN_LEN], bpriv[MIN_LEN];
         memset(bpub, 0, sizeof(bpub));
@@ -4784,7 +4781,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "new") == 0)
         {
             addr pub, priv;
-            makAddr(&pub, &priv);
+            makAddr(&pub, &priv, 0);
             exit(0);
         }
 
