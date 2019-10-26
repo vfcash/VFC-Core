@@ -52,22 +52,6 @@
         Only then will the local VFC daemon receive all transactions broadcast
     around the VFC p2p network.
 
-    ~? WHAT IS IF RUN AS MASTER_NODE = 1:
-
-    If you run the client in MASTER_NODE 1 mode, this is what will happen:
-    1. User directory will move from ~/.vfc to /srv/.vfc
-    2. Master node will exclude itself from some network send operations
-    3. Master node will track peers and log to file valid reward payment commands,
-        these commands can then later be executed in the bash terminal in-order
-        to pay out the rewards payments, or the file can be used to infer analytics.
-
-    When should you run the node as MASTER_NODE 1? When you are exposing a public
-    service such as the PHP REST API, in these cases it's best to run as a MASTER NODE
-    to reduce your TX output.
-        If you are just a regular user, using VFC privately exposing no web-services
-    it's much better to run MASTER_NODE 0 as running in MASTER_NODE 1 will disable
-    important user functionality for normal day-to-day operation as a user wallet.
-
     Distributed under the MIT software license, see the accompanying
     file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -109,7 +93,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.65";
+const char version[]="0.66";
 const uint16_t gport = 8787;
 
 //Error Codes
@@ -147,11 +131,6 @@ uint PEER_TRANSACTION_LIMIT_PER_MINUTE = 180; // 180 = 3 unique transactions per
 #define ulong unsigned long long int
 
 //Operating Global Variables
-#if MASTER_NODE == 1
-    time_t nextreward = 0;
-    uint rewardindex = 0;
-    uint rewardpaid = 1;
-#endif
 char mid[8];                         //Clients private identification code used in pings etc.
 float node_difficulty = 0.031;       //Clients weighted contribution to the federated mining difficulty
 float network_difficulty = 0.031;    //Assumed or actual network difficulty (starts at lowest until known)
@@ -822,20 +801,7 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
 //
 //
 //
-/* ~ P2P Tracker
-
-    isMasterNode() - Check if address is master node
-    setMasterNode() - Reset's the peers list setting master node at index 0
-
-    resyncBlocks() - Download most recent blockchain version from master
-    verifyChain() - verify blockchain has the original genesis block.
-    
-    addPeer() - Add a peer address to the peers (if free space available)
-    isPeer() - Check if peer already exists in list.
-    
-    peersBroadcast() - Broadcast a packet to the peers (skipping master)
-
-*/
+// ~ P2P Tracker
 
 //General peer tracking
 uint peers[MAX_PEERS]; //Peer IPv4 addresses
@@ -963,14 +929,14 @@ uint verifyChain(const char* path)
     return 1;
 }
 
-uint isMasterNode(const uint ip)
+uint isSeedNode(const uint ip)
 {
     if(ip == peers[0])
         return 1;
     return 0;
 }
 
-void setMasterNode()
+void setSeedNode()
 {
     peers[0] = HOSTtoIPv4("vfcash.co.uk");
     sprintf(peer_ua[0], "VFC-SEED");
@@ -1145,56 +1111,6 @@ void printDifficultyVotes() //Legacy, remove in future
     for(uint i = 31; i < 241; i++)
         printf("%.3f,%u\n", (double)i/1000, tally[i]);
 }
-
-#if MASTER_NODE == 1
-void RewardPeer(const uint ip, const char* pubkey)
-{
-    //Only reward if ready
-    if(rewardpaid == 1)
-        return;
-
-    //Only reward the eligible peer
-    if(peers[rewardindex] != ip)
-        return;
-
-    //Base amount
-    double amount = 1.000;
-
-    //Wrong / not latest version? Low reward
-    if(strstr(peer_ua[rewardindex], version) == NULL)
-    {
-        amount = 0;
-        return;
-    }
-
-    //Clean the input ready for sprintf (exploit vector potential otherwise)
-    char sa[MIN_LEN];
-    memset(sa, 0, sizeof(sa));
-    const int sal = strlen(pubkey);
-    memcpy(sa, pubkey, sal);
-    for(int i = 1; i < sal; ++i)
-        if(isalonu(sa[i]) == 0)
-            sa[i] = 0x00;
-
-    //Drop info
-    struct in_addr ip_addr;
-    ip_addr.s_addr = ip;
-    timestamp();
-    printf("Reward Yapit (%u):%s, %.3f, %s\n", rewardindex, sa, amount, inet_ntoa(ip_addr));
-
-    //Do not fork from here, will fork the threads too.
-    FILE* f = fopen(".vfc/payout.txt", "a");
-    if(f)
-    {
-        flockfile(f);
-        fprintf(f, reward_command, sa, amount);
-        funlockfile(f);
-        fclose(f);
-    }
-
-    rewardpaid = 1;
-}
-#endif
 
 //Peers are only replaced if they have not responded in a x time period, otherwise we still consider them contactable until replaced.
 int addPeer(const uint ip)
@@ -2750,7 +2666,7 @@ void loadmem()
         fclose(f);
     }
 
-    setMasterNode();
+    setSeedNode();
 }
 
 void sigintHandler(int sig_num) 
@@ -2848,7 +2764,7 @@ void *generalThread(void *arg)
             networkDifficulty(); //Recalculate the network difficulty
 
             //Update master IPv4 from DNS
-            setMasterNode();
+            setSeedNode();
         }
 
         //Let's execute a Sync every 1 hour  /////  [ This should NEVER be automatic ]
@@ -2869,7 +2785,7 @@ void *generalThread(void *arg)
             for(uint i = 0; i < MAX_PEERS; i++)
                 peer_ltcount[i] = 0;
             
-            setMasterNode(); //Update master IPv4 from DNS
+            setSeedNode(); //Update master IPv4 from DNS
 
             sp = time(0) + 60;
         }
@@ -2883,8 +2799,8 @@ void *generalThread(void *arg)
             pr = time(0) + PING_INTERVAL;
         }
 
-        //Every hour have the rewards address send 1 vfc to itself to authorized any possible
-        // new network addresses you may have been re-assigned.
+        /*  Every hour have the rewards address send 1 vfc to itself to authorized any possible
+                new network addresses you may have been re-assigned.    */
         if(time(0) > aa)
         {
             char cmd[1024];
@@ -2893,45 +2809,7 @@ void *generalThread(void *arg)
                 printf("ERROR: Failed to execute VFC Network Authentication.\n");
             aa = time(0) + 3600; //every hour
         }
-            
-//This code is only for the masternode to execute, in-order to distribute rewards fairly.
-#if MASTER_NODE == 1
-        //Peers get a few chances to collect their reward
-        if(rewardpaid == 0 && time(0) > nr)
-        {
-            csend(peers[rewardindex], "x", 1);
-            nr = time(0)+1;
-        }
-
-        //Otherwise they forefit, it's time to reward the next peer.
-        if(time(0) > nextreward)
-        {
-            //Set the next reward time / reset reward interval
-            nextreward = time(0) + REWARD_INTERVAL;
-            rewardpaid = 0;
-            
-            //Try to find a peer who has responded to a ping in atleast the last 9 minutes. Remember we check every peer with a ping every 3 minutes.
-            rewardindex++;
-            if(rewardindex >= num_peers) //Is the next peer valid?
-            {
-                rewardindex = 0; //Master is always worthy, never takes payments
-            }
-            else
-            {
-                //Is it ping worthy of a payment?
-                while(isPeerAlive(rewardindex) == 0)
-                {
-                    rewardindex++;
-                    if(rewardindex >= num_peers)
-                    {
-                        rewardindex = 0; //Master is always worthy, never takes payments
-                        break;
-                    }
-                }
-            }
-            
-        }
-#endif
+    
     }
 
     return 0;
@@ -3265,13 +3143,13 @@ void *networkThread(void *arg)
         memset(rb, 0, sizeof(rb));
         read_size = recvfrom(s, rb, RECV_BUFF_SIZE-1, 0, (struct sockaddr *)&client, &slen);
 
-        //It's time to payout some rewards (if eligible).
-#if MASTER_NODE == 1
-        if(rb[0] == ' ')
+        //Transaction limiter
+        const int peerid = getPeer(client.sin_addr.s_addr);
+        if(peerid != -1)
         {
-            RewardPeer(client.sin_addr.s_addr, rb); //Check if the peer is eligible
+            if(peer_ltcount[peerid] >= PEER_TRANSACTION_LIMIT_PER_MINUTE)
+                continue;
         }
-#endif
 
         //peer has sent a transaction
         if(rb[0] == 't' && read_size == trans_size)
@@ -3294,55 +3172,53 @@ void *networkThread(void *arg)
             memcpy(&t.amount, ofs, sizeof(mval));
             ofs += sizeof(mval);
             memcpy(t.owner.key, ofs, ECC_CURVE*2);
-            
-            //Transaction limiter
-            const int gp = getPeer(client.sin_addr.s_addr);
-            if(peer_ltcount[gp] < PEER_TRANSACTION_LIMIT_PER_MINUTE)
+
+            //Process Transaction (Threaded (using processThread()) not to jam up UDP relay)
+            const uint qrv = aQue(&t, client.sin_addr.s_addr, origin, 1);
+            if(qrv > 0)
             {
-                //Process Transaction (Threaded (using processThread()) not to jam up UDP relay)
-                const uint qrv = aQue(&t, client.sin_addr.s_addr, origin, 1);
-                if(qrv > 0)
+                //printf("Q: %u %lu %u\n", t.amount, t.uid, gQueSize());
+
+                //Log
+                // char pfrom[MIN_LEN];
+                // memset(pfrom, 0, sizeof(pfrom));
+                // char pto[MIN_LEN];
+                // memset(pto, 0, sizeof(pto));
+                // size_t len = MIN_LEN;
+                // b58enc(pfrom, &len, t.from.key, ECC_CURVE+1);
+                // len = MIN_LEN;
+                // b58enc(pto, &len, t.to.key, ECC_CURVE+1);
+                // printf("%s / t: %lu, %s, %s, %u\n", inet_ntoa(client.sin_addr), t.uid, pfrom, pto, t.amount);
+
+                //Broadcast to peers
+                origin = client.sin_addr.s_addr;
+                char pc[MIN_LEN];
+                pc[0] = 't';
+                char* ofs = pc + 1;
+                memcpy(ofs, &origin, sizeof(uint));
+                ofs += sizeof(uint);
+                memcpy(ofs, &t.uid, sizeof(uint64_t));
+                ofs += sizeof(uint64_t);
+                memcpy(ofs, t.from.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, t.to.key, ECC_CURVE+1);
+                ofs += ECC_CURVE+1;
+                memcpy(ofs, &t.amount, sizeof(mval));
+                ofs += sizeof(mval);
+                memcpy(ofs, t.owner.key, ECC_CURVE*2);
+
+                //If it's a peer increase it's transaction count
+                if(peerid != -1)
                 {
-                    //printf("Q: %u %lu %u\n", t.amount, t.uid, gQueSize());
-
-                    //Log
-                    // char pfrom[MIN_LEN];
-                    // memset(pfrom, 0, sizeof(pfrom));
-                    // char pto[MIN_LEN];
-                    // memset(pto, 0, sizeof(pto));
-                    // size_t len = MIN_LEN;
-                    // b58enc(pfrom, &len, t.from.key, ECC_CURVE+1);
-                    // len = MIN_LEN;
-                    // b58enc(pto, &len, t.to.key, ECC_CURVE+1);
-                    // printf("%s / t: %lu, %s, %s, %u\n", inet_ntoa(client.sin_addr), t.uid, pfrom, pto, t.amount);
-
-
-                    //Broadcast to peers
-                    origin = client.sin_addr.s_addr;
-                    char pc[MIN_LEN];
-                    pc[0] = 't';
-                    char* ofs = pc + 1;
-                    memcpy(ofs, &origin, sizeof(uint));
-                    ofs += sizeof(uint);
-                    memcpy(ofs, &t.uid, sizeof(uint64_t));
-                    ofs += sizeof(uint64_t);
-                    memcpy(ofs, t.from.key, ECC_CURVE+1);
-                    ofs += ECC_CURVE+1;
-                    memcpy(ofs, t.to.key, ECC_CURVE+1);
-                    ofs += ECC_CURVE+1;
-                    memcpy(ofs, &t.amount, sizeof(mval));
-                    ofs += sizeof(mval);
-                    memcpy(ofs, t.owner.key, ECC_CURVE*2);
-
-                    peer_tcount[gp]++; //race condition possible, however this is not a mission critical statistic
-                    peer_ltcount[gp]++; 
-
-                    if(qrv == 1) //Transaction Added to Que
-                        triBroadcast(pc, trans_size, 3);
-                    else
-                    if(qrv == 2) //Double spend detected
-                        peersBroadcast(pc, trans_size); //triBroadcast(pc, trans_size, 9);
+                    peer_tcount[peerid]++; //race condition possible, however this is not a mission critical statistic
+                    peer_ltcount[peerid]++;
                 }
+
+                if(qrv == 1) //Transaction Added to Que
+                    triBroadcast(pc, trans_size, 3);
+                else
+                if(qrv == 2) //Double spend detected
+                    peersBroadcast(pc, trans_size); //triBroadcast(pc, trans_size, 9);
             }
         }
 
@@ -3350,7 +3226,7 @@ void *networkThread(void *arg)
         else if(rb[0] == 'r' && read_size == 1)
         {
             //Is this peer even registered? if not, suspect foul play, not part of verified network.
-            if(isPeer(client.sin_addr.s_addr) == 1)
+            if(peerid != 1)
             {
                 //Launch replay
                 launchReplayThread(client.sin_addr.s_addr);
@@ -3361,7 +3237,7 @@ void *networkThread(void *arg)
         else if(rb[0] == 'a' && rb[1] == 0x00 && read_size == 1)
         {
             //Check this is the replay peer
-            if(isPeer(client.sin_addr.s_addr))
+            if(peerid != -1)
             {
                 struct stat st;
                 stat(CHAIN_FILE, &st);
@@ -3382,13 +3258,12 @@ void *networkThread(void *arg)
         else if(rb[0] == 'a' && read_size >= 9)
         {
             //Check this is a peer
-            const int p = getPeer(client.sin_addr.s_addr);
-            if(p != -1)
+            if(peerid != -1)
             {
                 //printf("%s: %s\n", inet_ntoa(client.sin_addr), rb);
-                memset(peer_ua[p], 0, 64);
-                memcpy(&peer_ua[p], rb+1, read_size);
-                peer_ua[p][63] = 0x00;
+                memset(peer_ua[peerid], 0, 64);
+                memcpy(&peer_ua[peerid], rb+1, read_size);
+                peer_ua[peerid][63] = 0x00;
             }
         }
 
@@ -3397,7 +3272,7 @@ void *networkThread(void *arg)
         {
             //Check if this peer is authorized to send replay transactions
             uint allow = 0;
-            if(isMasterNode(client.sin_addr.s_addr) == 1)
+            if(isSeedNode(client.sin_addr.s_addr) == 1)
             {
                 allow = 1;
             }
@@ -3425,7 +3300,7 @@ void *networkThread(void *arg)
         {
             //Check if this peer is authorized to send replay transactions
             uint allow = 0;
-            if(client.sin_addr.s_addr == inet_addr("127.0.0.1") || isMasterNode(client.sin_addr.s_addr) == 1)
+            if(client.sin_addr.s_addr == inet_addr("127.0.0.1") || isSeedNode(client.sin_addr.s_addr) == 1)
             {
                 allow = 1;
             }
@@ -3493,12 +3368,10 @@ void *networkThread(void *arg)
             }
         }
 
-        //master is requesting clients reward public key to make a payment
+        //A peer is requesting the nodes rewards public key
         else if(rb[0] == 'x' && read_size == 1)
         {
-            //A peer is requesting your nodes rewards public key
-            const int p = getPeer(client.sin_addr.s_addr);
-            if(p != -1)
+            if(peerid != -1)
                 csend(client.sin_addr.s_addr, myrewardkey, strlen(myrewardkey));
         }
     
@@ -3965,11 +3838,6 @@ int main(int argc , char *argv[])
     //Set genesis public key
     size_t len = ECC_CURVE+1;
     b58tobin(genesis_pub, &len, "foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ", 44);
-
-    //Set next reward time
-#if MASTER_NODE == 1
-    nextreward = time(0) + REWARD_INTERVAL;
-#endif
 
     //Set the MID
     mid[0] = '\t';
