@@ -2720,23 +2720,10 @@ void *generalThread(void *arg)
     {
         sleep(3);
 
-        //Load any new peers
-        uint nps[MAX_PEERS];
-        FILE* f = fopen(".vfc/peers.mem", "r");
-        if(f)
-        {
-            if(fread(nps, sizeof(uint), MAX_PEERS, f) == MAX_PEERS)
-                for(uint i = 0; nps[i] != 0 && i < MAX_PEERS; i++)
-                    if(getPeer(nps[i]) == -1)
-                        addPeer(nps[i]);
-            
-            fclose(f);
-        }
-
         //Save memory state
         savemem();
 
-        //Load new replay allow value
+        //Load new replay allow values
         forceRead(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_PEERS);
 
         //Recalculate network difficulty
@@ -2787,11 +2774,27 @@ void *generalThread(void *arg)
         //Reset peer send limit every minute
         if(time(0) > sp)
         {
+            //Reset peer frequency limiting
             for(uint i = 0; i < MAX_PEERS; i++)
                 peer_ltcount[i] = 0;
             
-            setSeedNode(); //Update master IPv4 from DNS
+            //Update master IPv4 from DNS
+            setSeedNode();
 
+            //Load any new peers
+            uint nps[MAX_PEERS];
+            FILE* f = fopen(".vfc/peers.mem", "r");
+            if(f)
+            {
+                if(fread(nps, sizeof(uint), MAX_PEERS, f) == MAX_PEERS)
+                    for(uint i = 0; nps[i] != 0 && i < MAX_PEERS; i++)
+                        if(getPeer(nps[i]) == -1)
+                            addPeer(nps[i]);
+                
+                fclose(f);
+            }
+
+            //set next execution
             sp = time(0) + 60;
         }
 
