@@ -4188,7 +4188,7 @@ int main(int argc , char *argv[])
         {
             loadmem();
             addPeer(inet_addr(argv[2]));
-            printf("\nThank you peer %s has been added to your peer list. Please restart your full node process to load the changes.\n\n", argv[2]);
+            printf("\nThank you peer %s has been added to your peer list.\n\n", argv[2]);
             savemem();
             exit(0);
         }
