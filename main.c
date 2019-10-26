@@ -3164,6 +3164,8 @@ void *networkThread(void *arg)
             }
             else
             {
+                //We allow non-peers to send one authentication request every 24 minutes per IPv4 addess.
+                //Preferably we prefer new peers where added manually via an existing peer on the network.
                 const uint64_t nuid = (uint64_t)client.sin_addr.s_addr;
                 if(has_uid(nuid) == 0)
                     add_uid(nuid, 1600); //26 min gap between auth trans per IPv4
