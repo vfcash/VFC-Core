@@ -30,27 +30,15 @@
     Only Supports IPv4 addresses.
     Local storage in ~/.vfc
 
-    MASTER NODE = SEED NODE [Bitcoin has 4 Seed nodes, all p2p networks need an initial    ]
-                            [seed node, this does not mean the whole project is centralised]
-
-    *** In the current state we only track peer's who send a transaction to the server. ***
-    *** Send a transaction to yourself, you wont see any address balance until verified ***
-
-    Peers are aware of each other by referral, passing the origin ip of a
-    transaction across the network makes this possible, but this also exposes
-    the IP address of the clients operating specific transactions. This is fine if
-    you are behind a VPN but otherwise, this is generally bad for accountability.
-    This could give the an attacker insights that could lead to a successfully
-    poisioned block replay. Although the risks are SLIM I would suggest mixing
-    this IP list up aka the ip and ipo uint32 arrays when there is more than one
-    index.
-
+    *** Nodes only track peer's who send a transaction to the server from and to the same address. ***
+    ~
     Peers can only be part of the network by proving they control VFC currency in a
     given VFC address. This is done by making a transaction from the same IP as the
     node running the full time VFC daemon. This transaction has to be a transaction
     to itself [a transaction from the same address it is sent to].
         Only then will the local VFC daemon receive all transactions broadcast
     around the VFC p2p network.
+    ~
 
     Distributed under the MIT software license, see the accompanying
     file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -349,8 +337,10 @@ void forceRead(const char* file, void* data, const size_t data_len)
         if(fc > 333)
         {
             if(data_len != sizeof(uint)*MAX_PEERS) //Ignore rp.mem error
+            {
                 printf("ERROR: fopen() in forceRead() has failed for '%s'.\n", file);
-            err++;
+                err++;
+            }
             return;
         }
 
@@ -366,8 +356,10 @@ void forceRead(const char* file, void* data, const size_t data_len)
         if(fc > 333)
         {
             if(data_len != sizeof(uint)*MAX_PEERS) //Ignore rp.mem error
+            {
                 printf("ERROR: fread() in forceRead() has failed for '%s'.\n", file);
-            err++;
+                err++;
+            }
             fclose(f);
             return;
         }
@@ -504,7 +496,7 @@ void init_sites(const size_t ims)
 }
 
 //Check against all uid in memory for a match
-int has_uid(const uint64_t uid) //Pub
+uint has_uid(const uint64_t uid) //Pub
 {
     //Find site index
     const uint site_index = uid % MAX_SITES;
@@ -1320,7 +1312,7 @@ pthread_mutex_unlock(&mutex5);
     //Success
     if(memcmp(t->from.key, t->to.key, ECC_CURVE+1) == 0) //is auth trans
     {
-        add_uid(crc64(0, (unsigned char*)t->from.key, ECC_CURVE+1), 1600); //1 hr for auth trans
+        add_uid(crc64(0, (unsigned char*)t->from.key, ECC_CURVE+1), 1600); //26 min for auth trans
     }
     else
     {
@@ -3143,6 +3135,7 @@ void *networkThread(void *arg)
         memset(rb, 0, sizeof(rb));
         read_size = recvfrom(s, rb, RECV_BUFF_SIZE-1, 0, (struct sockaddr *)&client, &slen);
 
+
         //Transaction limiter
         const int peerid = getPeer(client.sin_addr.s_addr);
         if(peerid != -1)
@@ -3150,7 +3143,16 @@ void *networkThread(void *arg)
             if(peer_ltcount[peerid] >= PEER_TRANSACTION_LIMIT_PER_MINUTE)
                 continue;
         }
+        else
+        {
+            const uint64_t nuid = (uint64_t)client.sin_addr.s_addr;
+            if(has_uid(nuid) == 0)
+                add_uid(nuid, 1600); //26 min gap between auth trans per IPv4
+            else
+                continue;
+        }
 
+        
         //peer has sent a transaction
         if(rb[0] == 't' && read_size == trans_size)
         {
