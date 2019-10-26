@@ -3137,19 +3137,23 @@ void *networkThread(void *arg)
 
 
         //Transaction limiter
-        const int peerid = getPeer(client.sin_addr.s_addr);
-        if(peerid != -1)
+        int peerid = -1;
+        if(client.sin_addr.s_addr != inet_addr("127.0.0.1"))
         {
-            if(peer_ltcount[peerid] >= PEER_TRANSACTION_LIMIT_PER_MINUTE)
-                continue;
-        }
-        else
-        {
-            const uint64_t nuid = (uint64_t)client.sin_addr.s_addr;
-            if(has_uid(nuid) == 0)
-                add_uid(nuid, 1600); //26 min gap between auth trans per IPv4
+            peerid = getPeer(client.sin_addr.s_addr);
+            if(peerid != -1)
+            {
+                if(peer_ltcount[peerid] >= PEER_TRANSACTION_LIMIT_PER_MINUTE)
+                    continue;
+            }
             else
-                continue;
+            {
+                const uint64_t nuid = (uint64_t)client.sin_addr.s_addr;
+                if(has_uid(nuid) == 0)
+                    add_uid(nuid, 1600); //26 min gap between auth trans per IPv4
+                else
+                    continue;
+            }
         }
 
         
@@ -3302,7 +3306,7 @@ void *networkThread(void *arg)
         {
             //Check if this peer is authorized to send replay transactions
             uint allow = 0;
-            if(client.sin_addr.s_addr == inet_addr("127.0.0.1") || isSeedNode(client.sin_addr.s_addr) == 1)
+            if(isSeedNode(client.sin_addr.s_addr) == 1)
             {
                 allow = 1;
             }
