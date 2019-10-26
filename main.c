@@ -2726,7 +2726,7 @@ void *generalThread(void *arg)
         if(f)
         {
             if(fread(nps, sizeof(uint), MAX_PEERS, f) == MAX_PEERS)
-                for(uint i = 0; nps[i] != 0 || i < MAX_PEERS; i++)
+                for(uint i = 0; nps[i] != 0 && i < MAX_PEERS; i++)
                     if(isPeer(nps[i]) == 0)
                         addPeer(nps[i]);
             
