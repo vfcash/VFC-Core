@@ -130,7 +130,7 @@ Use the command ```vfc difficulty``` for more information.
 - **multi-threaded 1**  - Uses more CPU Cores
 - **multi-threaded 0**  - Uses only one CPU Core
 - **replay-threads 32** - Replays blockchain data to a maximum of 32 peers simultaneously.
-- **replay-delay 1000** - Uses less TX bandwidth
+- **replay-delay 1000** - Uses less TX bandwidth (microseconds between each transaction replayed)
 - **replay-delay 1**    - Uses more TX bandwidth
 - **peer-trans-limit-per-min 180** - Limits the amount of transactions a peer can send per minute, by default this value is 180, it is not recommended to set this value lower than 60.
 
