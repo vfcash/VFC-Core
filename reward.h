@@ -8,6 +8,6 @@
 #define RUN_AS_ROOT 0
 
 //How many v the currency inflates by on each transaction
-#define INFLATION_TAX 1000
+#define INFLATION_TAX 3000
 
 #endif
