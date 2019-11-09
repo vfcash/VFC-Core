@@ -5099,7 +5099,7 @@ while(1)
 
         const int64_t bal1 = getBalanceLocal(&t.from);
         setlocale(LC_NUMERIC, "");
-        if(bal0 != bal1)
+        if(bal0 == bal1)
         {
             printf("Transaction Sent, but unable to verify it's success. Refer to sent transactions for confirmation. Trying again..\n\n");
             csend(inet_addr("127.0.0.1"), pc, len); //Will attempt local cache.
