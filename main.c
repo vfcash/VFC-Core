@@ -804,7 +804,7 @@ uint peer_ltcount[MAX_PEERS]; //delta tcount for flood protection / rate limitin
 char peer_ua[MAX_PEERS][64]; //Peer user agent
 time_t peer_rm[MAX_PEERS]; //Last time peer responded to a mid request
 
-uint countPeers()
+uint countPeers() //generates num_peers on load
 {
     uint c = 1; //skip the master, as some times master could end up as 0
     for(uint i = 1; i < MAX_PEERS; i++)
@@ -827,7 +827,6 @@ uint isPeerAlive(const uint id)
     return 0;
 }
 
-//could optimize to prevent running the whole buffer len by terminating at peer[i] == 0 such as in countPeers()
 uint countLivingPeers()
 {
     uint c = 1; //Assume master to always be alive
@@ -891,11 +890,11 @@ uint verifyChain(const char* path)
     size_t len = ECC_CURVE+1;
     b58tobin(gpub, &len, "foxXshGUtLFD24G9pz48hRh3LWM58GXPYiRhNHUyZAPJ", 44);
 
-    //Ok let's check that genesis trans and work through chain
+    //Check for genesis transaction
     FILE* f = fopen(path, "r");
     if(f)
     {
-        //Is legit genesis block?
+        //Is the correct genesis block?
         struct trans t;
         if(fread(&t, 1, sizeof(struct trans), f) == sizeof(struct trans))
         {
@@ -917,7 +916,7 @@ uint verifyChain(const char* path)
         return 0;
     }
     
-    //Look's legit
+    //Verified
     return 1;
 }
 
@@ -1105,7 +1104,7 @@ void printDifficultyVotes() //Legacy, remove in future
         printf("%.3f,%u\n", (double)i/1000, tally[i]);
 }
 
-//Peers are only replaced if they have not responded in a x time period, otherwise we still consider them contactable until replaced.
+//Peers are only replaced if they have not responded in a x time period.
 int addPeer(const uint ip)
 {
     //Is there room for a new peer?
@@ -1338,7 +1337,7 @@ int gQue()
             break;
 
         if(tq[i].amount != 0)
-            if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
+            if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions at least 3 second old [replays are instant]
                 return i;
     }
     for(int i = mi; i < MAX_TRANS_QUEUE; i++) //now check to the right of random index
@@ -1347,7 +1346,7 @@ int gQue()
             break;
 
         if(tq[i].amount != 0)
-            if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions more than 3 second old [replays are instant]
+            if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions at least 3 second old [replays are instant]
                 return i;
     }
     return -1;
@@ -1477,7 +1476,7 @@ uint32_t replay_peers[MAX_THREADS_BUFF];
 //Get replay peer
 uint32_t getRP()
 {
-    pthread_mutex_lock(&mutex6);
+pthread_mutex_lock(&mutex6);
     for(int i = 0; i < max_replay_threads; ++i)
     {
         if(replay_peers[i] != 0)
@@ -1488,14 +1487,14 @@ uint32_t getRP()
             return r;
         }
     }
-    pthread_mutex_unlock(&mutex6);
+pthread_mutex_unlock(&mutex6);
     return 0;
 }
 
 //Set replay peer ip
 void setRP(const uint32_t ip)
 {
-    pthread_mutex_lock(&mutex6);
+pthread_mutex_lock(&mutex6);
     for(int i = 0; i < max_replay_threads; ++i)
     {
         if(replay_peers[i] == 0)
@@ -1504,7 +1503,7 @@ void setRP(const uint32_t ip)
             break;
         } 
     }
-    pthread_mutex_unlock(&mutex6);
+pthread_mutex_unlock(&mutex6);
 }
 
 //Replay blocks to x address
@@ -1687,7 +1686,7 @@ pthread_mutex_unlock(&mutex1);
         printf("ERROR: replayBlocksThread() nice(19) failed.\n");
 
     //Is thread needed?
-    pthread_mutex_lock(&mutex1);
+pthread_mutex_lock(&mutex1);
     const uint ip = getRP(); //This contains a write
     if(ip == 0)
     {
@@ -1695,7 +1694,7 @@ pthread_mutex_unlock(&mutex1);
         pthread_mutex_unlock(&mutex1);
         return 0;
     }
-    pthread_mutex_unlock(&mutex1);
+pthread_mutex_unlock(&mutex1);
 
     //Get peer by ip
     const uint peer = getPeer(ip);
@@ -1735,12 +1734,12 @@ pthread_mutex_unlock(&mutex1);
     }
 
     //End the thread
-    pthread_mutex_lock(&mutex1);
+pthread_mutex_lock(&mutex1);
     threads--;
     for(int i = 0; i < max_replay_threads; i++)
         if(thread_ip[i] == ip)
             thread_ip[i] = 0;
-    pthread_mutex_unlock(&mutex1);
+pthread_mutex_unlock(&mutex1);
     return 0;
 }
 
@@ -1766,10 +1765,10 @@ void launchReplayThread(const uint32_t ip)
         if(pthread_create(&tid, NULL, replayBlocksThread, NULL) == 0)
         {
             pthread_detach(tid);
-            pthread_mutex_lock(&mutex1);
+pthread_mutex_lock(&mutex1);
             thread_ip[threads] = ip;
             threads++;
-            pthread_mutex_unlock(&mutex1);
+pthread_mutex_unlock(&mutex1);
         }
     }
 }
@@ -2376,7 +2375,7 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
 if(single_threaded == 0)
 pthread_mutex_lock(&mutex3);
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        //The mutex is not preventing race conditions, thats why we have the temporary 1 second expirary rExi / UID check in a limited size buffer. [has_uid()/add_uid() further protects from this condition]
+        //Encase the process mutex fails and is no longer preventing race conditions, we have this temporary 1 second expirary rExi / UID check in a limited size buffer. [has_uid()/add_uid() further protects from multi-process race conditions]
         if(rExi(uid) == 0)
         {
             FILE* f = fopen(CHAIN_FILE, "a");
@@ -2559,7 +2558,7 @@ void loadConfig(const uint stat)
                 if(stat == 1)
                     printf("Setting Loaded: %s %u\n", set, val);
 
-                if(strcmp(set, "multi-threaded") == 0) //Single threaded is more stable.
+                if(strcmp(set, "multi-threaded") == 0)
                     single_threaded = val == 0 ? 1 : 0;
 
                 if(strcmp(set, "replay-delay") == 0) //Default 1,000, the higher the number the less bandwith used refer to notes in getReplatRate() function.
@@ -2568,7 +2567,7 @@ void loadConfig(const uint stat)
                 if(strcmp(set, "replay-threads") == 0) //Default is variable based on CPU core count, max is 512
                     max_replay_threads = val;
 
-                if(strcmp(set, "peer-trans-limit-per-min") == 0) //Default is 180
+                if(strcmp(set, "peer-trans-limit-per-min") == 0) //Default is 180 - 540
                     PEER_TRANSACTION_LIMIT_PER_MINUTE = val;
             }
         }
@@ -2662,20 +2661,6 @@ void loadmem()
     setSeedNode();
 }
 
-void sigintHandler(int sig_num) 
-{
-    static int m_qe = 0;
-    
-    if(m_qe == 0)
-    {
-        printf("\nPlease Wait while we save the peers state...\n\n");
-        m_qe = 1;
-
-        savemem();
-        exit(0);
-    }
-}
-
 uint isNodeRunning()
 {
     struct sockaddr_in server;
@@ -2691,7 +2676,7 @@ uint isNodeRunning()
     if(bind(s, (struct sockaddr*)&server, sizeof(server)) == 0)
     {
         close(s);
-        return 0; //Bind success, we where not already running.
+        return 0; //Bind success, process not already running.
     }
 
     close(s);
@@ -3732,7 +3717,6 @@ void cleanChainFull()
 }
 
 
-
 //https://stackoverflow.com/questions/77005/how-to-automatically-generate-a-stacktrace-when-my-program-crashes
 void exception_handler(int sig)
 {
@@ -3744,7 +3728,19 @@ void exception_handler(int sig)
     exit(1);
 }
 
+void sigint_handler(int sig_num) 
+{
+    static int m_qe = 0;
+    
+    if(m_qe == 0)
+    {
+        printf("\nPlease Wait while we save the peers state...\n\n");
+        m_qe = 1;
 
+        savemem();
+        exit(0);
+    }
+}
 
 int main(int argc , char *argv[])
 {
@@ -5138,8 +5134,8 @@ while(1)
     printf("Quick Scan: Checking blocks.dat for invalid transactions...\n");
     truncate_at_error(CHAIN_FILE, 9333);
 
-    //Hijack CTRL+C
-    signal(SIGINT, sigintHandler);
+    //Callback for CTRL+C
+    signal(SIGINT, sigint_handler);
 
 
     //Launch Info
