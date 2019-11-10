@@ -936,8 +936,9 @@ void setSeedNode()
 
 void peersBroadcast(const char* dat, const size_t len)
 {
-    for(uint i = 0; i < num_peers; ++i) //Start from 1, skip master
-        csend(peers[i], dat, len);
+    for(uint i = 0; i < num_peers; ++i)
+        if(isPeerAlive(i) == 1)
+            csend(peers[i], dat, len);
 }
 
 void broadcastUserAgent()
