@@ -4275,7 +4275,7 @@ int main(int argc , char *argv[])
             printf("vfc getpub <private key>         - Get Public Key from Private Key\n");
             printf("vfc issub <public key>           - Is supplied public address a subG address\n");
             printf("-------------------------------\n");
-            printf("vfc votes                        - Map of difficulty votes\n");
+            printf("vfc votes                        - Map of client difficulty values\n");
             printf("vfc difficulty                   - Network mining difficulty\n");
             printf("-------------------------------\n");
             printf("vfc sync <optional num peers>    - Trigger blockchain sync from your peers\n");
