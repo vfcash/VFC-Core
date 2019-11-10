@@ -2375,7 +2375,7 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
 if(single_threaded == 0)
 pthread_mutex_lock(&mutex3);
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        //Encase the process mutex fails and is no longer preventing race conditions, we have this temporary 1 second expirary rExi / UID check in a limited size buffer. [has_uid()/add_uid() further protects from multi-process race conditions]
+        //Encase the process mutex fails and is no longer preventing race conditions, we have this temporary 1 second expirary rExi / UID check in a limited size buffer. [helps not elimination, such a case is very unlikely to occur hence arguably unnecessary]
         if(rExi(uid) == 0)
         {
             FILE* f = fopen(CHAIN_FILE, "a");
