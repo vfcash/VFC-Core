@@ -5193,7 +5193,8 @@ while(1)
     time_t tt = time(0);
     while(1)
     {
-        printf("STAT: Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %llu\n", countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, max_replay_threads, err);
+        setlocale(LC_NUMERIC, "");
+        printf("STAT: Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %'llu\n", countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, max_replay_threads, err);
         tt = time(0);
         sleep(180);
     }
