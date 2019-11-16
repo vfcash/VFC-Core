@@ -120,7 +120,7 @@ uint PEER_TRANSACTION_LIMIT_PER_MINUTE = 540; // 180 = 3 unique transactions per
 
 //Operating Global Variables
 char mid[8];                         //Clients private identification code used in pings etc.
-float node_difficulty = 0.031;       //Clients weighted contribution to the federated mining difficulty
+float node_difficulty = 0.031;       //legacy
 float network_difficulty = 0.031;    //Assumed or actual network difficulty (starts at lowest until known)
 ulong err = 0;                       //Global error count
 uint replay_allow[MAX_PEERS];        //IP address of peer allowed to send replay blocks
@@ -424,14 +424,14 @@ int isPrivateAddress(const uint32_t iip)
 uint32_t HOSTtoIPv4(const char* ihost)
 {
     struct hostent* host = gethostbyname(ihost);
-	if(host == NULL) 
-	    return 0;
+    if(host == NULL) 
+        return 0;
 
-	struct in_addr** addr = (struct in_addr**)host->h_addr_list;
-	for(int i = 0; addr[i] != NULL; i++) 
-	    return addr[i]->s_addr;
-	
-	return 0;
+    struct in_addr** addr = (struct in_addr**)host->h_addr_list;
+    for(int i = 0; addr[i] != NULL; i++) 
+        return addr[i]->s_addr;
+
+    return 0;
 }
 
 uint getReplayRate()
