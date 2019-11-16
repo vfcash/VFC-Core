@@ -1,5 +1,5 @@
-#ifndef REWARD_H
-#define REWARD_H
+#ifndef FIXED_H
+#define FIXED_H
 
 // For compile time, is this going to be a client or a reward-paying masternode?
 #define MASTER_NODE 0
