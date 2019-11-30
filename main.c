@@ -138,7 +138,7 @@ pthread_mutex_t mutex6 = PTHREAD_MUTEX_INITIALIZER;
 
 
 //User-Configurable
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 uint single_threaded = 0;
 uint replay_packet_delay = 1000;
 
