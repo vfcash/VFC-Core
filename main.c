@@ -92,7 +92,6 @@ const uint16_t gport = 8787;
 #define ERROR_OPEN -5
 
 //Node Settings
-#define MIN_DIFFICULTY 0.180            // Easiest minting difficulty.
 #define MAX_TRANS_QUEUE 8192            // Maximum transaction backlog to keep in real-time [8192 / 3 = 2,730 TPS]
 #define MAX_REXI_SIZE MAX_TRANS_QUEUE   // Need to be atleast MAX_TRANS_QUEUE / 3
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
