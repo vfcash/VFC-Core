@@ -100,9 +100,6 @@ const uint16_t gport = 8787;
 #define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this. [replay sends]
 
-//Peer flood protection
-uint PEER_TRANSACTION_LIMIT_PER_MINUTE = 540; // 180 = 3 unique transactions per second per peer limit
-
 //Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
 #define MIN_LEN 256
@@ -139,10 +136,17 @@ pthread_mutex_t mutex4 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex5 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex6 = PTHREAD_MUTEX_INITIALIZER;
 
+
 //User-Configurable
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 uint single_threaded = 0;
 uint replay_packet_delay = 1000;
-uint max_replay_threads = 6;                //maximum number of replay threads
+
+//maximum number of replay threads
+uint max_replay_threads = 6;
+
+//Peer flood protection
+uint PEER_TRANSACTION_LIMIT_PER_MINUTE = 540; // 180 = 3 unique transactions per second per peer limit
 
 ///////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////
