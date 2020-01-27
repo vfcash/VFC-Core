@@ -99,6 +99,7 @@ const uint16_t gport = 8787;
 #define PING_INTERVAL 270               // How often to ping the peers and see if they are still alive
 #define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this. [replay sends]
+#define QUERY_TIMEOUT 3                 // Maximum seconds before an address transaction history query times out on master nodes  
 
 //Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
@@ -1867,9 +1868,20 @@ void printAll(addr* a)
         {
             close(f);
 
+#if MASTER_NODE == 1
+            const time_t st = time(0);
+#endif
+
             struct trans t;
             for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
+#if MASTER_NODE == 1
+                if(time(0) - st > QUERY_TIMEOUT)
+                {
+                    printf("Query Timeout.\n");
+                    break; //break the loop if the lookup is taking more than x seconds on a master node.
+                }
+#endif
                 memcpy(&t, m+i, sizeof(struct trans));
 
                 if(memcmp(&t.from.key, a->key, ECC_CURVE+1) == 0)
@@ -1912,9 +1924,20 @@ void printIns(addr* a)
         {
             close(f);
 
+#if MASTER_NODE == 1
+            const time_t st = time(0);
+#endif
+
             struct trans t;
             for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
+#if MASTER_NODE == 1
+                if(time(0) - st > QUERY_TIMEOUT)
+                {
+                    printf("Query Timeout.\n");
+                    break; //break the loop if the lookup is taking more than x seconds on a master node.
+                }
+#endif
                 memcpy(&t, m+i, sizeof(struct trans));
 
                 if(memcmp(&t.to.key, a->key, ECC_CURVE+1) == 0)
@@ -1949,9 +1972,21 @@ void printOuts(addr* a)
         {
             close(f);
 
+#if MASTER_NODE == 1
+            const time_t st = time(0);
+#endif
+
             struct trans t;
             for(size_t i = 0; i < len; i += sizeof(struct trans))
             {
+#if MASTER_NODE == 1
+                if(time(0) - st > QUERY_TIMEOUT)
+                {
+                    printf("Query Timeout.\n");
+                    break; //break the loop if the lookup is taking more than x seconds on a master node.
+                }
+#endif
+
                 memcpy(&t, m+i, sizeof(struct trans));
 
                 if(memcmp(&t.from.key, a->key, ECC_CURVE+1) == 0)
