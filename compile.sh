@@ -7,6 +7,9 @@ apt install --assume-yes gcc
 apt install --assume-yes xterm
 apt install --assume-yes qt5-default
 apt install --assume-yes libsdl2-2.0-0
+apt install --assume-yes llibSDL2_net
+apt install --assume-yes libsdl2-net-2.0-0
+apt install --assume-yes libomp-9-dev
 clear
 clear
 pkill vfc
