@@ -17,7 +17,7 @@ Join us on Telegram [@vfcash](https://t.me/vfcash) because it's better if you re
 ```
 git clone https://github.com/vfcash/VFC-Core && cd VFC-Core
 chmod 0777 compile.sh
-./compile.sh
+sudo ./compile.sh
 
 vfc cdn_resync
 ```
