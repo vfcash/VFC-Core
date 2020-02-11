@@ -118,7 +118,7 @@ If the balance of **24KvoteVFC** is higher than **q15voteVFC** the difficulty wi
 Use the command ```vfc difficulty``` for more information.
 
 # Configuration File
-- **multi-threaded 1**  - Uses more CPU Cores
+- **multi-threaded 1**  - Uses all CPU Cores
 - **multi-threaded 0**  - Uses only one CPU Core
 - **replay-threads 32** - Replays blockchain data to a maximum of 32 peers simultaneously.
 - **replay-delay 1000** - Uses less TX bandwidth (microseconds between each transaction replayed)
