@@ -22,7 +22,10 @@ cp bin/vfc /usr/bin/vfc
 cp bin/vfui /usr/bin/vfui
 cp bin/vfwallet /usr/bin/vfwallet
 cp bin/cminer /usr/bin/cminer
-chmod 0777 /usr/bin/vfc
+chmod +x /usr/bin/vfc
+chmod +x /usr/bin/vfui
+chmod +x /usr/bin/vfwallet
+chmod +x /usr/bin/cminer
 crontab -l > ncron
 if grep -qxF '*/6 * * * * /usr/bin/vfc' ncron; then
     echo "Cron1 Exists";
