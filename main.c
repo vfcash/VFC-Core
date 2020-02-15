@@ -96,7 +96,7 @@ const uint16_t gport = 8787;
 #define MAX_REXI_SIZE MAX_TRANS_QUEUE   // Need to be atleast MAX_TRANS_QUEUE / 3
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
-#define PING_INTERVAL 270               // How often to ping the peers and see if they are still alive
+#define PING_INTERVAL 270               // How often to ping the peers and see if they are still alive in seconds
 #define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this. [replay sends]
 #define QUERY_TIMEOUT 3                 // Maximum seconds before an address transaction history query times out on master nodes  
