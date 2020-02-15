@@ -2827,7 +2827,7 @@ void *generalThread(void *arg)
         {
             peersBroadcast(mid, 8);
             peersBroadcast("a", 1); //Give us your user-agent too please
-            broadcastUserAgent(); //Forcibly tell everyone our user-agent
+            //broadcastUserAgent(); //Forcibly tell everyone our user-agent
             peer_timeouts[0] = time(0) + MAX_PEER_EXPIRE_SECONDS; //Reset master timeout
             pr = time(0) + PING_INTERVAL;
         }
