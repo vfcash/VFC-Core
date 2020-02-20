@@ -13,7 +13,7 @@ Join us on Telegram [@vfcash](https://t.me/vfcash) because it's better if you re
 
 # Installation & Running a Node
 
-**Linux Compile & Install Instructions (Full Node & Client Wallet):**
+**Linux (Debian/Ubuntu) Compile & Install Instructions (Full Node & Client Wallet):**
 ```
 git clone https://github.com/vfcash/VFC-Core && cd VFC-Core
 chmod 0777 compile.sh
