@@ -3938,7 +3938,7 @@ int main(int argc , char *argv[])
             exit(0);
         }
 
- 	    if(strstr(argv[1], "printtrans") != NULL)
+        if(strstr(argv[1], "printtrans") != NULL)
         {
             uint from;
             sscanf(argv[2], "%u", &from);
