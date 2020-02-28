@@ -3784,9 +3784,6 @@ int main(int argc , char *argv[])
     //Handle SIGSEV
     signal(SIGSEGV, exception_handler);
 
-    //If never set difficulty before, let's set random
-    //node_difficulty = qRandFloat(0.031, MIN_DIFFICULTY);
-
     //set local working directory
     if(chdir(getHome()) == -1)
     {
