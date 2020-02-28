@@ -491,12 +491,7 @@ void init_sites(const size_t ims)
         exit(0);
     }
 
-    for(int i = 0; i < MAX_SITES; ++i)
-    {
-        sites[i].uid_high = 0;
-        sites[i].uid_low = 0;
-        sites[i].expire_epoch = 0;
-    }
+    memset(sites, 0, MAX_SITES * sizeof(struct site));
 }
 
 //Check against all uid in memory for a match
