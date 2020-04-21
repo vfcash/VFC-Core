@@ -4379,8 +4379,7 @@ int main(int argc , char *argv[])
             time_t lt = time(0);
             struct tm* tmi = gmtime(&lt);
 
-            printf("\nVoting has changed.\n\n");
-            printf("You are now expected to pay vfc into one of two addresses that define the minting difficulty value between [0.031 - %.3f].\n\n", MIN_DIFFICULTY);
+            printf("In order to vote you are expected to pay vfc into one of two addresses that define the minting difficulty value between [0.031 - %.3f].\n\n", MIN_DIFFICULTY);
             setlocale(LC_NUMERIC, "");
             printf("To increase the difficulty towards 0.031 pay VFC into:\nq15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK (%'.3f VFC)\n\n", toDB(getBalanceLocal(&lpub)));
             printf("To increase the difficulty towards %.3f. pay VFC into:\n24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3 (%'.3f VFC)\n\n", MIN_DIFFICULTY, toDB(getBalanceLocal(&tpub)));
