@@ -1,9 +1,6 @@
 /*
-    VF Cash has been created by James William Fletcher
-    http://github.com/mrbid
-
+    VF Cash is the creation of James William Fletcher
     A Cryptocurrency for Linux written in C.
-    https://vf.cash
     https://vfcash.uk
 
     The VF CASH logo was created by Futoshi Tanaka, 2019.
