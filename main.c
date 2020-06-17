@@ -50,7 +50,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <pwd.h>
-#include <sys/sysinfo.h> //CPU cores
+#include <sys/sysinfo.h> //cpu cores
 #include <sys/stat.h> //mkdir
 #include <fcntl.h> //open
 #include <time.h> //time
@@ -59,7 +59,7 @@
 #include <sys/utsname.h> //uname
 #include <locale.h> //setlocale
 #include <signal.h> //SIGPIPE
-#include <pthread.h> //Threading
+#include <pthread.h> //threading
 #include <execinfo.h> //backtrace
 #include <netdb.h> //gethostbyname
 
