@@ -108,7 +108,7 @@ All nodes re-calculate the difficulty once an hour at exactly 0 minutes UTC of t
 To increase the difficulty towards 0.031 pay VFC into:
 - **q15voteVFC**f7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK
 
-To increase the difficulty towards 0.240 pay VFC into:
+To decrease the difficulty towards 0.240 pay VFC into:
 - **24KvoteVFC**7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3
 
 If the balance of **24KvoteVFC** is higher than **q15voteVFC** the difficulty will be 0.240, otherwise the difference between the balance of the two addresses will be used to reduce the difficulty from 0.240 to 0.031.
