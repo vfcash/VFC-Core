@@ -4893,7 +4893,7 @@ int main(int argc , char *argv[])
             //Too low amount?
             if(t.amount < 0.001)
             {
-                printf("Sorry the amount you provided was too low, please try 0.001 VFC or above.\n\n");
+                printf("The amount you provided was too low, please try 0.001 VFC or above.\n\n");
                 exit(0);
             }
             //UID Based on timestamp & signature
@@ -4907,7 +4907,7 @@ int main(int argc , char *argv[])
             makHash(thash, &t);
             if(ecdsa_sign(priv, thash, t.owner.key) == 0)
             {
-                printf("\nSorry you're client failed to sign the Transaction.\n\n");
+                printf("\nTransaction signing failed.\n\n");
                 exit(0);
             }
 
