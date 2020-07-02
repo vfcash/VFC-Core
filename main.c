@@ -241,7 +241,7 @@ char* getHome()
 #endif
 }
 
-uint qRand(const uint min, const uint max)
+uint qRand(const uint min, const uint umax)
 {
     static time_t ls = 0;
     if(time(0) > ls)
@@ -250,6 +250,7 @@ uint qRand(const uint min, const uint max)
         ls = time(0) + 33;
     }
     const int rv = rand();
+    const uint max = umax + 1;
     if(rv == 0)
         return min;
     return ( ((float)rv / RAND_MAX) * (max-min) ) + min; //(rand()%(max-min))+min;
