@@ -138,5 +138,3 @@ This is why it is important that you expose some kind of gatway for end-users, a
 - CRC64.c - Salvatore Sanfilippo
 - Base58.c - Luke Dashjr
 
-# Known Bugs
-- qRand(0, x) where for example x = 10; only 0-9 will ever be returned. Code was written to expect 10 as a possible return.
