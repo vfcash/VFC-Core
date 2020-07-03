@@ -78,7 +78,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.67";
+const char version[]="0.68";
 const uint16_t gport = 8787;
 
 //Error Codes
@@ -90,7 +90,6 @@ const uint16_t gport = 8787;
 
 //Node Settings
 #define MAX_TRANS_QUEUE 8192            // Maximum transaction backlog to keep in real-time [8192 / 3 = 2,730 TPS]
-#define MAX_REXI_SIZE MAX_TRANS_QUEUE   // Need to be atleast MAX_TRANS_QUEUE / 3
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
 #define PING_INTERVAL 270               // How often to ping the peers and see if they are still alive in seconds
@@ -1330,18 +1329,12 @@ int gQue()
     const uint mi = qRand(3, MAX_TRANS_QUEUE-3);
     for(int i = mi; i >= 0; i--) //Check left first, que is stacked left to right
     {
-        if(i < 0 || i >= MAX_TRANS_QUEUE) //just being sure
-            break;
-
         if(tq[i].amount != 0)
             if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions at least 3 second old [replays are instant]
                 return i;
     }
     for(int i = mi; i < MAX_TRANS_QUEUE; i++) //now check to the right of random index
     {
-        if(i < 0 || i >= MAX_TRANS_QUEUE) //just being sure
-            break;
-
         if(tq[i].amount != 0)
             if(time(0) - delta[i] >= 3 || replay[i] == 0) //Only process transactions at least 3 second old [replays are instant]
                 return i;
@@ -2337,31 +2330,6 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
         return 0;
 }
 
-
-//rExi check, last line of defense to prevent race conditions if the process mutex fails
-uint64_t uidlist[MAX_REXI_SIZE];
-time_t uidtimes[MAX_REXI_SIZE];
-uint rExi(uint64_t uid)
-{
-    int free = -1;
-    for(uint i = 0; i < MAX_REXI_SIZE; i++)
-    {
-        if(uidlist[i] == uid && uidtimes[i] > time(0)) //It's blocked for three seconds otherwise.
-            return 1;
-        else if(time(0) > uidtimes[i] || uidtimes[i] == 0) //Expired? Is free slot
-            free = i;
-    }
-
-    if(free != -1)
-    {
-        uidlist[free] = uid;
-        uidtimes[free] = time(0) + 1; //We block for three seconds
-        return 0;
-    }
-
-    return 1;
-}
-
 //Execute Transaction
 int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* owner)
 {
@@ -2406,82 +2374,76 @@ int process_trans(const uint64_t uid, addr* from, addr* to, mval amount, sig* ow
 if(single_threaded == 0)
 pthread_mutex_lock(&mutex3);
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        //Encase the process mutex fails and is no longer preventing race conditions, we have this temporary 1 second expirary rExi / UID check in a limited size buffer. [helps not elimination, such a case is very unlikely to occur hence arguably unnecessary]
-        if(rExi(uid) == 0)
-        {
-            FILE* f = fopen(CHAIN_FILE, "a");
 
-            uint fc = 0;
-            while(f == NULL)
+        FILE* f = fopen(CHAIN_FILE, "a");
+
+        uint fc = 0;
+        while(f == NULL)
+        {
+            fc++;
+            if(fc > 333)
             {
+                printf("ERROR: fopen() in process_trans() has failed.\n");
+                err++;
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if(single_threaded == 0)
+pthread_mutex_unlock(&mutex3);
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                return ERROR_OPEN;
+            }
+
+            f = fopen(CHAIN_FILE, "a");
+        }
+
+        size_t written = 0;
+
+        if(f)
+        {
+            fc = 0;
+            while(written == 0)
+            {
+                written = fwrite(&t, 1, sizeof(struct trans), f);
+
                 fc++;
                 if(fc > 333)
                 {
-                    printf("ERROR: fopen() in process_trans() has failed.\n");
+                    printf("ERROR: fwrite() in process_trans() has failed.\n");
                     err++;
+                    fclose(f);
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if(single_threaded == 0)
 pthread_mutex_unlock(&mutex3);
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                    return ERROR_OPEN;
+                    return ERROR_WRITE;
                 }
-
-                f = fopen(CHAIN_FILE, "a");
-            }
-
-            size_t written = 0;
-
-            if(f)
-            {
-                fc = 0;
-                while(written == 0)
+                
+                if(written == 0)
                 {
-                    written = fwrite(&t, 1, sizeof(struct trans), f);
-
-                    // if(amount == 3)
-                    //     printf("Special Written: %lu\n", uid);
-
-                    fc++;
-                    if(fc > 333)
-                    {
-                        printf("ERROR: fwrite() in process_trans() has failed.\n");
-                        err++;
-                        fclose(f);
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-if(single_threaded == 0)
-pthread_mutex_unlock(&mutex3);
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                        return ERROR_WRITE;
-                    }
-                    
-                    if(written == 0)
-                    {
-                        fclose(f);
-                        f = fopen(CHAIN_FILE, "a");
-                        continue;
-                    }
-                    
-                    //Did we corrupt the chain?
-                    if(written < sizeof(struct trans))
-                    {
-                        fclose(f);
-
-                        printf("ERROR: fwrite() in process_trans() reverted potential chain corruption.\n");
-
-                        //Revert the failed write
-                        struct stat st;
-                        stat(CHAIN_FILE, &st);
-                        forceTruncate(CHAIN_FILE, st.st_size - written);
-
-                        //Try again
-                        written = 0;
-                        f = fopen(CHAIN_FILE, "a");
-                        continue;
-                    }
+                    fclose(f);
+                    f = fopen(CHAIN_FILE, "a");
+                    continue;
                 }
+                
+                //Did we corrupt the chain?
+                if(written < sizeof(struct trans))
+                {
+                    fclose(f);
 
-                fclose(f);
+                    printf("ERROR: fwrite() in process_trans() reverted potential chain corruption.\n");
+
+                    //Revert the failed write
+                    struct stat st;
+                    stat(CHAIN_FILE, &st);
+                    forceTruncate(CHAIN_FILE, st.st_size - written);
+
+                    //Try again
+                    written = 0;
+                    f = fopen(CHAIN_FILE, "a");
+                    continue;
+                }
             }
+
+            fclose(f);
         }
 
 // FILE* f = fopen("/var/www/html/p_good.txt", "a");
@@ -4830,9 +4792,6 @@ int main(int argc , char *argv[])
     memset(&ipo, 0, sizeof(uint)*MAX_TRANS_QUEUE);
     memset(&replay, 0, sizeof(unsigned char)*MAX_TRANS_QUEUE);
     memset(&delta, 0, sizeof(time_t)*MAX_TRANS_QUEUE);
-
-    memset(&uidlist, 0, sizeof(uint64_t)*MIN_LEN);
-    memset(&uidtimes, 0, sizeof(time_t)*MIN_LEN);
 
     //Init UID hashmap
     init_sites(MAX_SITES); //11 mb
