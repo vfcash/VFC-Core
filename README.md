@@ -137,4 +137,5 @@ This is why it is important that you expose some kind of gatway for end-users, a
 **Additional Dependencies:**
 - CRC64.c - Salvatore Sanfilippo
 - Base58.c - Luke Dashjr
+- SHA3.c - Andrey Jivsov
 
