@@ -4056,6 +4056,7 @@ int main(int argc , char *argv[])
             char packet[147];
             size_t len = 147;
             b58tobin(packet, &len, argv[2], strlen(argv[2]));
+            csend(inet_addr("127.0.0.1"), packet, &len);
             peersBroadcast(packet, 147);
             exit(0);
         }
