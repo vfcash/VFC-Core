@@ -78,7 +78,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.68";
+const char version[]="0.69";
 const uint16_t gport = 8787;
 
 //Error Codes
@@ -817,7 +817,7 @@ uint isPeerAlive(const uint id)
     if(peers[id] == 0)
         return 0;
     const uint pd = time(0)-(peer_timeouts[id]-MAX_PEER_EXPIRE_SECONDS);
-    const uint md = time(0) - peer_rm[id];
+    const uint md = time(0) - peer_rm[id]; // WARNING: if there is ever network connectivity issues peers that can't send across a MID in time can never re-index without a "flushpeers"
     if(pd <= PING_INTERVAL*20 && md <= PING_INTERVAL*64)
         return 1;
     return 0;
@@ -971,8 +971,8 @@ void triBroadcast(const char* dat, const size_t len, const uint multi)
                     fc++;
                     if(fc > 1)
                     {
-                        printf("ERROR: triBroadcast() has failed to find a living peer.\n");
-                        err++;
+                        //printf("ERROR: triBroadcast() has failed to find a living peer.\n");
+                        //err++;
                         return;
                     }
                 }
@@ -983,7 +983,7 @@ void triBroadcast(const char* dat, const size_t len, const uint multi)
     }
     else
     {
-        for(uint p = 0; p < num_peers; p++)
+        for(uint p = 0; p < num_peers; p++) //WARNING: information will leak to possible rogue dead peers, not critical but worth considering.
             csend(peers[p], dat, len);
     }
 }
@@ -3728,7 +3728,7 @@ void sigint_handler(int sig_num)
     
     if(m_qe == 0)
     {
-        printf("\nPlease Wait while we save the peers state...\n\n");
+        printf("\nPlease Wait while the peers state is saved...\n\n");
         m_qe = 1;
 
         savemem();
@@ -3815,7 +3815,7 @@ int main(int argc , char *argv[])
         myrewardkey[0] = ' ';
         
         if(fread(myrewardkey+1, sizeof(char), len, f) != len)
-            printf("Failed to load Rewards address, this means you are unable to receive rewards.\n");
+            printf("Failed to load Rewards address, you will be unable to receive rewards.\n");
 
         //clean off any new spaces at the end, etc
         const int sal = strlen(myrewardkey);
@@ -4056,7 +4056,7 @@ int main(int argc , char *argv[])
             char packet[147];
             size_t len = 147;
             b58tobin(packet, &len, argv[2], strlen(argv[2]));
-            csend(inet_addr("127.0.0.1"), packet, &len);
+            csend(inet_addr("127.0.0.1"), packet, len);
             peersBroadcast(packet, 147);
             exit(0);
         }
@@ -4182,7 +4182,7 @@ int main(int argc , char *argv[])
         {
             loadmem();
             addPeer(inet_addr(argv[2]));
-            printf("\nThank you peer %s has been added to your peer list.\n\n", argv[2]);
+            printf("\nThank you peer %s has been added to the peer list.\n\n", argv[2]);
             savemem();
             exit(0);
         }
@@ -4263,7 +4263,9 @@ int main(int argc , char *argv[])
             printf("vfc reward                              - Your awarded or mined VFC\n");
             printf("-------------------------------\n");
             printf("vfc mine <optional num threads>  - CPU miner for VFC\n");
-            printf("vfc peers                        - List locally indexed peers\n");
+            printf("vfc peers                        - List locally indexed living peers\n");
+            printf("vfc deadpeers                    - List locally indexed dead peers\n");
+            printf("vfc flushpeers                   - Removes all indexed peers\n");
             printf("vfc getpub <private key>         - Get Public Key from Private Key\n");
             printf("vfc issub <public key>           - Is supplied public address a subG address\n");
             printf("-------------------------------\n");
@@ -4342,7 +4344,7 @@ int main(int argc , char *argv[])
 
             printf("In order to vote you are expected to pay vfc into one of two addresses that define the minting difficulty value between [0.031 - %.3f].\n\n", MIN_DIFFICULTY);
             setlocale(LC_NUMERIC, "");
-            printf("To increase the difficulty towards 0.031 pay VFC into:\nq15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK (%'.3f VFC)\n\n", toDB(getBalanceLocal(&lpub)));
+            printf("To decrease the difficulty towards 0.031 pay VFC into:\nq15voteVFCf7Csb8dKwaYkcYVEWa2CxJVHm96SGEpvzK (%'.3f VFC)\n\n", toDB(getBalanceLocal(&lpub)));
             printf("To increase the difficulty towards %.3f. pay VFC into:\n24KvoteVFC7JsTiFaGna9F6RhtMWdB7MUa3wZoVNm7wH3 (%'.3f VFC)\n\n", MIN_DIFFICULTY, toDB(getBalanceLocal(&tpub)));
             printf("If the balance of 24K~ is higher than q15~ the difficulty will be %.3f, otherwise the difference between the balance of the two addresses will be used to reduce the difficulty from %.3f to 0.031.\n\n", MIN_DIFFICULTY, MIN_DIFFICULTY);
             printf("Next Network Difficulty: %.3f in %u minutes\n", liveNetworkDifficulty(), 60 - tmi->tm_min);
@@ -4630,7 +4632,7 @@ int main(int argc , char *argv[])
         //master_resync
         if(strcmp(argv[1], "master_resync") == 0 || strcmp(argv[1], "cdn_resync") == 0)
         {
-            remove("blocks.dat");
+            remove(CHAIN_FILE);
 
             printf("Please select a mirror: 1 or 2: ");
             char c;
@@ -4744,13 +4746,32 @@ int main(int argc , char *argv[])
             if(fgets(in, 32, stdin) != NULL)
             {
                 addPeer(inet_addr(in));
-                printf("\nThank you peer %s has been added to your peer list. Please restart your full node process to load the changes.\n\n", in);
+                printf("\nThank you peer %s has been added to the peer list.\n\n", in);
                 savemem();
             }
             exit(0);
         }
 
-        //List all peers and their total throughput
+        //Remove all peers
+        if(strcmp(argv[1], "flushpeers") == 0)
+        {
+            remove(".vfc/peers.mem");
+            remove(".vfc/peers1.mem");
+            remove(".vfc/peers2.mem");
+            remove(".vfc/peers3.mem");
+
+            memset(&peers, 0, sizeof(uint)*MAX_PEERS);
+            memset(&peer_tcount, 0, sizeof(uint)*MAX_PEERS);
+            memset(&peer_ltcount, 0, sizeof(uint)*MAX_PEERS);
+            memset(&peer_ua, 0, sizeof(char)*MAX_PEERS);
+            memset(&peer_timeouts, 0, sizeof(time_t)*MAX_PEERS);
+            memset(&peer_rm, 0, sizeof(time_t)*MAX_PEERS);
+            num_peers = 0;
+
+            setSeedNode();
+        }
+
+        //List alive peers and their total throughput
         if(strcmp(argv[1], "peers") == 0)
         {
             loadmem();
@@ -4772,12 +4793,35 @@ int main(int argc , char *argv[])
             printf("Alive Peers: %u\n\n", ac);
             exit(0);
         }
+
+        //List dead peers and their total throughput
+        if(strcmp(argv[1], "deadpeers") == 0)
+        {
+            loadmem();
+            printf("\nTip; If you are running a full-node then consider hosting a website on port 80 where you can declare a little about your operation and a VFC address people can use to donate to you on. Thus you should be able to visit any of these IP addresses in a web-browser and find out a little about each node or obtain a VFC Address to donate to the node operator on.\n\n");
+            printf("Total Peers: %u\n\n", num_peers);
+            printf("IP Address / Number of Transactions Relayed / Seconds since last trans or ping / user-agent [blockheight/version/cpu cores/machine/difficulty] \n");
+            uint ac = 0;
+            for(uint i = 0; i < num_peers; ++i)
+            {
+                struct in_addr ip_addr;
+                ip_addr.s_addr = peers[i];
+                const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS);
+                if(isPeerAlive(i) == 0 || i == 0)
+                {
+                    printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
+                    ac++;
+                }
+            }
+            printf("Alive Peers: %u\n\n", ac);
+            exit(0);
+        }
     }
 
     //Let's make sure we're on the correct chain
     if(verifyChain(CHAIN_FILE) == 0)
     {
-        printf("Sorry you're not on the right chain. Please run ./vfc reset_chain & ./vfc sync or ./vfc cdn_resync\n\n");
+        printf("Invalid chain. Please run ./vfc reset_chain & ./vfc sync or ./vfc cdn_resync\n\n");
         if(system("vfc cdn_resync") == -1)
             exit(0);
         exit(0);
@@ -5034,7 +5078,7 @@ int main(int argc , char *argv[])
         makHash(thash, &t);
         if(ecdsa_sign(priv, thash, t.owner.key) == 0)
         {
-            printf("\nSorry you're client failed to sign the Transaction.\n\n");
+            printf("\nSorry your client failed to sign the Transaction.\n\n");
             exit(0);
         }
 
