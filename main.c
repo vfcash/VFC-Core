@@ -814,10 +814,13 @@ uint countPeers() //generates num_peers on load
 
 uint isPeerAlive(const uint id)
 {
+    if(id == 0) //SEED-NODE always considered alive.
+        return 1;
     if(peers[id] == 0)
         return 0;
     const uint pd = time(0)-(peer_timeouts[id]-MAX_PEER_EXPIRE_SECONDS);
-    const uint md = time(0) - peer_rm[id]; // WARNING: if there is ever network connectivity issues peers that can't send across a MID in time can never re-index without a "flushpeers"
+    const uint md = time(0) - peer_rm[id];  // WARNING:   if there is ever network connectivity issues peers that can't send across a MID in time can never re-index without a "flushpeers"
+                                            // CORRECTED: peersBroadcastAll() will now send mid request to all peers including dead.
     if(pd <= PING_INTERVAL*20 && md <= PING_INTERVAL*64)
         return 1;
     return 0;
@@ -936,6 +939,12 @@ void peersBroadcast(const char* dat, const size_t len)
             csend(peers[i], dat, len);
 }
 
+void peersBroadcastAll(const char* dat, const size_t len)
+{
+    for(uint i = 0; i < num_peers; ++i)
+        csend(peers[i], dat, len);
+}
+
 void broadcastUserAgent()
 {
     struct stat st;
@@ -983,7 +992,7 @@ void triBroadcast(const char* dat, const size_t len, const uint multi)
     }
     else
     {
-        for(uint p = 0; p < num_peers; p++) //WARNING: information will leak to possible rogue dead peers, not critical but worth considering.
+        for(uint p = 0; p < num_peers; p++) //WARNING: packets could leak to possible rogue dead peers, not critical but worth considering.
             csend(peers[p], dat, len);
     }
 }
@@ -2780,8 +2789,8 @@ void *generalThread(void *arg)
         //Check which of the peers are still alive, those that are, update their timestamps
         if(time(0) > pr)
         {
-            peersBroadcast(mid, 8);
-            peersBroadcast("a", 1); //Give us your user-agent too please
+            peersBroadcastAll(mid, 8);
+            peersBroadcast("a", 1); // send user-agent too please
             //broadcastUserAgent(); //Forcibly tell everyone our user-agent
             peer_timeouts[0] = time(0) + MAX_PEER_EXPIRE_SECONDS; //Reset master timeout
             pr = time(0) + PING_INTERVAL;
@@ -4755,20 +4764,12 @@ int main(int argc , char *argv[])
         //Remove all peers
         if(strcmp(argv[1], "flushpeers") == 0)
         {
+            printf("Please ensure the VFC Node is not running when executing this command.\n");
             remove(".vfc/peers.mem");
             remove(".vfc/peers1.mem");
             remove(".vfc/peers2.mem");
             remove(".vfc/peers3.mem");
-
-            memset(&peers, 0, sizeof(uint)*MAX_PEERS);
-            memset(&peer_tcount, 0, sizeof(uint)*MAX_PEERS);
-            memset(&peer_ltcount, 0, sizeof(uint)*MAX_PEERS);
-            memset(&peer_ua, 0, sizeof(char)*MAX_PEERS);
-            memset(&peer_timeouts, 0, sizeof(time_t)*MAX_PEERS);
-            memset(&peer_rm, 0, sizeof(time_t)*MAX_PEERS);
-            num_peers = 0;
-
-            setSeedNode();
+            exit(0);
         }
 
         //List alive peers and their total throughput
