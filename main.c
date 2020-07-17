@@ -95,7 +95,8 @@ const uint16_t gport = 8787;
 #define PING_INTERVAL 270               // How often to ping the peers and see if they are still alive in seconds
 #define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this. [replay sends]
-#define QUERY_TIMEOUT 3                 // Maximum seconds before an address transaction history query times out on master nodes  
+#define QUERY_TIMEOUT 3                 // Maximum seconds before an address transaction history query times out on master nodes
+#define timeout_attempts 333
 
 //Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
@@ -298,7 +299,7 @@ void forceWrite(const char* file, const void* data, const size_t data_len)
     while(f == NULL)
     {
         fc++;
-        if(fc > 333)
+        if(fc > timeout_attempts)
         {
             printf("ERROR: fopen() in forceWrite() has failed for '%s'.\n", file);
             err++;
@@ -314,7 +315,7 @@ void forceWrite(const char* file, const void* data, const size_t data_len)
         fclose(f);
         f = fopen(file, "w");
         fc++;
-        if(fc > 333)
+        if(fc > timeout_attempts)
         {
             printf("ERROR: fwrite() in forceWrite() has failed for '%s'.\n", file);
             err++;
@@ -335,7 +336,7 @@ void forceRead(const char* file, void* data, const size_t data_len)
     while(f == NULL)
     {
         fc++;
-        if(fc > 333)
+        if(fc > timeout_attempts)
         {
             if(data_len != sizeof(uint)*MAX_PEERS) //Ignore rp.mem error
             {
@@ -354,7 +355,7 @@ void forceRead(const char* file, void* data, const size_t data_len)
         fclose(f);
         f = fopen(file, "r");
         fc++;
-        if(fc > 333)
+        if(fc > timeout_attempts)
         {
             if(data_len != sizeof(uint)*MAX_PEERS) //Ignore rp.mem error
             {
@@ -382,7 +383,7 @@ void forceTruncate(const char* file, const size_t pos)
             close(f);
             f = open(file, O_WRONLY);
             c++;
-            if(c > 333)
+            if(c > timeout_attempts)
             {
                 printf("ERROR: truncate() in forceTruncate() has failed for '%s'.\n", file);
                 err++;
@@ -1547,7 +1548,7 @@ void replayHead(const uint ip, const size_t rlen)
                 f = fopen(CHAIN_FILE, "r");
                 
                 fc++;
-                if(fc > 333)
+                if(fc > timeout_attempts)
                 {
                     printf("ERROR: fread() in replayHead() #1 has failed for peer %s\n", inet_ntoa(ip_addr));
                     err++;
@@ -1637,7 +1638,7 @@ void replayBlocks(const uint ip)
                 fclose(f);
                 f = fopen(CHAIN_FILE, "r");
                 fc++;
-                if(fc > 333)
+                if(fc > timeout_attempts)
                 {
                     printf("ERROR: fread() in replayBlocks() #2 has failed for peer %s\n", inet_ntoa(ip_addr));
                     err++;
@@ -2288,7 +2289,7 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
     while(f == -1)
     {
         fc++;
-        if(fc > 333)
+        if(fc > timeout_attempts)
         {
             printf("ERROR: open() in hasbalance() has failed.\n");
             err++;
@@ -2390,7 +2391,7 @@ pthread_mutex_lock(&mutex3);
         while(f == NULL)
         {
             fc++;
-            if(fc > 333)
+            if(fc > timeout_attempts)
             {
                 printf("ERROR: fopen() in process_trans() has failed.\n");
                 err++;
@@ -2414,7 +2415,7 @@ pthread_mutex_unlock(&mutex3);
                 written = fwrite(&t, 1, sizeof(struct trans), f);
 
                 fc++;
-                if(fc > 333)
+                if(fc > timeout_attempts)
                 {
                     printf("ERROR: fwrite() in process_trans() has failed.\n");
                     err++;
