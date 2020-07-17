@@ -4808,13 +4808,13 @@ int main(int argc , char *argv[])
                 struct in_addr ip_addr;
                 ip_addr.s_addr = peers[i];
                 const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS);
-                if(isPeerAlive(i) == 0 || i == 0)
+                if(isPeerAlive(i) == 0)
                 {
                     printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
                     ac++;
                 }
             }
-            printf("Alive Peers: %u\n\n", ac);
+            printf("Dead Peers: %u\n\n", ac);
             exit(0);
         }
     }
