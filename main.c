@@ -5131,7 +5131,7 @@ while(1)
     //Launch Info
     timestamp();
     printf("\n.. VFC ..\n");
-    printf("https://VF.CASH - https://VFCASH.UK\n");
+    printf("https://VFCASH.UK\n");
     printf("https://github.com/vfcash\n");
     printf("v%s\n\n", version);
     printf("You will have to make a transaction before your IPv4 address registers\nwith the mainnet when running a full time node/daemon.\n\n");
