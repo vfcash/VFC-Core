@@ -4765,7 +4765,7 @@ int main(int argc , char *argv[])
         //Remove all peers
         if(strcmp(argv[1], "flushpeers") == 0)
         {
-            printf("Please ensure the VFC Node is not running when executing this command.\n");
+            printf("Peers flushed. Please ensure the VFC Node is not running when executing this command.\n");
             remove(".vfc/peers.mem");
             remove(".vfc/peers1.mem");
             remove(".vfc/peers2.mem");
