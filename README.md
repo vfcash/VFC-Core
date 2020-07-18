@@ -54,6 +54,8 @@ vfc reward                              - Your awarded or mined VFC
 -------------------------------
 vfc mine <optional num threads>  - CPU miner for VFC
 vfc peers                        - List locally indexed peers
+vfc deadpeers                    - List locally indexed dead peers
+vfc flushpeers                   - Removes all indexed peers
 vfc getpub <private key>         - Get Public Key from Private Key
 vfc issub <public key>           - Is supplied public address a subG address
 -------------------------------
