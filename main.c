@@ -78,7 +78,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.69";
+const char version[]="0.70";
 const uint16_t gport = 8787;
 
 //Error Codes
@@ -4840,9 +4840,6 @@ int main(int argc , char *argv[])
     memset(&replay, 0, sizeof(unsigned char)*MAX_TRANS_QUEUE);
     memset(&delta, 0, sizeof(time_t)*MAX_TRANS_QUEUE);
 
-    //Init UID hashmap
-    init_sites(MAX_SITES); //11 mb
-
     //Load Mem
     loadmem();
 
@@ -5165,6 +5162,7 @@ while(1)
         printf("The VFC node is already running.\n\n");
         exit(0);
     }
+    
 
     //Check for broken blocks
     printf("Quick Scan: Checking blocks.dat for invalid transactions...\n");
@@ -5172,6 +5170,9 @@ while(1)
 
     //Callback for CTRL+C
     signal(SIGINT, sigint_handler);
+    
+    //Init UID hashmap
+    init_sites(MAX_SITES); //11 mb
 
 
     //Launch Info
