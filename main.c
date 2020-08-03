@@ -12,6 +12,7 @@
     Additional Dependencies:
     - CRC64.c - Salvatore Sanfilippo
     - Base58.c - Luke Dashjr
+    - SHA3.c - Andrey Jivsov
 
 ~~
     PERFORMANCE:
