@@ -273,7 +273,7 @@ float qRandFloat(const float min, const float max)
 
 void timestamp()
 {
-    time_t ltime = time(0);
+    const time_t ltime = time(0);
     printf("%s", asctime(localtime(&ltime)));
 }
 
