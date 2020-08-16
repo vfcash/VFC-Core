@@ -1150,7 +1150,7 @@ pthread_mutex_unlock(&mutex4);
     }
 
     //Try to add to a free slot first
-    if(num_peers < MAX_PEERS)
+    if(num_peers < MAX_PEERS-1)
     {
         peers[num_peers] = ip;
         peer_timeouts[num_peers] = time(0) + MAX_PEER_EXPIRE_SECONDS;
