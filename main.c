@@ -4548,7 +4548,7 @@ int main(int argc , char *argv[])
             struct stat st;
             stat(CHAIN_FILE, &st);
             if(st.st_size > 0)
-                printf("%1.f kb / %lu Transactions\n", (double)st.st_size / 1000, st.st_size / sizeof(struct trans));
+                printf("%.0f kb (%.2f gb) / %lu Transactions\n", (double)st.st_size / 1000, ((((double)st.st_size) / 1000) / 1000) / 1000, st.st_size / sizeof(struct trans));
             exit(0);
         }
 
