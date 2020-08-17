@@ -2191,10 +2191,10 @@ uint64_t getBalanceLocal(addr* from)
                     rv -= t.amount;
                 }
 
+#if MASTER_NODE == 0
                 if(lrv != rv)
                 {
-#if MASTER_NODE == 0
-                    //re-enforce each transaction over network using sporadic distribution; limited to mmap() branch only
+                    //re-enforce each transaction over the network
                     const uint32_t origin = 0;
                     const size_t len = 1+sizeof(uint64_t)+sizeof(uint32_t)+ECC_CURVE+1+ECC_CURVE+1+sizeof(mval)+ECC_CURVE+ECC_CURVE;
                     char pc[MIN_LEN];
@@ -2213,8 +2213,8 @@ uint64_t getBalanceLocal(addr* from)
                     memcpy(ofs, t.owner.key, ECC_CURVE*2);
                     triBroadcast(pc, len, 3); //Just tell a random few peers or we will start triggering transaction duplication logs in badblocks 
                     //                        particularly on outgoing transactions. This is just to support the replay redundency at a minimal cost.
-#endif
                 }
+#endif
             }
 
             munmap(m, len);
