@@ -4084,7 +4084,7 @@ int main(int argc , char *argv[])
             while(1)
             {
                 struct stat st;
-                const int sr = stat(CHAIN_FILE, &st);
+                stat(CHAIN_FILE, &st);
                 if(st.st_size != ls)
                 {
                     ls = st.st_size;
