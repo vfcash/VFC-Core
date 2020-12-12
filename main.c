@@ -250,11 +250,8 @@ uint qRand(const uint min, const uint umax)
         srand(time(0));
         ls = time(0) + 33;
     }
-    const int rv = rand();
     const uint max = umax + 1;
-    if(rv == 0)
-        return min;
-    return ( ((float)rv / RAND_MAX) * (max-min) ) + min; //(rand()%(max-min))+min;
+    return ( ((float)rand() / RAND_MAX) * (max-min) ) + min; //(rand()%(max-min))+min;
 }
 
 float qRandFloat(const float min, const float max)
@@ -265,10 +262,7 @@ float qRandFloat(const float min, const float max)
         srand(time(0));
         ls = time(0) + 33;
     }
-    const float rv = (float)rand();
-    if(rv == 0)
-        return min;
-    return ( (rv / RAND_MAX) * (max-min) ) + min;
+    return ( ((float)rand() / (float)RAND_MAX) * (max-min) ) + min;
 }
 
 void timestamp()
@@ -713,9 +707,9 @@ uint64_t isSubGenesisAddress(uint8_t *a, const uint fr)
     {
         //Get the tax
         struct stat st;
-        stat(CHAIN_FILE, &st);
+        const int sr = stat(CHAIN_FILE, &st);
         uint64_t ift = 0;
-        if(st.st_size > 0)
+        if(sr == 0 && st.st_size > 0)
             ift = (uint64_t)st.st_size / sizeof(struct trans);
         else
             return 0;
@@ -950,11 +944,11 @@ void peersBroadcastAll(const char* dat, const size_t len)
 void broadcastUserAgent()
 {
     struct stat st;
-    stat(CHAIN_FILE, &st);
+    const int sr = stat(CHAIN_FILE, &st);
     struct utsname ud;
     uname(&ud);
     char pc[MIN_LEN];
-    if(st.st_size > 0)
+    if(sr == 0 && st.st_size > 0)
     {
         snprintf(pc, sizeof(pc), "a%lu, %s, %u, %s, %.3f", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
         peersBroadcast(pc, strlen(pc));
@@ -1408,9 +1402,9 @@ uint64_t getCirculatingSupply()
 {
     //Get the tax
     struct stat st;
-    stat(CHAIN_FILE, &st);
+    const int sr = stat(CHAIN_FILE, &st);
     uint64_t ift = 0;
-    if(st.st_size > 0)
+    if(sr == 0 && st.st_size > 0)
         ift = (uint64_t)st.st_size / sizeof(struct trans);
     ift *= INFLATION_TAX; //every transaction inflates vfc by 1 VFC (1000v). This is a TAX paid to miners.
 
@@ -1517,8 +1511,8 @@ void replayHead(const uint ip, const size_t rlen)
 
     //Send block height
     struct stat st;
-    stat(CHAIN_FILE, &st);
-    if(st.st_size > 0)
+    const int sr = stat(CHAIN_FILE, &st);
+    if(sr == 0 && st.st_size > 0)
     {
         char pc[MIN_LEN];
         pc[0] = 'h';
@@ -1598,8 +1592,8 @@ void replayBlocks(const uint ip)
 
     //Send block height
     struct stat st;
-    stat(CHAIN_FILE, &st);
-    if(st.st_size > 0)
+    const int sr = stat(CHAIN_FILE, &st);
+    if(sr == 0 && st.st_size > 0)
     {
         char pc[MIN_LEN];
         pc[0] = 'h';
@@ -3255,16 +3249,18 @@ void *networkThread(void *arg)
             if(peerid != -1)
             {
                 struct stat st;
-                stat(CHAIN_FILE, &st);
-
-                struct utsname ud;
-                uname(&ud);
-                
-                if(st.st_size > 0)
+                const int sr = stat(CHAIN_FILE, &st);
+                if(sr == 0)
                 {
-                    char pc[MIN_LEN];
-                    snprintf(pc, sizeof(pc), "a%lu, %s, %u, %s, %.3f", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
-                    csend(client.sin_addr.s_addr, pc, strlen(pc));
+                    struct utsname ud;
+                    uname(&ud);
+                    
+                    if(st.st_size > 0)
+                    {
+                        char pc[MIN_LEN];
+                        snprintf(pc, sizeof(pc), "a%lu, %s, %u, %s, %.3f", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
+                        csend(client.sin_addr.s_addr, pc, strlen(pc));
+                    }
                 }
             }
         }
@@ -4088,7 +4084,7 @@ int main(int argc , char *argv[])
             while(1)
             {
                 struct stat st;
-                stat(CHAIN_FILE, &st);
+                const int sr = stat(CHAIN_FILE, &st);
                 if(st.st_size != ls)
                 {
                     ls = st.st_size;
@@ -4325,10 +4321,10 @@ int main(int argc , char *argv[])
             loadmem();
             forceRead(".vfc/netdiff.mem", &node_difficulty, sizeof(float));
             struct stat st;
-            stat(CHAIN_FILE, &st);
+            const int sr = stat(CHAIN_FILE, &st);
             struct utsname ud;
             uname(&ud);
-            if(st.st_size > 0)
+            if(sr == 0 && st.st_size > 0)
                 printf("%lu, %s, %u, %s, %.3f\n", st.st_size / sizeof(struct trans), version, num_processors, ud.machine, node_difficulty);
             broadcastUserAgent();
             exit(0);
@@ -4546,8 +4542,8 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "heigh") == 0)
         {
             struct stat st;
-            stat(CHAIN_FILE, &st);
-            if(st.st_size > 0)
+            const int sr = stat(CHAIN_FILE, &st);
+            if(sr == 0 && st.st_size > 0)
                 printf("%.0f kb (%.2f gb) / %lu Transactions\n", (double)st.st_size / 1000, ((((double)st.st_size) / 1000) / 1000) / 1000, st.st_size / sizeof(struct trans));
             exit(0);
         }
