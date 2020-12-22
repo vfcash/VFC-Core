@@ -9,6 +9,8 @@ Transactions are free, there is no charge for making a transaction on the networ
 
 VFC is a private decentralised network, consequently you will need control of some currency before the wider network considers your node viable for indexing. The usual method is to mine some VFC using the `vfc mine` command. Also you can transfer VFC to your node's reward address `vfc reward` will identify your reward public key / address once your reward address has some VFC your node will automatically verify itself within the hour.
 
+Additionally to the information provided in this document is an [FAQ here](https://github.com/vfcash/Assets/blob/master/README.md).
+
 # Installation & Running a Node
 
 **Linux (Debian/Ubuntu) Compile & Install Instructions (Full Node & Client Wallet):**
