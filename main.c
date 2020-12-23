@@ -79,7 +79,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.70";
+const char version[]="0.71";
 const uint16_t gport = 8787;
 
 //Error Codes
