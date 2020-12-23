@@ -251,7 +251,10 @@ uint qRand(const uint min, const uint umax)
         ls = time(0) + 33;
     }
     const uint max = umax + 1;
-    return ( ((float)rand() / RAND_MAX) * (max-min) ) + min; //(rand()%(max-min))+min;
+    const float rv = (float)rand();
+    if(rv == 0)
+        return min;
+    return ( (rv / RAND_MAX) * (max-min) ) + min; //(rand()%(max-min))+min;
 }
 
 float qRandFloat(const float min, const float max)
@@ -262,7 +265,10 @@ float qRandFloat(const float min, const float max)
         srand(time(0));
         ls = time(0) + 33;
     }
-    return ( ((float)rand() / (float)RAND_MAX) * (max-min) ) + min;
+    const float rv = (float)rand();
+    if(rv == 0)
+        return min;
+    return ( (rv / (float)RAND_MAX) * (max-min) ) + min;
 }
 
 void timestamp()
