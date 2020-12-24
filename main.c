@@ -1854,6 +1854,68 @@ void dumpbadtrans()
     }
 }
 
+//print top x sent & recv transactions
+void printTop(addr* a, const uint num)
+{
+    int f = open(CHAIN_FILE, O_RDONLY);
+    if(f)
+    {
+        const size_t len = lseek(f, 0, SEEK_END);
+
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
+        {
+            close(f);
+
+#if MASTER_NODE == 1
+            const time_t st = time(0);
+#endif
+            uint tc = 0;
+            struct trans t;
+            for(size_t i = len-sizeof(struct trans); i >= 0; i -= sizeof(struct trans))
+            {
+#if MASTER_NODE == 1
+                if(time(0) - st > QUERY_TIMEOUT)
+                {
+                    printf("Query Timeout.\n");
+                    break; //break the loop if the lookup is taking more than x seconds on a master node.
+                }
+#endif
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                if(memcmp(&t.from.key, a->key, ECC_CURVE+1) == 0)
+                {
+                    char pub[MIN_LEN];
+                    memset(pub, 0, sizeof(pub));
+                    size_t len = MIN_LEN;
+                    b58enc(pub, &len, t.to.key, ECC_CURVE+1);
+                    setlocale(LC_NUMERIC, "");
+                    printf("OUT,%lu,%s,%'.3f\n", t.uid, pub, toDB(t.amount));
+                    tc++;
+                    if(tc > num)
+                        return;
+                }
+                else if(memcmp(&t.to.key, a->key, ECC_CURVE+1) == 0)
+                {
+                    char pub[MIN_LEN];
+                    memset(pub, 0, sizeof(pub));
+                    size_t len = MIN_LEN;
+                    b58enc(pub, &len, t.from.key, ECC_CURVE+1);
+                    setlocale(LC_NUMERIC, "");
+                    printf("IN,%lu,%s,%'.3f\n", t.uid, pub, toDB(t.amount));
+                    tc++;
+                    if(tc > num)
+                        return;
+                }
+            }
+
+            munmap(m, len);
+        }
+
+        close(f);
+    }
+}
+
 //print sent & recv transactions
 void printAll(addr* a)
 {
@@ -3920,6 +3982,15 @@ int main(int argc , char *argv[])
             printtrans(from, to);
             exit(0);
         }
+
+        if(strstr(argv[1], "top") != NULL)
+        {
+            addr a;
+            size_t len = ECC_CURVE+1;
+            b58tobin(a.key, &len, argv[2], strlen(argv[2]));
+            printTop(&a, atoi(argv[3]));
+            exit(0);
+        }
     }
 
     //Outgoings and Incomings
@@ -4264,6 +4335,7 @@ int main(int argc , char *argv[])
             printf("vfc out <address public key>  - Gets sent transactions\n");
             printf("vfc in <address public key>   - Gets received transactions\n");
             printf("vfc all <address public key>  - Recv & Sent transactions\n");
+            printf("vfc top <address> <num>       - Top Recv & Sent transactions\n");
             printf("-----------------------------\n\n");
             printf("Send a transaction:\n");
             printf("vfc <sender public key> <reciever public key> <amount> <sender private key>\n\n");
@@ -5244,3 +5316,4 @@ while(1)
     //Daemon
     return 0;
 }
+
