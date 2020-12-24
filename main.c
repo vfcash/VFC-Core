@@ -1872,7 +1872,7 @@ void printTop(addr* a, const uint num)
 #endif
             uint tc = 0;
             struct trans t;
-            for(size_t i = len-sizeof(struct trans); i >= 0; i -= sizeof(struct trans))
+            for(size_t i = len-sizeof(struct trans); i > 0; i -= sizeof(struct trans))
             {
 #if MASTER_NODE == 1
                 if(time(0) - st > QUERY_TIMEOUT)
@@ -1892,7 +1892,7 @@ void printTop(addr* a, const uint num)
                     setlocale(LC_NUMERIC, "");
                     printf("OUT,%lu,%s,%'.3f\n", t.uid, pub, toDB(t.amount));
                     tc++;
-                    if(tc > num)
+                    if(tc >= num)
                         return;
                 }
                 else if(memcmp(&t.to.key, a->key, ECC_CURVE+1) == 0)
@@ -1904,7 +1904,7 @@ void printTop(addr* a, const uint num)
                     setlocale(LC_NUMERIC, "");
                     printf("IN,%lu,%s,%'.3f\n", t.uid, pub, toDB(t.amount));
                     tc++;
-                    if(tc > num)
+                    if(tc >= num)
                         return;
                 }
             }
