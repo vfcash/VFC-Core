@@ -4108,12 +4108,12 @@ int main(int argc , char *argv[])
             printf("\033[H\033[J");
 
             //Get Private Key
-            uint8_t p_privateKey[ECC_BYTES+1];
+            uint8_t p_privateKey[ECC_BYTES+1] = {0}; // one byte more than necessary
             size_t len = ECC_CURVE;
             b58tobin(p_privateKey, &len, argv[2], strlen(argv[2]));
 
             //Gen Public Key
-            uint8_t p_publicKey[ECC_BYTES+1];
+            uint8_t p_publicKey[ECC_BYTES+1] = {0};
             ecc_get_pubkey(p_publicKey, p_privateKey);
 
             //Dump Public Key as Base58
