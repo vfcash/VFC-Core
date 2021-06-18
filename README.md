@@ -133,13 +133,8 @@ VF Cash is a private decentralised network, this means that the only people who 
 This is why it is important that you expose some kind of gatway for end-users, at minimum this would mean installing NGINX, PHP-FPM and exposing the [php rest api](https://github.com/vfcash/VFC-PHP-API/blob/master/rest.php) for public use by copying the rest.php file to `/var/www/html` the default configured nginx www/html path.
 
 # Third-Party Dependencies
-
-**CRYPTO:**
-- https://github.com/brainhub/SHA3IUF   [SHA3]
-- https://github.com/esxgx/easy-ecc     [ECDSA]
-
-**Additional Dependencies:**
-- CRC64.c - Salvatore Sanfilippo
+- CRC64.c  - Salvatore Sanfilippo
 - Base58.c - Luke Dashjr
-- SHA3.c - Andrey Jivsov
+- SHA3.c   - Andrey Jivsov
+- ECC.c    - Kenneth MacKay
 
