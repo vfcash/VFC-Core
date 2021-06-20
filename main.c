@@ -1047,7 +1047,7 @@ int getPeer(const uint ip)
     return -1;
 }
 
-size_t getPeerHeigh(const uint id)
+size_t getPeerHigh(const uint id)
 {
     const char* str = strtok(peer_ua[id], ",");
     if(str != NULL)
@@ -1704,15 +1704,15 @@ pthread_mutex_unlock(&mutex1);
     if(peer != -1)
     {
         //Get peer height
-        const size_t peer_heigh = getPeerHeigh(peer);
+        const size_t peer_heigh = getPeerHigh(peer);
         
         //Get my height
         struct stat st;
         stat(CHAIN_FILE, &st);
-        const size_t my_heigh = st.st_size > 0 ? st.st_size / sizeof(struct trans) : 0;
+        const size_t my_high = st.st_size > 0 ? st.st_size / sizeof(struct trans) : 0;
 
         //if peer has a smaller block height
-        const int diff = my_heigh - peer_heigh;
+        const int diff = my_high - peer_high;
         if(diff != 0)
         {
             if(diff <= REPLAY_SIZE && diff > 0) //Give peer the fast update
@@ -1722,7 +1722,7 @@ pthread_mutex_unlock(&mutex1);
             }
             else
             {
-                if(peer_heigh < my_heigh)
+                if(peer_high < my_high)
                 {
                     //Give peer a random block because the peer is way behind
                     replayBlocks(ip);
@@ -4381,7 +4381,7 @@ int main(int argc , char *argv[])
             printf("vfc version      - Node version\n");
             printf("vfc agent        - Node user-agent\n");
             printf("vfc config       - Node configuration\n");
-            printf("vfc heigh        - Returns node [ blocks.dat size / num transactions ]\n");
+            printf("vfc high         - Returns node [ blocks.dat size / num transactions ]\n");
             printf("vfc circulating  - Circulating supply\n");
             printf("vfc minted       - Minted supply\n");
             printf("vfc unclaimed    - Lists all unclaimed addresses from your minted.priv\n");
@@ -4619,7 +4619,7 @@ int main(int argc , char *argv[])
         }
 
         //Block height / total blocks / size
-        if(strcmp(argv[1], "heigh") == 0)
+        if(strcmp(argv[1], "high") == 0)
         {
             struct stat st;
             const int sr = stat(CHAIN_FILE, &st);
