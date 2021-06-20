@@ -24,7 +24,10 @@ vfc cdn_resync
 Then use the `vfc help` command in the console for a full command list or `vfui` if you are running a desktop environment and prefer a graphical user interface.
 
 ```> vfui```
+
 ```> vfwallet```
+
+```> cminer```
 
 ```
 > vfc help
