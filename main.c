@@ -1704,7 +1704,7 @@ pthread_mutex_unlock(&mutex1);
     if(peer != -1)
     {
         //Get peer height
-        const size_t peer_heigh = getPeerHigh(peer);
+        const size_t peer_high = getPeerHigh(peer);
         
         //Get my height
         struct stat st;
