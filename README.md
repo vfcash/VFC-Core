@@ -83,7 +83,7 @@ vfc clearbad                     - Clear all detected double spend attempts
 vfc version      - Node version
 vfc agent        - Node user-agent
 vfc config       - Node configuration
-vfc heigh        - Returns node [ blocks.dat size / num transactions ]
+vfc high         - Returns node [ blocks.dat size / num transactions ]
 vfc circulating  - Circulating supply
 vfc minted       - Minted supply
 vfc unclaimed    - Lists all unclaimed addresses from your minted.priv
