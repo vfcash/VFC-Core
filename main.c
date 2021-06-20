@@ -1090,7 +1090,7 @@ float getPeerDiff(const uint id)
     return roundFloat(rv);
 }
 
-void printDifficultyVotes() //Legacy, remove in future
+void printDifficultySpread() //Legacy, remove in future
 {
     uint tally[256];
     memset(tally, 0, sizeof(uint)*256);
@@ -4356,7 +4356,7 @@ int main(int argc , char *argv[])
             printf("vfc getpub <private key>         - Get Public Key from Private Key\n");
             printf("vfc issub <public key>           - Is supplied public address a subG address\n");
             printf("-------------------------------\n");
-            printf("vfc votes                        - Map of client difficulty values\n");
+            printf("vfc spread                       - Map of client difficulty values\n");
             printf("vfc difficulty                   - Network mining difficulty\n");
             printf("-------------------------------\n");
             printf("vfc sync <optional num peers>    - Trigger blockchain sync from your peers\n");
@@ -4441,14 +4441,14 @@ int main(int argc , char *argv[])
         }
 
         //get mining difficulty
-        if(strcmp(argv[1], "votes") == 0)
+        if(strcmp(argv[1], "spread") == 0)
         {
             loadmem();
             int vpp = (countLivingPeers()*1.23)/209;
             if(vpp < 1)
                 vpp = 1;
             printf("%u\n", vpp);
-            printDifficultyVotes();
+            printDifficultySpread();
             exit(0);
         }
 
