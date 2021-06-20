@@ -1,5 +1,5 @@
 # VF Cash
-VF Cash has no proof of work (PoW) and blockchain file that grows at a rate 76% less than Bitcoin. [Whitepaper.pdf](https://github.com/vfcash/RELEASES/blob/master/vfcash.pdf)
+VF Cash has no proof of work (PoW) and blockchain file that grows at a rate 76% less than Bitcoin.
 
 The project started on the 23rd of April 2019. It has no Proof-of-Work (PoW) rather it has a finders-keeps distribution system similar to mining and a transaction rate limit per address / public key of three seconds for the confirmation period. This prevents the sender of a transaction from making any further transactions during this period. The chain is unordered, and the networking uses UDP. The Digital Signature algorithm uses secp256r1.
 
