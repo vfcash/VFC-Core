@@ -108,7 +108,7 @@ const uint16_t gport = 8787;
 #define BADCHAIN_FILE ".vfc/bad_blocks.dat"
 #define CONFIG_FILE ".vfc/vfc.cnf"
 
-//Vairable Definitions
+//Variable Definitions
 #define uint uint32_t
 #define mval uint32_t
 #define ulong unsigned long long int
