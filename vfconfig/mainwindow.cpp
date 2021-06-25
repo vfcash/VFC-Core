@@ -18,6 +18,15 @@ void MainWindow::saveConfig()
         QTextStream stream(&file);
         stream << ui->config_edit->toPlainText() << endl;
     }
+    else
+    {
+        QFile file("/srv/.vfc/vfc.cnf");
+        if (file.open(QIODevice::WriteOnly))
+        {
+            QTextStream stream(&file);
+            stream << ui->config_edit->toPlainText() << endl;
+        }
+    }
 }
 
 void MainWindow::loadConfig()
@@ -28,6 +37,16 @@ void MainWindow::loadConfig()
         QTextStream in(&file);
         ui->config_edit->setText(in.readAll());
         file.close();
+    }
+    else
+    {
+        QFile file("/srv/.vfc/vfc.cnf");
+        if(file.open(QIODevice::ReadOnly))
+        {
+            QTextStream in(&file);
+            ui->config_edit->setText(in.readAll());
+            file.close();
+        }
     }
 }
 
