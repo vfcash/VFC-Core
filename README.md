@@ -38,6 +38,7 @@ vfc <address public key>      - Get address balance
 vfc out <address public key>  - Gets sent transactions
 vfc in <address public key>   - Gets received transactions
 vfc all <address public key>  - Recv & Sent transactions
+vfc top <address> <num>       - Top Recv & Sent transactions
 -----------------------------
 
 Send a transaction:
