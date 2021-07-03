@@ -64,6 +64,7 @@
 #include <pthread.h> //threading
 #include <execinfo.h> //backtrace
 #include <netdb.h> //gethostbyname
+#include <byteswap.h> //__bswap_32
 
 #include "ecc.h"
 #include "sha3.h"
@@ -80,7 +81,7 @@
 ////////
 
 //Client Configuration
-const char version[]="0.71";
+const char version[]="0.72";
 const uint16_t gport = 8787;
 
 //Error Codes
@@ -435,7 +436,7 @@ uint32_t HOSTtoIPv4(const char* ihost)
 
     struct in_addr** addr = (struct in_addr**)host->h_addr_list;
     for(int i = 0; addr[i] != NULL; i++) 
-        return addr[i]->s_addr;
+        return ntohl(addr[i]->s_addr);
 
     return 0;
 }
@@ -1115,8 +1116,11 @@ void printDifficultySpread() //Legacy, remove in future
 }
 
 //Peers are only replaced if they have not responded in a x time period.
-int addPeer(const uint ip)
+int addPeer(const uint iip)
 {
+    //Convert from network byte order to host byte order.
+    const uint ip = ntohl(iip);
+
     //Is there room for a new peer?
     if(num_peers >= MAX_PEERS)
         return 0;
