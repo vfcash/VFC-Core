@@ -49,9 +49,9 @@
 #include <math.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <pwd.h>
+#include <stdlib.h> //RAND_MAX
+#include <sys/types.h> //pthreads
+#include <pwd.h> //getpwuid
 #include <sys/sysinfo.h> //cpu cores
 #include <sys/stat.h> //mkdir
 #include <fcntl.h> //open
