@@ -854,7 +854,7 @@ uint csend(const uint ip, const char* send, const size_t len)
     memset((char*)&server, 0, sizeof(server));
     server.sin_family = AF_INET;
     server.sin_port = htons(gport);
-    server.sin_addr.s_addr = ip;
+    server.sin_addr.s_addr = htonl(ip);
 
     if(sendto(s, send, len, 0, (struct sockaddr*)&server, sizeof(server)) < 0)
     {
@@ -1518,7 +1518,7 @@ pthread_mutex_unlock(&mutex6);
 void replayHead(const uint ip, const size_t rlen)
 {
     struct in_addr ip_addr;
-    ip_addr.s_addr = ip;
+    ip_addr.s_addr = htonl(ip);
 
     const uint replay_rate = getReplayRate();
 
@@ -1533,7 +1533,7 @@ void replayHead(const uint ip, const size_t rlen)
         const uint height = st.st_size;
         memcpy(ofs, &height, sizeof(uint));
         csend(ip, pc, 1+sizeof(uint));
-        printf("Replaying Head: %.1f kb to %s\n", (double) ( sizeof(struct trans) * rlen ) / 1000, inet_ntoa(htonl(ip_addr)));
+        printf("Replaying Head: %.1f kb to %s\n", (double) ( sizeof(struct trans) * rlen ) / 1000, inet_ntoa(ip_addr));
     }
 
     //Replay blocks
@@ -1558,7 +1558,7 @@ void replayHead(const uint ip, const size_t rlen)
                 fc++;
                 if(fc > timeout_attempts)
                 {
-                    printf("ERROR: fread() in replayHead() #1 has failed for peer %s\n", inet_ntoa(htonl(ip_addr)));
+                    printf("ERROR: fread() in replayHead() #1 has failed for peer %s\n", inet_ntoa(ip_addr));
                     err++;
                     fclose(f);
                     return;
@@ -1585,7 +1585,7 @@ void replayHead(const uint ip, const size_t rlen)
             csend(ip, pc, len);
 
             //Log
-            //printf("%s: %lu\n", inet_ntoa(htonl(ip_addr)), t.uid);
+            //printf("%s: %lu\n", inet_ntoa(ip_addr), t.uid);
 
             //Rate limit
             usleep(replay_rate);
@@ -1599,7 +1599,7 @@ void replayHead(const uint ip, const size_t rlen)
 void replayBlocks(const uint ip)
 {
     struct in_addr ip_addr;
-    ip_addr.s_addr = ip;
+    ip_addr.s_addr = htonl(ip);
 
     const uint replay_rate = getReplayRate();
 
@@ -1614,7 +1614,7 @@ void replayBlocks(const uint ip)
         const uint height = st.st_size;
         memcpy(ofs, &height, sizeof(uint));
         csend(ip, pc, 1+sizeof(uint));
-        printf("Replaying Blocks: %.1f kb to %s\n", (double) ( sizeof(struct trans) * REPLAY_SIZE ) / 1000, inet_ntoa(htonl(ip_addr)));
+        printf("Replaying Blocks: %.1f kb to %s\n", (double) ( sizeof(struct trans) * REPLAY_SIZE ) / 1000, inet_ntoa(ip_addr));
     }
 
     //Replay blocks
@@ -1648,7 +1648,7 @@ void replayBlocks(const uint ip)
                 fc++;
                 if(fc > timeout_attempts)
                 {
-                    printf("ERROR: fread() in replayBlocks() #2 has failed for peer %s\n", inet_ntoa(htonl(ip_addr)));
+                    printf("ERROR: fread() in replayBlocks() #2 has failed for peer %s\n", inet_ntoa(ip_addr));
                     err++;
                     fclose(f);
                     return;
@@ -4866,11 +4866,11 @@ int main(int argc , char *argv[])
             for(uint i = 0; i < num_peers; ++i)
             {
                 struct in_addr ip_addr;
-                ip_addr.s_addr = peers[i];
+                ip_addr.s_addr = htonl(peers[i]);
                 const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS);
                 if(isPeerAlive(i) == 1 || i == 0)
                 {
-                    printf("%s / %u / %u / %s\n", inet_ntoa(htonl(ip_addr)), peer_tcount[i], pd, peer_ua[i]);
+                    printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
                     ac++;
                 }
             }
@@ -4889,11 +4889,11 @@ int main(int argc , char *argv[])
             for(uint i = 0; i < num_peers; ++i)
             {
                 struct in_addr ip_addr;
-                ip_addr.s_addr = peers[i];
+                ip_addr.s_addr = htonl(peers[i]);
                 const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS);
                 if(isPeerAlive(i) == 0)
                 {
-                    printf("%s / %u / %u / %s\n", inet_ntoa(htonl(ip_addr)), peer_tcount[i], pd, peer_ua[i]);
+                    printf("%s / %u / %u / %s\n", inet_ntoa(ip_addr), peer_tcount[i], pd, peer_ua[i]);
                     ac++;
                 }
             }
