@@ -925,8 +925,10 @@ uint verifyChain(const char* path)
     return 1;
 }
 
-uint isSeedNode(const uint ip)
+uint isSeedNode(const uint iip)
 {
+    const uint ip = ntohl(iip); //Convert from network byte order to host byte order.
+    
     if(ip == peers[0])
         return 1;
     return 0;
@@ -1025,8 +1027,10 @@ void resyncBlocks(const uint irnp)
     forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_PEERS);
 }
 
-uint isPeer(const uint ip)
+uint isPeer(const uint iip)
 {
+    const uint ip = ntohl(iip); //Convert from network byte order to host byte order.
+    
     if(ip == ntohl(inet_addr("127.0.0.1")))
         return 1;
 
@@ -1041,8 +1045,10 @@ uint isPeer(const uint ip)
     return 0;
 }
 
-int getPeer(const uint ip)
+int getPeer(const uint iip)
 {
+    const uint ip = ntohl(iip); //Convert from network byte order to host byte order.
+    
     for(uint i = 0; i < num_peers; ++i)
         if(peers[i] == ip)
             return i;
