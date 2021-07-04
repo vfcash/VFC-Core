@@ -402,10 +402,8 @@ void forceTruncate(const char* file, const size_t pos)
 }
 
 //https://stackoverflow.com/questions/14293095/is-there-a-library-function-to-determine-if-an-ip-address-ipv4-and-ipv6-is-pri
-int isPrivateAddress(const uint32_t iip)
+int isPrivateAddress(const uint32_t ip)
 {
-    const uint32_t ip = ntohl(iip); ///Convert from network to host byte order
-
     uint8_t b1=0, b2, b3, b4;
     b1 = (uint8_t)(ip >> 24);
     b2 = (uint8_t)((ip >> 16) & 0x0ff);
@@ -436,7 +434,7 @@ uint32_t HOSTtoIPv4(const char* ihost)
 
     struct in_addr** addr = (struct in_addr**)host->h_addr_list;
     for(int i = 0; addr[i] != NULL; i++) 
-        return ntohl(addr[i]->s_addr);
+        return addr[i]->s_addr;
 
     return 0;
 }
@@ -854,7 +852,7 @@ uint csend(const uint ip, const char* send, const size_t len)
     memset((char*)&server, 0, sizeof(server));
     server.sin_family = AF_INET;
     server.sin_port = htons(gport);
-    server.sin_addr.s_addr = htonl(ip);
+    server.sin_addr.s_addr = ip;
 
     if(sendto(s, send, len, 0, (struct sockaddr*)&server, sizeof(server)) < 0)
     {
@@ -925,10 +923,8 @@ uint verifyChain(const char* path)
     return 1;
 }
 
-uint isSeedNode(const uint iip)
+uint isSeedNode(const uint ip)
 {
-    const uint ip = ntohl(iip); //Convert from network byte order to host byte order.
-    
     if(ip == peers[0])
         return 1;
     return 0;
@@ -1027,11 +1023,9 @@ void resyncBlocks(const uint irnp)
     forceWrite(".vfc/rp.mem", &replay_allow, sizeof(uint)*MAX_PEERS);
 }
 
-uint isPeer(const uint iip)
+uint isPeer(const uint ip)
 {
-    const uint ip = ntohl(iip); //Convert from network byte order to host byte order.
-    
-    if(ip == ntohl(inet_addr("127.0.0.1")))
+    if(ip == inet_addr("127.0.0.1"))
         return 1;
 
     for(uint i = 0; i < num_peers; ++i)
@@ -1045,10 +1039,8 @@ uint isPeer(const uint iip)
     return 0;
 }
 
-int getPeer(const uint iip)
+int getPeer(const uint ip)
 {
-    const uint ip = ntohl(iip); //Convert from network byte order to host byte order.
-    
     for(uint i = 0; i < num_peers; ++i)
         if(peers[i] == ip)
             return i;
@@ -1122,17 +1114,14 @@ void printDifficultySpread() //Legacy, remove in future
 }
 
 //Peers are only replaced if they have not responded in a x time period.
-int addPeer(const uint iip)
+int addPeer(const uint ip)
 {
-    //Convert from network byte order to host byte order.
-    const uint ip = ntohl(iip);
-
     //Is there room for a new peer?
     if(num_peers >= MAX_PEERS)
         return 0;
 
     //Never add local host
-    if(ip == ntohl(inet_addr("127.0.0.1"))) //inet_addr("127.0.0.1") //0x0100007F
+    if(ip == inet_addr("127.0.0.1")) //inet_addr("127.0.0.1") //0x0100007F
         return -1;
 
     //Or local network address
@@ -1524,7 +1513,7 @@ pthread_mutex_unlock(&mutex6);
 void replayHead(const uint ip, const size_t rlen)
 {
     struct in_addr ip_addr;
-    ip_addr.s_addr = htonl(ip);
+    ip_addr.s_addr = ip;
 
     const uint replay_rate = getReplayRate();
 
@@ -1605,7 +1594,7 @@ void replayHead(const uint ip, const size_t rlen)
 void replayBlocks(const uint ip)
 {
     struct in_addr ip_addr;
-    ip_addr.s_addr = htonl(ip);
+    ip_addr.s_addr = ip;
 
     const uint replay_rate = getReplayRate();
 
@@ -4881,7 +4870,7 @@ int main(int argc , char *argv[])
             for(uint i = 0; i < num_peers; ++i)
             {
                 struct in_addr ip_addr;
-                ip_addr.s_addr = htonl(peers[i]);
+                ip_addr.s_addr = peers[i];
                 const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS);
                 if(isPeerAlive(i) == 1 || i == 0)
                 {
@@ -4904,7 +4893,7 @@ int main(int argc , char *argv[])
             for(uint i = 0; i < num_peers; ++i)
             {
                 struct in_addr ip_addr;
-                ip_addr.s_addr = htonl(peers[i]);
+                ip_addr.s_addr = peers[i];
                 const uint pd = time(0)-(peer_timeouts[i]-MAX_PEER_EXPIRE_SECONDS);
                 if(isPeerAlive(i) == 0)
                 {
