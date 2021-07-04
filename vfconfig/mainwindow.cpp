@@ -120,17 +120,43 @@ void MainWindow::updateStats(const int full)
         ui->explore_address->setText(rs);
         file.close();
     }
-
-    QFile file3(QDir::homePath() + "/.vfc/minted.priv");
-    if(file3.open(QIODevice::ReadOnly))
+    else
     {
-        QTextStream in(&file3);
+        QFile file("/srv/.vfc/public.key");
+        if(file.open(QIODevice::ReadOnly))
+        {
+            QTextStream in(&file);
+            QString rs = in.readAll();
+            ui->rewards_address->setText(rs);
+            ui->explore_address->setText(rs);
+            file.close();
+        }
+    }
+
+    QFile file2(QDir::homePath() + "/.vfc/minted.priv");
+    if(file2.open(QIODevice::ReadOnly))
+    {
+        QTextStream in(&file2);
 
         ui->mined_list->clear();
         while(!in.atEnd())
             ui->mined_list->addItem(in.readLine());
 
-        file3.close();
+        file2.close();
+    }
+    else
+    {
+        QFile file2("/srv/.vfc/minted.priv");
+        if(file2.open(QIODevice::ReadOnly))
+        {
+            QTextStream in(&file2);
+
+            ui->mined_list->clear();
+            while(!in.atEnd())
+                ui->mined_list->addItem(in.readLine());
+
+            file2.close();
+        }
     }
 
     //Configure the peers table
@@ -157,38 +183,41 @@ void MainWindow::updateStats(const int full)
     ui->peers_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     r = execCommand("vfc peers");
-    QStringList pl = r.split("\n");
-    int pi = 0;
-    foreach(QString v, pl)
+    if(r.length() != 0)
     {
-        if(v[0].isDigit())
+        QStringList pl = r.split("\n");
+        int pi = 0;
+        foreach(QString v, pl)
         {
-            QStringList p1 = v.split(" / ");
-            if(p1.count() >= 4)
+            if(v[0].isDigit())
             {
-                QStringList p2 = p1[3].split(", ");
-                if(p2.count() >= 5)
+                QStringList p1 = v.split(" / ");
+                if(p1.count() >= 4)
                 {
-                    addPeer(pi, p1[0], p1[1], p1[2], p2[0], p2[1], p2[2], p2[3], p2[4]);
-                    pi++;
+                    QStringList p2 = p1[3].split(", ");
+                    if(p2.count() >= 5)
+                    {
+                        addPeer(pi, p1[0], p1[1], p1[2], p2[0], p2[1], p2[2], p2[3], p2[4]);
+                        pi++;
+                    }
+                    else
+                    {
+                        addPeer(pi, p1[0], p1[1], p1[2], "0", "0", "0", "0", "0");
+                        pi++;
+                    }
                 }
-                else
+                else if(p1.count() == 3)
                 {
                     addPeer(pi, p1[0], p1[1], p1[2], "0", "0", "0", "0", "0");
                     pi++;
                 }
             }
-            else if(p1.count() == 3)
-            {
-                addPeer(pi, p1[0], p1[1], p1[2], "0", "0", "0", "0", "0");
-                pi++;
-            }
-        }
 
-        if(v[0] == 'A' && v[1] == 'l')
-        {
-            ui->num_peers->setText("Num Peers:                      " + v.split(": ")[1] + " / 3072");
-            ui->peers_table->setRowCount(v.split(": ")[1].toInt());
+            if(v[0] == 'A' && v[1] == 'l')
+            {
+                ui->num_peers->setText("Num Peers:                      " + v.split(": ")[1] + " / 3072");
+                ui->peers_table->setRowCount(v.split(": ")[1].toInt());
+            }
         }
     }
 
