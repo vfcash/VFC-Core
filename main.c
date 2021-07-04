@@ -4732,9 +4732,14 @@ int main(int argc , char *argv[])
         {
             remove(CHAIN_FILE);
             
-            if(system("wget -O.vfc/master_blocks.dat http://vfcash.co.uk/sync/") != -1)
-                if(system("cp .vfc/master_blocks.dat .vfc/blocks.dat") != -1)
-                    printf("Resync from master complete.\n\n");
+            printf("Are you sure? y/n");
+            char c;
+            if(scanf("%c", &c) == 'y')
+            {
+                if(system("wget -O.vfc/master_blocks.dat http://vfcash.co.uk/sync/") != -1)
+                    if(system("cp .vfc/master_blocks.dat .vfc/blocks.dat") != -1)
+                        printf("Resync from master complete.\n\n");
+            }
 
 //             printf("Please select a mirror: 1 or 2: ");
 //             char c;
