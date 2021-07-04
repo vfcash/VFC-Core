@@ -4731,21 +4731,25 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "master_resync") == 0 || strcmp(argv[1], "cdn_resync") == 0)
         {
             remove(CHAIN_FILE);
+            
+            if(system("wget -O.vfc/master_blocks.dat http://vfcash.co.uk/sync/") != -1)
+                if(system("cp .vfc/master_blocks.dat .vfc/blocks.dat") != -1)
+                    printf("Resync from master complete.\n\n");
 
-            printf("Please select a mirror: 1 or 2: ");
-            char c;
-            if(scanf("%c", &c) > 0)
-            {
-                if(c == '1')
-                    if(system("wget -O.vfc/master_blocks.dat http://vfcash.co.uk/sync/") != -1)
-                        if(system("cp .vfc/master_blocks.dat .vfc/blocks.dat") != -1)
-                            printf("Resync from master complete.\n\n");
+//             printf("Please select a mirror: 1 or 2: ");
+//             char c;
+//             if(scanf("%c", &c) > 0)
+//             {
+//                 if(c == '1')
+//                     if(system("wget -O.vfc/master_blocks.dat http://vfcash.co.uk/sync/") != -1)
+//                         if(system("cp .vfc/master_blocks.dat .vfc/blocks.dat") != -1)
+//                             printf("Resync from master complete.\n\n");
 
-                if(c == '2')
-                    if(system("wget -O.vfc/master_blocks.dat http://207.180.252.56:8000/master_blocks.dat") != -1)
-                        if(system("cp .vfc/master_blocks.dat .vfc/blocks.dat") != -1)
-                            printf("Resync from master complete.\n\n");
-            }
+//                 if(c == '2')
+//                     if(system("wget -O.vfc/master_blocks.dat http://207.180.252.56:8000/master_blocks.dat") != -1)
+//                         if(system("cp .vfc/master_blocks.dat .vfc/blocks.dat") != -1)
+//                             printf("Resync from master complete.\n\n");
+//             }
 
             exit(0);
         }
