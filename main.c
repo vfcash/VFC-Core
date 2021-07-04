@@ -4732,7 +4732,7 @@ int main(int argc , char *argv[])
         {
             remove(CHAIN_FILE);
             
-            printf("Are you sure? y/n");
+            printf("Are you sure? y/n: ");
             char c;
             if(scanf("%c", &c) == 'y')
             {
