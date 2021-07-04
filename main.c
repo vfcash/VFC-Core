@@ -936,6 +936,7 @@ void setSeedNode()
 {
     peers[0] = HOSTtoIPv4("vfcash.co.uk");
     sprintf(peer_ua[0], "VFC-SEED");
+    if(num_peers == 0){num_peers = 1;}
 }
 
 void peersBroadcast(const char* dat, const size_t len)
