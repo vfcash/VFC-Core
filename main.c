@@ -402,8 +402,10 @@ void forceTruncate(const char* file, const size_t pos)
 }
 
 //https://stackoverflow.com/questions/14293095/is-there-a-library-function-to-determine-if-an-ip-address-ipv4-and-ipv6-is-pri
-int isPrivateAddress(const uint32_t ip)
+int isPrivateAddress(const uint32_t iip)
 {
+    const uint32_t ip = ntohl(iip); //Convert from network to host byte order
+    
     uint8_t b1=0, b2, b3, b4;
     b1 = (uint8_t)(ip >> 24);
     b2 = (uint8_t)((ip >> 16) & 0x0ff);
