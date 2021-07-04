@@ -1027,7 +1027,7 @@ void resyncBlocks(const uint irnp)
 
 uint isPeer(const uint ip)
 {
-    if(ip == inet_addr("127.0.0.1"))
+    if(ip == ntohl(inet_addr("127.0.0.1")))
         return 1;
 
     for(uint i = 0; i < num_peers; ++i)
@@ -1126,7 +1126,7 @@ int addPeer(const uint iip)
         return 0;
 
     //Never add local host
-    if(ip == inet_addr("127.0.0.1")) //inet_addr("127.0.0.1") //0x0100007F
+    if(ip == ntohl(inet_addr("127.0.0.1"))) //inet_addr("127.0.0.1") //0x0100007F
         return -1;
 
     //Or local network address
