@@ -5,10 +5,6 @@
 
     The VF CASH logo was created by Futoshi Tanaka, 2019.
 
-    CRYPTO:
-    - https://github.com/brainhub/SHA3IUF   [SHA3]
-    - https://github.com/esxgx/easy-ecc     [ECDSA]
-
     Additional Dependencies:
     - CRC64.c  - Salvatore Sanfilippo
     - Base58.c - Luke Dashjr
