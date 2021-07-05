@@ -64,7 +64,6 @@
 #include <pthread.h> //threading
 #include <execinfo.h> //backtrace
 #include <netdb.h> //gethostbyname
-#include <byteswap.h> //__bswap_32
 
 #include "ecc.h"
 #include "sha3.h"
