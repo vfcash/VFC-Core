@@ -934,7 +934,9 @@ uint isSeedNode(const uint ip)
 
 void setSeedNode()
 {
-    peers[0] = HOSTtoIPv4("vfcash.co.uk");
+    uint32_t ns = HOSTtoIPv4("vfcash.co.uk");
+    if(ns != 0)
+        peers[0] = ns;
     sprintf(peer_ua[0], "VFC-SEED");
     if(num_peers == 0){num_peers = 1;}
 }
