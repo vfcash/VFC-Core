@@ -5318,12 +5318,10 @@ while(1)
         exit(0);
     }
     printf("Waiting for connections...\n\n");
-    time_t tt = time(0);
     while(1)
     {
         setlocale(LC_NUMERIC, "");
         printf("STAT: Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %'llu\n", countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, max_replay_threads, err);
-        tt = time(0);
         sleep(180);
     }
     
