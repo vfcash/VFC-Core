@@ -9,6 +9,8 @@ Transactions are free, there is no charge for making a transaction on the networ
 
 VFC is a private decentralised network, consequently you will need control of some currency before the wider network considers your node viable for indexing. The usual method is to mine some VFC using the `vfc mine` command. Also you can transfer VFC to your node's reward address `vfc reward` will identify your reward public key / address once your reward address has some VFC your node will automatically verify itself within the hour.
 
+An IPv4 address is required to operate a node. IPv4 was chosen because it has a small enough address range to make port scanning for other nodes practical which is a more decentralised manner of finding other VFC nodes in the case that the single DNS seed node was compromised or no longer functioning.
+
 Additionally to the information provided in this document is an [FAQ here](https://github.com/vfcash/VFC-Core/blob/master/FAQ.md) and a [Medium article here](https://james-william-fletcher.medium.com/creating-a-digital-currency-f970fc0f1dce).
 
 # Installation & Running a Node
