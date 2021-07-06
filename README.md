@@ -60,7 +60,7 @@ vfc flushpeers                   - Removes all indexed peers
 vfc getpub <private key>         - Get Public Key from Private Key
 vfc issub <public key>           - Is supplied public address a subG address
 -------------------------------
-vfc spread                       - Map of difficulty votes
+vfc spread                       - Map of difficulty values
 vfc difficulty                   - Network mining difficulty
 -------------------------------
 vfc sync <optional num peers>    - Trigger blockchain sync from your peers
