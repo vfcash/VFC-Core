@@ -60,6 +60,7 @@
 #include <pthread.h> //threading
 #include <execinfo.h> //backtrace
 #include <netdb.h> //gethostbyname
+#include <sys/time.h> //getimeofday
 
 #include "ecc.h"
 #include "sha3.h"
@@ -204,6 +205,16 @@ void makHash(uint8_t *hash, const struct trans* t)
 //
 /* ~ Util Functions
 */
+
+//Time in microseconds
+uint64_t microtime()
+{
+	struct timeval tv;
+	struct timezone tz;
+	memset(&tz, 0, sizeof(struct timezone));
+	gettimeofday(&tv, &tz);
+	return 1000000 * tv.tv_sec + tv.tv_usec;
+}
 
 //Round a floating point
 float roundFloat(const float f)
@@ -4941,18 +4952,16 @@ int main(int argc , char *argv[])
         b58tobin(from.key, &len, argv[1], strlen(argv[1]));
 
         //Local
-        struct timespec s;
-        clock_gettime(CLOCK_MONOTONIC, &s);
+        uint64_t td = microtime();
         uint64_t bal = getBalanceLocal(&from);
-        struct timespec e;
-        clock_gettime(CLOCK_MONOTONIC, &e);
-        time_t td = (e.tv_nsec - s.tv_nsec);
-        if(td > 0){td /= 1000000;}
+        td = microtime() - td;
+        uint64_t ms = td;
+        if(ms > 0){ms /= 1000;}
         else if(td < 0){td = 0;}
         
         //Result
         setlocale(LC_NUMERIC, "");
-        printf("The Balance for Address: %s\nTime Taken %li Milliseconds (%li ns).\n\nFinal Balance: %'.3f VFC\n\n", argv[1], td, (e.tv_nsec - s.tv_nsec), toDB(bal));
+        printf("The Balance for Address: %s\nTime Taken %li Microseconds (%li ms).\n\nFinal Balance: %'.3f VFC\n\n", argv[1], td, ms, toDB(bal));
         exit(0);
     }
 
