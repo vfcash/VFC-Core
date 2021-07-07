@@ -25,7 +25,7 @@
     Only Supports IPv4 addresses.
     Local storage in ~/.vfc
 
-    *** Nodes only track peer's who send a transaction to the server from and to the same address. ***
+    *** Nodes only track peers that send a transaction to the server from and to the same address. ***
     ~
     Peers can only be part of the network by proving they control VFC currency in a
     given VFC address. This is done by making a transaction from the same IP as the
