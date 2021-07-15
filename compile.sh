@@ -25,15 +25,15 @@ chmod +x /usr/bin/vfwallet
 chmod +x /usr/bin/cminer
 crontab -l > ncron
 if grep -qxF '*/6 * * * * /usr/bin/vfc' ncron; then
-    echo "Cron1 Exists";
+    echo "VFC Cron Exists";
 else
     echo "*/6 * * * * /usr/bin/vfc" >> ncron
     crontab ncron
-    echo "Cron1 Added";
+    echo "VFC Cron Added";
 fi
 rm ncron
 clear
 clear
-echo "Compiled and Installed /usr/bin/vfc and /srv/.vfc or ~/.vfc "
+echo "Compiled and Installed /usr/bin/vfc and /srv/.vfc or ~/.vfc"
 echo "Don't forget to forward UDP port 8787 if behind a router."
 echo "For more information type; vfc help"
