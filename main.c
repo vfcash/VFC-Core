@@ -5105,9 +5105,6 @@ int main(int argc , char *argv[])
         exit(0);
     }
 
-    //using cache?
-    printf("using_cache: %i\n", using_cache);
-
     //Init arrays
     memset(peers, 0, sizeof(uint)*MAX_PEERS);
     memset(peer_timeouts, 0, sizeof(uint)*MAX_PEERS);
@@ -5444,6 +5441,9 @@ while(1)
     //Check for broken blocks
     printf("Quick Scan: Checking blocks.dat for invalid transactions...\n");
     truncate_at_error(CHAIN_FILE, 9333);
+
+    //using cache?
+    printf("using_cache: %i\n", using_cache);
 
     //Callback for CTRL+C
     signal(SIGINT, sigint_handler);
