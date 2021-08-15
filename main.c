@@ -459,49 +459,29 @@ int forceIncrement(const char* file, const int64_t amount)
         // open file
 		f = open(file, O_CREAT | O_RDWR, CHMOD);
 		if(f < 0)
-        {
-            printf("1\n");
             continue;
-        }
         
         // lock file
 		if(flock(f, LOCK_EX) != 0)
-        {
-            printf("2\n");
 			continue;
-        }
 	
         // read file
         if(fex == 1)
-        {
             if(read(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
-            {
-                printf("3\n");
                 continue;
-            }
-        }
         
         // increment
         ra += amount;
 
 		// tunc
 		if(ftruncate(f, 0) == -1)
-        {
-            printf("4\n");
 			continue;
-        }
 		if(lseek(f, (size_t)0, SEEK_SET) == -1)
-        {
-            printf("5\n");
 			continue;
-        }
         
 		// write
 		if(write(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
-        {
-            printf("6\n");
 			continue;
-        }
 
 		// unlock
 		flock(f, LOCK_UN);
