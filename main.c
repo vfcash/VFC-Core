@@ -3920,11 +3920,7 @@ int main(int argc , char *argv[])
         peer_rm[i] = time(0);
 
     //create vfc dir
-#if RUN_AS_ROOT == 1
-    mkdir(".vfc", 0777);
-#else
-    mkdir(".vfc", 0700);
-#endif
+    mkdir(".vfc", 0600);
 
     //Create rewards address if it doesnt exist
     if(access(".vfc/public.key", F_OK) == -1)
