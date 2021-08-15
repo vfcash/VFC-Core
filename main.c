@@ -90,7 +90,11 @@ const uint16_t gport = 8787;
 #define ERROR_OPEN -5
 
 //Node Settings
-#define CHMOD 0700                      // Permissions when setting chmod
+#if RUN_AS_ROOT == 1
+    #define CHMOD 0777                  // Permissions when setting chmod
+#else
+    #define CHMOD 0700                  // Permissions when setting chmod
+#endif
 #define MAX_TRANS_QUEUE 8192            // Maximum transaction backlog to keep in real-time [8192 / 3 = 2,730 TPS]
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
@@ -2374,6 +2378,32 @@ void broadcastBalance(addr* from, const uint topx, const uint delay)
 //get balance
 uint64_t getBalanceLocal(addr* from)
 {
+    if(using_cache == 1)
+    {
+        int64_t rv = 0;
+
+        char addr[MIN_LEN];
+        memset(addr, 0, sizeof(addr));
+        size_t len = MIN_LEN;
+        b58enc(addr, &len, from->key, ECC_CURVE+1);
+
+        char path[MIN_LEN*2];
+        sprintf(path, ".vfc/cache/%s", addr);
+
+        int f = open(path, O_RDONLY);
+        if(f > -1)
+        {
+            if(read(f, &rv, sizeof(int64_t)) != sizeof(int64_t))
+                printf("ERROR: Cache read failed for address %s.\n", addr);
+            close(f);
+        }
+        rv = toDB(rv);
+
+        rv += isSubGenesisAddress(from->key, 0);
+
+        return rv;
+    }
+
     //Get local Balance
     int64_t rv = isSubGenesisAddress(from->key, 0);
 
