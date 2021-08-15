@@ -43,24 +43,25 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <stdlib.h> //RAND_MAX
-#include <sys/types.h> //pthreads
-#include <pwd.h> //getpwuid
-#include <sys/sysinfo.h> //cpu cores
-#include <sys/stat.h> //mkdir
-#include <fcntl.h> //open
-#include <time.h> //time
-#include <sys/mman.h> //mmap
-#include <unistd.h> //sleep
-#include <sys/utsname.h> //uname
-#include <locale.h> //setlocale
-#include <signal.h> //SIGPIPE
-#include <pthread.h> //threading
-#include <execinfo.h> //backtrace
-#include <netdb.h> //gethostbyname
-#include <sys/time.h> //getimeofday
+#include <stdlib.h>     //RAND_MAX
+#include <netdb.h>      //gethostbyname
+#include <arpa/inet.h>  //in_addr
+#include <sys/socket.h> //sockaddr
+#include <sys/types.h>  //pthread_t
+#include <sys/sysinfo.h>//cpu cores
+#include <sys/stat.h>   //mkdir
+#include <sys/file.h>   //flock
+#include <sys/time.h>   //getimeofday
+#include <sys/utsname.h>//uname
+#include <sys/mman.h>   //mmap
+#include <fcntl.h>      //open
+#include <pwd.h>        //getpwuid
+#include <time.h>       //time
+#include <unistd.h>     //sleep
+#include <locale.h>     //setlocale
+#include <signal.h>     //SIGPIPE
+#include <pthread.h>    //pthread_create
+#include <execinfo.h>   //backtrace
 
 #include "ecc.h"
 #include "sha3.h"
@@ -95,7 +96,7 @@ const uint16_t gport = 8787;
 #define REPLAY_SIZE 6944                // How many transactions to send a peer in one replay request , 2mb 13888 / 1mb 6944
 #define MAX_THREADS_BUFF 512            // Maximum threads allocated for replay, dynamic scale cannot exceed this. [replay sends]
 #define QUERY_TIMEOUT 3                 // Maximum seconds before an address transaction history query times out on master nodes
-#define timeout_attempts 333
+#define timeout_attempts 333            // Technically this is a strike-out but the former terminology is more intuitive.
 
 //Generic Buffer Sizes
 #define RECV_BUFF_SIZE 256
@@ -112,20 +113,20 @@ const uint16_t gport = 8787;
 #define ulong unsigned long long int
 
 //Operating Global Variables
-char mid[8];                         //Clients private identification code used in pings etc.
-float node_difficulty = 0.031;       //legacy
-float network_difficulty = 0.031;    //Assumed or actual network difficulty (starts at lowest until known)
-ulong err = 0;                       //Global error count
-uint replay_allow[MAX_PEERS];        //IP address of peer allowed to send replay blocks
-uint replay_height = 0;              //Block Height of current peer authorized to receive a replay from
-char myrewardkey[MIN_LEN];           //client reward addr public key
-char myrewardkeyp[MIN_LEN];          //client reward addr private key
-uint8_t genesis_pub[ECC_CURVE+1];    //genesis address public key
-uint thread_ip[MAX_THREADS_BUFF];    //IP's replayed to by threads (prevents launching a thread for the same IP more than once)
-uint nthreads = 0;                   //number of running mining threads
-uint threads = 0;                    //number of running replay threads
-uint num_processors = 1;             //number of logical processors on the device
-size_t MAX_SITES = 11111101;         //Maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes. [433024253 = 3,464 mb]
+char mid[8];                         // clients private identification code used in pings etc.
+float node_difficulty = 0.031;       // legacy
+float network_difficulty = 0.031;    // assumed or actual network difficulty (starts at lowest until known)
+ulong err = 0;                       // global error count
+uint replay_allow[MAX_PEERS];        // IP address of peer allowed to send replay blocks
+uint replay_height = 0;              // block height of current peer authorized to receive a replay from
+char myrewardkey[MIN_LEN];           // client reward addr public key
+char myrewardkeyp[MIN_LEN];          // client reward addr private key
+uint8_t genesis_pub[ECC_CURVE+1];    // genesis address public key
+uint thread_ip[MAX_THREADS_BUFF];    // IPs replayed to by threads (prevents launching a thread for the same IP more than once)
+uint nthreads = 0;                   // number of running mining threads
+uint threads = 0;                    // number of running replay threads
+uint num_processors = 1;             // number of logical processors on the device
+size_t MAX_SITES = 11111101;         // maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes. [433024253 = 3,464 mb]
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
@@ -386,7 +387,7 @@ void forceRead(const char* file, void* data, const size_t data_len)
 void forceTruncate(const char* file, const size_t pos)
 {
     int f = open(file, O_WRONLY);
-    if(f)
+    if(f > -1)
     {
         uint c = 0;
         while(ftruncate(f, pos) == -1)
@@ -405,6 +406,67 @@ void forceTruncate(const char* file, const size_t pos)
 
         close(f);
     }
+}
+
+int forceIncrement(const char* file, const int64_t amount)
+{
+    int64_t ra = 0;
+    uint fc = 0;
+	int f = -1;
+
+    // keep looping until success
+	while(1)
+	{
+        // timeout
+        fc++;
+        if(fc > timeout_attempts)
+        {
+            printf("ERROR: forceIncrement() has timedout for '%s'.\n", file);
+            err++;
+            return -1;
+        }
+
+		// unlock and close file if already open
+		if(f > -1)
+		{
+			flock(f, LOCK_UN);
+			close(f);
+		}
+
+        // open file
+		f = open(file, O_CREAT | O_RDWR, 0600);
+		if(f < 0)
+            continue;
+        
+        // lock file
+		if(flock(f, LOCK_EX) != 0)
+			continue;
+	
+        // read file
+        if(read(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
+            continue;
+        
+        // increment
+        ra += amount;
+
+		// tunc
+		if(ftruncate(f, 0) == -1)
+			continue;
+		if(lseek(f, (size_t)0, SEEK_SET) == -1)
+			continue;
+        
+		// write
+		if(write(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
+			continue;
+
+		// unlock
+		flock(f, LOCK_UN);
+		
+		//done
+		close(f);
+		return 0;
+	}
+    return -1;
 }
 
 //https://stackoverflow.com/questions/14293095/is-there-a-library-function-to-determine-if-an-ip-address-ipv4-and-ipv6-is-pri
@@ -923,7 +985,7 @@ uint verifyChain(const char* path)
     }
     else
     {
-        printf("Look's like the blocks.dat cannot be found please make sure you chmod 700 ~/.vfc\n");
+        printf("Look's like the blocks.dat cannot be found please make sure you chmod 600 ~/.vfc\n");
         return 0;
     }
     
@@ -1384,7 +1446,7 @@ uint64_t getMinedSupply()
 {
     uint64_t rv = 0;
     int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -1441,7 +1503,7 @@ uint64_t getCirculatingSupply()
         rv = (ift / 100) * 20; // 20% of the ift tax
     
     int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -1791,7 +1853,7 @@ pthread_mutex_unlock(&mutex1);
 void dumptrans(const size_t offset)
 {
     int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -1830,7 +1892,7 @@ void dumptrans(const size_t offset)
 void dumpbadtrans()
 {
     int f = open(BADCHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -1869,7 +1931,7 @@ void dumpbadtrans()
 void printTop(addr* a, const uint num)
 {
     int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -1931,7 +1993,7 @@ void printTop(addr* a, const uint num)
 void printAll(addr* a)
 {
     int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -1987,7 +2049,7 @@ void printAll(addr* a)
 void printIns(addr* a)
 {
     int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -2035,7 +2097,7 @@ void printIns(addr* a)
 void printOuts(addr* a)
 {
     int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -2083,7 +2145,7 @@ void printOuts(addr* a)
 void printtrans(uint fromR, uint toR)
 {
     int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -2132,7 +2194,7 @@ void printtrans(uint fromR, uint toR)
 void findTrans(const uint64_t uid)
 {
     int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -2184,7 +2246,7 @@ void broadcastBalance(addr* from, const uint topx, const uint delay)
 {
     uint bc = 0;
     int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -2241,7 +2303,7 @@ uint64_t getBalanceLocal(addr* from)
     int64_t rv = isSubGenesisAddress(from->key, 0);
 
     int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -2362,7 +2424,7 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
 
     //Too critical to fail
     uint fc = 0;
-    while(f == -1)
+    while(f < 0)
     {
         fc++;
         if(fc > timeout_attempts)
@@ -3479,7 +3541,7 @@ void *networkThread(void *arg)
 void truncate_at_error(const char* file, const size_t num)
 {
     int f = open(file, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
         if(len == 0)
@@ -3603,7 +3665,7 @@ void cleanChain()
     
     //Now clean the chain
     int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -3662,7 +3724,7 @@ void cleanChain()
 void cleanChainFull()
 {
     int f = open(CHAIN_FILE, O_RDONLY);
-    if(f)
+    if(f > -1)
     {
         const size_t len = lseek(f, 0, SEEK_END);
 
@@ -3697,7 +3759,7 @@ void cleanChainFull()
                 int hbr = 0;
                 int64_t rv = isSubGenesisAddress(t.from.key, 1);
                 f = open(".vfc/cfblocks.dat", O_RDONLY);
-                if(f)
+                if(f > -1)
                 {
                     const size_t len = lseek(f, 0, SEEK_END);
 
