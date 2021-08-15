@@ -1,7 +1,7 @@
 clear
 clear
 apt --assume-yes update && upgrade
-apt install --assume-yes crontab
+apt install --assume-yes cron
 apt install --assume-yes wget
 apt install --assume-yes gcc
 apt install --assume-yes xterm
