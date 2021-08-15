@@ -62,6 +62,7 @@
 #include <signal.h>     //SIGPIPE
 #include <pthread.h>    //pthread_create
 #include <execinfo.h>   //backtrace
+#include <errno.h>      //errno
 
 #include "ecc.h"
 #include "sha3.h"
@@ -89,6 +90,7 @@ const uint16_t gport = 8787;
 #define ERROR_OPEN -5
 
 //Node Settings
+#define CHMOD 0700                      // Permissions when setting chmod
 #define MAX_TRANS_QUEUE 8192            // Maximum transaction backlog to keep in real-time [8192 / 3 = 2,730 TPS]
 #define MAX_PEERS 3072                  // Maximum trackable peers at once (this is a high enough number)
 #define MAX_PEER_EXPIRE_SECONDS 10800   // Seconds before a peer can be replaced by another peer. secs(3 days=259200, 3 hours=10800)
@@ -127,6 +129,7 @@ uint nthreads = 0;                   // number of running mining threads
 uint threads = 0;                    // number of running replay threads
 uint num_processors = 1;             // number of logical processors on the device
 size_t MAX_SITES = 11111101;         // maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes. [433024253 = 3,464 mb]
+uint using_cache = 0;                // equal to 1 if the getBalanceLocal, hasbalance, and process_trans functions are using a local cache (faster)
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
@@ -408,11 +411,31 @@ void forceTruncate(const char* file, const size_t pos)
     }
 }
 
+uint dirExist(const char* dir)
+{
+    struct stat st;
+    if(stat(dir, &st) == 0 && S_ISDIR(st.st_mode))
+        return 1;
+    return 0;
+}
+
+int fileExist(const char* file)
+{
+    struct stat st;
+    if(stat(file, &st) == 0)
+        return 1;
+    else if(errno == ENOENT)
+        return 0;
+    return -1; // we don't know
+}
+
 int forceIncrement(const char* file, const int64_t amount)
 {
     int64_t ra = 0;
     uint fc = 0;
 	int f = -1;
+
+    const int fex = fileExist(file);
 
     // keep looping until success
 	while(1)
@@ -434,30 +457,51 @@ int forceIncrement(const char* file, const int64_t amount)
 		}
 
         // open file
-		f = open(file, O_CREAT | O_RDWR, 0600);
+		f = open(file, O_CREAT | O_RDWR, CHMOD);
 		if(f < 0)
+        {
+            printf("1\n");
             continue;
+        }
         
         // lock file
 		if(flock(f, LOCK_EX) != 0)
+        {
+            printf("2\n");
 			continue;
+        }
 	
         // read file
-        if(read(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
-            continue;
+        if(fex == 1)
+        {
+            if(read(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
+            {
+                printf("3\n");
+                continue;
+            }
+        }
         
         // increment
         ra += amount;
 
 		// tunc
 		if(ftruncate(f, 0) == -1)
+        {
+            printf("4\n");
 			continue;
+        }
 		if(lseek(f, (size_t)0, SEEK_SET) == -1)
+        {
+            printf("5\n");
 			continue;
+        }
         
 		// write
 		if(write(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
+        {
+            printf("6\n");
 			continue;
+        }
 
 		// unlock
 		flock(f, LOCK_UN);
@@ -985,7 +1029,7 @@ uint verifyChain(const char* path)
     }
     else
     {
-        printf("Look's like the blocks.dat cannot be found please make sure you chmod 600 ~/.vfc\n");
+        printf("Look's like the blocks.dat cannot be found please make sure you chmod %i ~/.vfc\n", CHMOD);
         return 0;
     }
     
@@ -1846,6 +1890,57 @@ pthread_mutex_lock(&mutex1);
             threads++;
 pthread_mutex_unlock(&mutex1);
         }
+    }
+}
+
+//build balance cache
+void buildBalanceCache()
+{
+    int f = open(CHAIN_FILE, O_RDONLY);
+    if(f > -1)
+    {
+        const size_t len = lseek(f, 0, SEEK_END);
+
+        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+        if(m != MAP_FAILED)
+        {
+            close(f);
+
+            struct trans t;
+            for(size_t i = 0; i < len; i += sizeof(struct trans))
+            {
+                memcpy(&t, m+i, sizeof(struct trans));
+
+                char topub[MIN_LEN];
+                memset(topub, 0, sizeof(topub));
+                size_t len = MIN_LEN;
+                b58enc(topub, &len, t.to.key, ECC_CURVE+1);
+
+                char frompub[MIN_LEN];
+                memset(frompub, 0, sizeof(frompub));
+                len = MIN_LEN;
+                b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
+
+                char path[MIN_LEN*2];
+                sprintf(path, ".vfc/cache/%s", topub);
+                if(forceIncrement(path, t.amount) < 0) // increment balance of receiver
+                {
+                    printf("ERROR: buildBalanceCache() failed on a timeout.\n");
+                    return;
+                }
+
+                sprintf(path, ".vfc/cache/%s", frompub);
+                if(forceIncrement(path, -t.amount) < 0) // decrement balance of sender
+                {
+                    printf("ERROR: buildBalanceCache() failed on a timeout.\n");
+                    return;
+                }
+            }
+
+            munmap(m, len);
+        }
+
+        close(f);
     }
 }
 
@@ -3901,6 +3996,9 @@ int main(int argc , char *argv[])
         exit(0);
     }
 
+    //using cache?
+    using_cache = dirExist(".vfc/cache");
+
     //Workout size of server for replay scaling
     num_processors = get_nprocs();
     nthreads = num_processors;
@@ -3920,7 +4018,7 @@ int main(int argc , char *argv[])
         peer_rm[i] = time(0);
 
     //create vfc dir
-    mkdir(".vfc", 0600);
+    mkdir(".vfc", CHMOD);
 
     //Create rewards address if it doesnt exist
     if(access(".vfc/public.key", F_OK) == -1)
@@ -4973,6 +5071,29 @@ int main(int argc , char *argv[])
             printf("Dead Peers: %u\n\n", ac);
             exit(0);
         }
+
+        //Create local balance cache
+        if(strcmp(argv[1], "makecache") == 0)
+        {
+            // clear old cache
+            remove(".vfc/cache");
+            mkdir(".vfc/cache", CHMOD);
+
+            // build new cache
+            uint64_t td = microtime();
+            buildBalanceCache();
+            td = microtime() - td;
+            uint64_t seconds = td;
+            if(seconds > 0){seconds /= 1000000;}
+            else if(td < 0){td = 0;}
+        
+            //Result
+            setlocale(LC_NUMERIC, "");
+            printf("Time Taken %li Seconds (%li Minutes).\n", seconds, seconds/60);
+
+            // done
+            exit(0);
+        }
     }
 
     //Let's make sure we're on the correct chain
@@ -4983,6 +5104,9 @@ int main(int argc , char *argv[])
             exit(0);
         exit(0);
     }
+
+    //using cache?
+    printf("using_cache: %i\n", using_cache);
 
     //Init arrays
     memset(peers, 0, sizeof(uint)*MAX_PEERS);
