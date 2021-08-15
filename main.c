@@ -435,7 +435,6 @@ int fileExist(const char* file)
 
 int forceIncrement(const char* file, const int64_t amount)
 {
-    int64_t ra = 0;
     uint fc = 0;
 	int f = -1;
 
@@ -444,6 +443,8 @@ int forceIncrement(const char* file, const int64_t amount)
     // keep looping until success
 	while(1)
 	{
+        int64_t ra = 0;
+
         // timeout
         fc++;
         if(fc > timeout_attempts)
