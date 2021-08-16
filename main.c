@@ -20,7 +20,7 @@
     The node is capped at 2,700 transactions per second regardless of how many
     threads your machine has available.
 
-    With `vfc makecache` higher tx performance can be achieved.
+    With `vfc makecache` higher tx performance can be achieved. 
 ~~
 
     NOTES:
@@ -90,6 +90,7 @@ const uint16_t gport = 8787;
 #define ERROR_UIDEXIST -3
 #define ERROR_WRITE -4
 #define ERROR_OPEN -5
+#define ERROR_READ -6
 
 //Node Settings
 #if RUN_AS_ROOT == 1
@@ -2612,9 +2613,9 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
             fc++;
             if(fc > timeout_attempts)
             {
-                printf("ERROR: open() in hasbalance() has failed (using_cache).\n");
+                printf("ERROR: read() in hasbalance() has failed (using_cache).\n");
                 err++;
-                return ERROR_OPEN;
+                return ERROR_READ;
             }
         }
 
