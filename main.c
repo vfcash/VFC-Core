@@ -20,7 +20,7 @@
     The node is capped at 2,700 transactions per second regardless of how many
     threads your machine has available.
 
-    With `vfc makecache` higher tx performance can be achieved. 
+    Using `vfc makecache` higher tx performance can be achieved. 
 ~~
 
     NOTES:
@@ -265,7 +265,7 @@ void clearCache()
 {
     if(system("rm -r .vfc/cache") == -1)
     {
-        printf("ERROR: Failed to clear old cache file.\n");
+        printf("ERROR: Failed to clear old cache files.\n");
         exit(0);
     }
     mkdir(".vfc/cache", CHMOD);
@@ -2458,6 +2458,9 @@ uint64_t getBalanceLocal(addr* from)
 
         rv += isSubGenesisAddress(from->key, 0);
 
+        if(rv < 0)
+            rv = 0;
+
         return rv;
     }
 
@@ -2622,6 +2625,9 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
         close(f);
 
         rv += isSubGenesisAddress(from->key, 0);
+
+        if(rv < 0)
+            rv = 0;
 
         if(rv >= amount)
             return 1;
