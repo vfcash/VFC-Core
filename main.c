@@ -20,7 +20,7 @@
     The node is capped at 2,700 transactions per second regardless of how many
     threads your machine has available.
 
-    Using `vfc makecache` higher tx performance can be achieved. 
+    Using `vfc makecache` higher tx performance can be achieved. (currently in alpha)
 ~~
 
     NOTES:
