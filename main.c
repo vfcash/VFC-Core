@@ -433,18 +433,33 @@ int fileExist(const char* file)
     return -1; // we don't know
 }
 
-int forceIncrement(const char* file, const int64_t amount)
+int forceIncrement(const char* file, const int64_t amount) //designed to be multi-threaded, but currently used single threaded.
 {
+    uint faw = 0;
     uint fc = 0;
 	int f = -1;
 
-    const int fex = fileExist(file);
+    // Does file exist?
+    int fex = fileExist(file);
+    while(fex == -1)
+    {
+        // timeout
+        fc++;
+        if(fc > timeout_attempts)
+        {
+            printf("ERROR: fileExist() in forceIncrement() has timedout for '%s'.\n", file);
+            err++;
+            return -1;
+        }
+
+        fex = fileExist(file);
+    }
 
     // keep looping until success
+    fc = 0;
+    int64_t ra = 0;
 	while(1)
 	{
-        int64_t ra = 0;
-
         // timeout
         fc++;
         if(fc > timeout_attempts)
@@ -454,29 +469,38 @@ int forceIncrement(const char* file, const int64_t amount)
             return -1;
         }
 
-		// unlock and close file if already open
-		if(f > -1)
-		{
-			flock(f, LOCK_UN);
-			close(f);
-		}
+        if(faw == 0)
+        {
+            // unlock and close file if already open
+            if(f > -1)
+            {
+                flock(f, LOCK_UN);
+                close(f);
+            }
 
-        // open file
-		f = open(file, O_CREAT | O_RDWR, CHMOD);
-		if(f < 0)
-            continue;
-        
-        // lock file
-		if(flock(f, LOCK_EX) != 0)
-			continue;
-	
-        // read file
-        if(fex == 1)
-            if(read(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
+            // open file
+            f = open(file, O_CREAT | O_RDWR, CHMOD);
+            if(f < 0)
+                continue;
+            
+            // lock file
+            if(flock(f, LOCK_EX) != 0)
                 continue;
         
-        // increment
-        ra += amount;
+            // read file
+            if(fex == 1)
+            {
+                if(read(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
+                    continue;
+            }
+            else
+            {
+                ra = 0;
+            }
+            
+            // increment
+            ra += amount;
+        }
 
 		// tunc
 		if(ftruncate(f, 0) == -1)
@@ -486,7 +510,10 @@ int forceIncrement(const char* file, const int64_t amount)
         
 		// write
 		if(write(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
+        {
+            faw = 1;
 			continue;
+        }
 
 		// unlock
 		flock(f, LOCK_UN);
