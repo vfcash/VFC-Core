@@ -5248,6 +5248,13 @@ int main(int argc , char *argv[])
             // done
             exit(0);
         }
+
+        //Delete local balance cache
+        if(strcmp(argv[1], "deletecache") == 0)
+        {
+            clearCache();
+            exit(0);
+        }
     }
 
     //Let's make sure we're on the correct chain
