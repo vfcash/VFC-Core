@@ -87,6 +87,8 @@ vfc circulating  - Circulating supply
 vfc minted       - Minted supply
 vfc unclaimed    - Lists all unclaimed addresses from your minted.priv
 vfc claim        - Claims the contents of minted.priv to your rewards address
+vfc makecache    - Make local cache of wallet balances for faster TX
+vfc deletecache  - Delete local cache of wallet balances
 ----------------
 vfc single       - Launches the VFC node as single threaded
 vfc multi        - Launches the VFC node as multi threaded
