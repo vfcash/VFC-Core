@@ -437,7 +437,7 @@ int forceIncrement(const char* file, const int64_t amount) //designed to be mult
 {
     uint faw = 0;
     uint fc = 0;
-	int f = -1;
+    int f = -1;
 
     // Does file exist?
     int fex = fileExist(file);
@@ -458,8 +458,8 @@ int forceIncrement(const char* file, const int64_t amount) //designed to be mult
     // keep looping until success
     fc = 0;
     int64_t ra = 0;
-	while(1)
-	{
+    while(1)
+    {
         // timeout
         fc++;
         if(fc > timeout_attempts)
@@ -482,11 +482,11 @@ int forceIncrement(const char* file, const int64_t amount) //designed to be mult
             f = open(file, O_CREAT | O_RDWR, CHMOD);
             if(f < 0)
                 continue;
-            
+
             // lock file
             if(flock(f, LOCK_EX) != 0)
                 continue;
-        
+
             // read file
             if(fex == 1)
             {
@@ -497,32 +497,32 @@ int forceIncrement(const char* file, const int64_t amount) //designed to be mult
             {
                 ra = 0;
             }
-            
+
             // increment
             ra += amount;
         }
 
-		// tunc
-		if(ftruncate(f, 0) == -1)
-			continue;
-		if(lseek(f, (size_t)0, SEEK_SET) == -1)
-			continue;
-        
-		// write
-		if(write(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
+        // tunc
+        if(ftruncate(f, 0) == -1)
+            continue;
+        if(lseek(f, (size_t)0, SEEK_SET) == -1)
+            continue;
+
+        // write
+        if(write(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
         {
             faw = 1;
-			continue;
+            continue;
         }
 
-		// unlock
-		flock(f, LOCK_UN);
-		
-		//done
+        // unlock
+        flock(f, LOCK_UN);
+
+        //done
         // printf("I: %s : %ld\n", file, ra);
-		close(f);
-		return 0;
-	}
+        close(f);
+        return 0;
+    }
     return -1;
 }
 
