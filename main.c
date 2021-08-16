@@ -133,7 +133,7 @@ uint nthreads = 0;                   // number of running mining threads
 uint threads = 0;                    // number of running replay threads
 uint num_processors = 1;             // number of logical processors on the device
 size_t MAX_SITES = 11111101;         // maximum UID hashmap slots (11111101 = 11mb) it's a prime number, for performance, only use primes. [433024253 = 3,464 mb]
-uint using_cache = 0;                // equal to 1 if the getBalanceLocal, hasbalance, and process_trans functions are using a local cache (faster)
+// uint using_cache = 0;                // equal to 1 if the getBalanceLocal, hasbalance, and process_trans functions are using a local cache (faster)
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
@@ -433,97 +433,97 @@ int fileExist(const char* file)
     return -1; // we don't know
 }
 
-int forceIncrement(const char* file, const int64_t amount) //designed to be multi-threaded, but currently used single threaded.
-{
-    uint faw = 0;
-    uint fc = 0;
-	int f = -1;
+// int forceIncrement(const char* file, const int64_t amount) //designed to be multi-threaded, but currently used single threaded.
+// {
+//     uint faw = 0;
+//     uint fc = 0;
+// 	int f = -1;
 
-    // Does file exist?
-    int fex = fileExist(file);
-    while(fex == -1)
-    {
-        // timeout
-        fc++;
-        if(fc > timeout_attempts)
-        {
-            printf("ERROR: fileExist() in forceIncrement() has timedout for '%s'.\n", file);
-            err++;
-            return -1;
-        }
+//     // Does file exist?
+//     int fex = fileExist(file);
+//     while(fex == -1)
+//     {
+//         // timeout
+//         fc++;
+//         if(fc > timeout_attempts)
+//         {
+//             printf("ERROR: fileExist() in forceIncrement() has timedout for '%s'.\n", file);
+//             err++;
+//             return -1;
+//         }
 
-        fex = fileExist(file);
-    }
+//         fex = fileExist(file);
+//     }
 
-    // keep looping until success
-    fc = 0;
-    int64_t ra = 0;
-	while(1)
-	{
-        // timeout
-        fc++;
-        if(fc > timeout_attempts)
-        {
-            printf("ERROR: forceIncrement() has timedout for '%s'.\n", file);
-            err++;
-            return -1;
-        }
+//     // keep looping until success
+//     fc = 0;
+//     int64_t ra = 0;
+// 	while(1)
+// 	{
+//         // timeout
+//         fc++;
+//         if(fc > timeout_attempts)
+//         {
+//             printf("ERROR: forceIncrement() has timedout for '%s'.\n", file);
+//             err++;
+//             return -1;
+//         }
 
-        if(faw == 0)
-        {
-            // unlock and close file if already open
-            if(f > -1)
-            {
-                flock(f, LOCK_UN);
-                close(f);
-            }
+//         if(faw == 0)
+//         {
+//             // unlock and close file if already open
+//             if(f > -1)
+//             {
+//                 flock(f, LOCK_UN);
+//                 close(f);
+//             }
 
-            // open file
-            f = open(file, O_CREAT | O_RDWR, CHMOD);
-            if(f < 0)
-                continue;
+//             // open file
+//             f = open(file, O_CREAT | O_RDWR, CHMOD);
+//             if(f < 0)
+//                 continue;
             
-            // lock file
-            if(flock(f, LOCK_EX) != 0)
-                continue;
+//             // lock file
+//             if(flock(f, LOCK_EX) != 0)
+//                 continue;
         
-            // read file
-            if(fex == 1)
-            {
-                if(read(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
-                    continue;
-            }
-            else
-            {
-                ra = 0;
-            }
+//             // read file
+//             if(fex == 1)
+//             {
+//                 if(read(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
+//                     continue;
+//             }
+//             else
+//             {
+//                 ra = 0;
+//             }
             
-            // increment
-            ra += amount;
-        }
+//             // increment
+//             ra += amount;
+//         }
 
-		// tunc
-		if(ftruncate(f, 0) == -1)
-			continue;
-		if(lseek(f, (size_t)0, SEEK_SET) == -1)
-			continue;
+// 		// tunc
+// 		if(ftruncate(f, 0) == -1)
+// 			continue;
+// 		if(lseek(f, (size_t)0, SEEK_SET) == -1)
+// 			continue;
         
-		// write
-		if(write(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
-        {
-            faw = 1;
-			continue;
-        }
+// 		// write
+// 		if(write(f, &ra, sizeof(int64_t)) != sizeof(int64_t))
+//         {
+//             faw = 1;
+// 			continue;
+//         }
 
-		// unlock
-		flock(f, LOCK_UN);
+// 		// unlock
+// 		flock(f, LOCK_UN);
 		
-		//done
-		close(f);
-		return 0;
-	}
-    return -1;
-}
+// 		//done
+// 		close(f);
+// 		return 0;
+// 	}
+//     return -1;
+// }
 
 //https://stackoverflow.com/questions/14293095/is-there-a-library-function-to-determine-if-an-ip-address-ipv4-and-ipv6-is-pri
 int isPrivateAddress(const uint32_t iip)
@@ -1906,55 +1906,55 @@ pthread_mutex_unlock(&mutex1);
 }
 
 //build balance cache
-void buildBalanceCache()
-{
-    int f = open(CHAIN_FILE, O_RDONLY);
-    if(f > -1)
-    {
-        const size_t len = lseek(f, 0, SEEK_END);
+// void buildBalanceCache()
+// {
+//     int f = open(CHAIN_FILE, O_RDONLY);
+//     if(f > -1)
+//     {
+//         const size_t len = lseek(f, 0, SEEK_END);
 
-        unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
-        if(m != MAP_FAILED)
-        {
-            close(f);
+//         unsigned char* m = mmap(NULL, len, PROT_READ, MAP_SHARED, f, 0);
+//         if(m != MAP_FAILED)
+//         {
+//             close(f);
 
-            struct trans t;
-            for(size_t i = 0; i < len; i += sizeof(struct trans))
-            {
-                memcpy(&t, m+i, sizeof(struct trans));
+//             struct trans t;
+//             for(size_t i = 0; i < len; i += sizeof(struct trans))
+//             {
+//                 memcpy(&t, m+i, sizeof(struct trans));
 
-                char topub[MIN_LEN];
-                memset(topub, 0, sizeof(topub));
-                size_t len = MIN_LEN;
-                b58enc(topub, &len, t.to.key, ECC_CURVE+1);
+//                 char topub[MIN_LEN];
+//                 memset(topub, 0, sizeof(topub));
+//                 size_t len = MIN_LEN;
+//                 b58enc(topub, &len, t.to.key, ECC_CURVE+1);
 
-                char frompub[MIN_LEN];
-                memset(frompub, 0, sizeof(frompub));
-                len = MIN_LEN;
-                b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
+//                 char frompub[MIN_LEN];
+//                 memset(frompub, 0, sizeof(frompub));
+//                 len = MIN_LEN;
+//                 b58enc(frompub, &len, t.from.key, ECC_CURVE+1);
 
-                char path[MIN_LEN*2];
-                sprintf(path, ".vfc/cache/%s", topub);
-                if(forceIncrement(path, t.amount) < 0) // increment balance of receiver
-                {
-                    printf("ERROR: buildBalanceCache() failed on a timeout.\n");
-                    return;
-                }
+//                 char path[MIN_LEN*2];
+//                 sprintf(path, ".vfc/cache/%s", topub);
+//                 if(forceIncrement(path, t.amount) < 0) // increment balance of receiver
+//                 {
+//                     printf("ERROR: buildBalanceCache() failed on a timeout.\n");
+//                     return;
+//                 }
 
-                sprintf(path, ".vfc/cache/%s", frompub);
-                if(forceIncrement(path, -t.amount) < 0) // decrement balance of sender
-                {
-                    printf("ERROR: buildBalanceCache() failed on a timeout.\n");
-                    return;
-                }
-            }
+//                 sprintf(path, ".vfc/cache/%s", frompub);
+//                 if(forceIncrement(path, -t.amount) < 0) // decrement balance of sender
+//                 {
+//                     printf("ERROR: buildBalanceCache() failed on a timeout.\n");
+//                     return;
+//                 }
+//             }
 
-            munmap(m, len);
-        }
+//             munmap(m, len);
+//         }
 
-        close(f);
-    }
-}
+//         close(f);
+//     }
+// }
 
 //dump all trans
 void dumptrans(const size_t offset)
@@ -2406,31 +2406,31 @@ void broadcastBalance(addr* from, const uint topx, const uint delay)
 //get balance
 uint64_t getBalanceLocal(addr* from)
 {
-    if(using_cache == 1)
-    {
-        int64_t rv = 0;
+    // if(using_cache == 1)
+    // {
+    //     int64_t rv = 0;
 
-        char addr[MIN_LEN];
-        memset(addr, 0, sizeof(addr));
-        size_t len = MIN_LEN;
-        b58enc(addr, &len, from->key, ECC_CURVE+1);
+    //     char addr[MIN_LEN];
+    //     memset(addr, 0, sizeof(addr));
+    //     size_t len = MIN_LEN;
+    //     b58enc(addr, &len, from->key, ECC_CURVE+1);
 
-        char path[MIN_LEN*2];
-        sprintf(path, ".vfc/cache/%s", addr);
+    //     char path[MIN_LEN*2];
+    //     sprintf(path, ".vfc/cache/%s", addr);
 
-        int f = open(path, O_RDONLY);
-        if(f > -1)
-        {
-            if(read(f, &rv, sizeof(int64_t)) != sizeof(int64_t))
-                printf("ERROR: Cache read failed for address %s.\n", addr);
-            close(f);
-        }
-        rv = toDB(rv);
+    //     int f = open(path, O_RDONLY);
+    //     if(f > -1)
+    //     {
+    //         if(read(f, &rv, sizeof(int64_t)) != sizeof(int64_t))
+    //             printf("ERROR: Cache read failed for address %s.\n", addr);
+    //         close(f);
+    //     }
+    //     rv = toDB(rv);
 
-        rv += isSubGenesisAddress(from->key, 0);
+    //     rv += isSubGenesisAddress(from->key, 0);
 
-        return rv;
-    }
+    //     return rv;
+    // }
 
     //Get local Balance
     int64_t rv = isSubGenesisAddress(from->key, 0);
@@ -4035,7 +4035,7 @@ int main(int argc , char *argv[])
     }
 
     //using cache?
-    using_cache = dirExist(".vfc/cache");
+    // using_cache = dirExist(".vfc/cache");
 
     //Workout size of server for replay scaling
     num_processors = get_nprocs();
@@ -5111,27 +5111,27 @@ int main(int argc , char *argv[])
         }
 
         //Create local balance cache
-        if(strcmp(argv[1], "makecache") == 0)
-        {
-            // clear old cache
-            remove(".vfc/cache");
-            mkdir(".vfc/cache", CHMOD);
+        // if(strcmp(argv[1], "makecache") == 0)
+        // {
+        //     // clear old cache
+        //     remove(".vfc/cache");
+        //     mkdir(".vfc/cache", CHMOD);
 
-            // build new cache
-            uint64_t td = microtime();
-            buildBalanceCache();
-            td = microtime() - td;
-            uint64_t seconds = td;
-            if(seconds > 0){seconds /= 1000000;}
-            else if(td < 0){td = 0;}
+        //     // build new cache
+        //     uint64_t td = microtime();
+        //     buildBalanceCache();
+        //     td = microtime() - td;
+        //     uint64_t seconds = td;
+        //     if(seconds > 0){seconds /= 1000000;}
+        //     else if(td < 0){td = 0;}
         
-            //Result
-            setlocale(LC_NUMERIC, "");
-            printf("Time Taken %li Seconds (%li Minutes).\n", seconds, seconds/60);
+        //     //Result
+        //     setlocale(LC_NUMERIC, "");
+        //     printf("Time Taken %li Seconds (%li Minutes).\n", seconds, seconds/60);
 
-            // done
-            exit(0);
-        }
+        //     // done
+        //     exit(0);
+        // }
     }
 
     //Let's make sure we're on the correct chain
@@ -5481,7 +5481,7 @@ while(1)
     truncate_at_error(CHAIN_FILE, 9333);
 
     //using cache?
-    printf("using_cache: %i\n", using_cache);
+    // printf("using_cache: %i\n", using_cache);
 
     //Callback for CTRL+C
     signal(SIGINT, sigint_handler);
