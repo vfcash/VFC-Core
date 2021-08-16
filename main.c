@@ -4708,6 +4708,8 @@ int main(int argc , char *argv[])
             printf("vfc minted       - Minted supply\n");
             printf("vfc unclaimed    - Lists all unclaimed addresses from your minted.priv\n");
             printf("vfc claim        - Claims the contents of minted.priv to your rewards address\n");
+            printf("vfc makecache    - Make local cache of wallet balances for faster TX\n");
+            printf("vfc deletecache  - Delete local cache of wallet balances\n");
             printf("----------------\n");
             printf("vfc single       - Launches the VFC node as single threaded\n");
             printf("vfc multi        - Launches the VFC node as multi threaded\n");
