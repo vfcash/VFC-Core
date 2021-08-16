@@ -1959,6 +1959,7 @@ void buildBalanceCache()
                 sprintf(path, ".vfc/cache/%s", topub);
                 if(forceIncrement(path, (int64_t)t.amount) < 0) // increment balance of receiver
                 {
+                    clearCache();
                     printf("ERROR: forceIncrement() in buildBalanceCache() failed on a timeout for %s.\n", path);
                     err++;
                     return;
@@ -1967,6 +1968,7 @@ void buildBalanceCache()
                 sprintf(path, ".vfc/cache/%s", frompub);
                 if(forceIncrement(path, -(int64_t)t.amount) < 0) // decrement balance of sender
                 {
+                    clearCache();
                     printf("ERROR: forceIncrement() in buildBalanceCache() failed on a timeout for %s.\n", path);
                     err++;
                     return;
