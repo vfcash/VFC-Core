@@ -18,7 +18,9 @@
     that's roughly 224 transactions a second.
 
     The node is capped at 2,700 transactions per second regardless of how many
-    threads your machine has available. 
+    threads your machine has available.
+
+    With `vfc makecache` higher tx performance can be achieved.
 ~~
 
     NOTES:
@@ -256,6 +258,16 @@ char* getHome()
             ret = getpwuid(getuid())->pw_dir;
     return ret;
 #endif
+}
+
+void clearCache()
+{
+    if(system("rm -r .vfc/cache") == -1)
+    {
+        printf("ERROR: Failed to clear old cache file.\n");
+        exit(0);
+    }
+    mkdir(".vfc/cache", CHMOD);
 }
 
 uint qRand(const uint min, const uint umax)
@@ -1946,14 +1958,16 @@ void buildBalanceCache()
                 sprintf(path, ".vfc/cache/%s", topub);
                 if(forceIncrement(path, (int64_t)t.amount) < 0) // increment balance of receiver
                 {
-                    printf("ERROR: buildBalanceCache() failed on a timeout.\n");
+                    printf("ERROR: forceIncrement() in buildBalanceCache() failed on a timeout for %s.\n", path);
+                    err++;
                     return;
                 }
 
                 sprintf(path, ".vfc/cache/%s", frompub);
                 if(forceIncrement(path, -(int64_t)t.amount) < 0) // decrement balance of sender
                 {
-                    printf("ERROR: buildBalanceCache() failed on a timeout.\n");
+                    printf("ERROR: forceIncrement() in buildBalanceCache() failed on a timeout for %s.\n", path);
+                    err++;
                     return;
                 }
 
@@ -2434,7 +2448,10 @@ uint64_t getBalanceLocal(addr* from)
         if(f > -1)
         {
             if(read(f, &rv, sizeof(int64_t)) != sizeof(int64_t))
+            {
                 printf("ERROR: Cache read failed for address %s.\n", addr);
+                err++;
+            }
             close(f);
         }
 
@@ -2560,6 +2577,57 @@ void networkDifficulty()
 //Calculate if an address has the value required to make a transaction of x amount.
 int hasbalance(const uint64_t uid, addr* from, mval amount)
 {
+    if(using_cache == 1)
+    {
+        int64_t rv = 0;
+
+        char addr[MIN_LEN];
+        memset(addr, 0, sizeof(addr));
+        size_t len = MIN_LEN;
+        b58enc(addr, &len, from->key, ECC_CURVE+1);
+
+        char path[MIN_LEN*2];
+        sprintf(path, ".vfc/cache/%s", addr);
+
+        //Too critical to fail
+        uint fc = 0;
+        int f = open(path, O_RDONLY);
+        while(f < 0)
+        {
+            fc++;
+            if(fc > timeout_attempts)
+            {
+                printf("ERROR: open() in hasbalance() has failed (using_cache).\n");
+                err++;
+                return ERROR_OPEN;
+            }
+
+            f = open(path, O_RDONLY);
+        }
+
+        //Too critical to fail
+        fc = 0;
+        while(read(f, &rv, sizeof(int64_t)) != sizeof(int64_t))
+        {
+            fc++;
+            if(fc > timeout_attempts)
+            {
+                printf("ERROR: open() in hasbalance() has failed (using_cache).\n");
+                err++;
+                return ERROR_OPEN;
+            }
+        }
+
+        close(f);
+
+        rv += isSubGenesisAddress(from->key, 0);
+
+        if(rv >= amount)
+            return 1;
+
+        return 0;
+    }
+
     //Is subGenesis?
     int64_t rv = isSubGenesisAddress(from->key, 0);
 
@@ -2618,8 +2686,8 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
 
     if(rv >= amount)
         return 1;
-    else
-        return 0;
+
+    return 0;
 }
 
 //Execute Transaction
@@ -2744,6 +2812,37 @@ pthread_mutex_unlock(&mutex3);
 //     fprintf(f, "%lu : %lu / %.3f\n", time(0), t.uid, network_difficulty);
 //     fclose(f);
 // }
+
+        // update the cache
+        if(using_cache == 1)
+        {
+            char topub[MIN_LEN];
+            memset(topub, 0, sizeof(topub));
+            size_t len = MIN_LEN;
+            b58enc(topub, &len, to, ECC_CURVE+1);
+
+            char frompub[MIN_LEN];
+            memset(frompub, 0, sizeof(frompub));
+            len = MIN_LEN;
+            b58enc(frompub, &len, from, ECC_CURVE+1);
+
+            char path[MIN_LEN*2];
+            sprintf(path, ".vfc/cache/%s", topub);
+            while(forceIncrement(path, (int64_t)amount) < 0) // increment balance of receiver
+            {
+                printf("ERROR: forceIncrement() in process_trans() failed on a timeout for %s.\n", path);
+                clearCache(); // cache update failed, no longer safe to use cache, wipe it.
+                err++;
+            }
+
+            sprintf(path, ".vfc/cache/%s", frompub);
+            if(forceIncrement(path, -(int64_t)amount) < 0) // decrement balance of sender
+            {
+                printf("ERROR: forceIncrement() in process_trans() failed on a timeout for %s.\n", path);
+                clearCache(); // cache update failed, no longer safe to use cache, wipe it.
+                err++;
+            }
+        }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if(single_threaded == 0)
@@ -5125,12 +5224,7 @@ int main(int argc , char *argv[])
         if(strcmp(argv[1], "makecache") == 0)
         {
             // clear old cache
-            if(system("rm -r .vfc/cache") == -1)
-            {
-                printf("ERROR: Failed to clear old cache file.\n");
-                exit(0);
-            }
-            mkdir(".vfc/cache", CHMOD);
+            clearCache();
 
             // build new cache
             uint64_t td = microtime();
