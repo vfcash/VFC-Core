@@ -2841,7 +2841,7 @@ pthread_mutex_unlock(&mutex3);
             {
                 printf("ERROR: forceIncrement() in process_trans() failed on a timeout for %s.\n", path);
                 clearCache(); // cache update failed, no longer safe to use cache, wipe it.
-                using_cache = 1; // so that the current process can now operate without the cache
+                using_cache = 0; // so that the current process can now operate without the cache
                 err++;
             }
 
@@ -2850,7 +2850,7 @@ pthread_mutex_unlock(&mutex3);
             {
                 printf("ERROR: forceIncrement() in process_trans() failed on a timeout for %s.\n", path);
                 clearCache(); // cache update failed, no longer safe to use cache, wipe it.
-                using_cache = 1; // so that the current process can now operate without the cache
+                using_cache = 0; // so that the current process can now operate without the cache
                 err++;
             }
         }
