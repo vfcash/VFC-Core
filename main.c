@@ -21,6 +21,10 @@
     threads your machine has available.
 
     Using `vfc makecache` higher tx performance can be achieved. (currently in alpha)
+    	- currently if a cache write fails the cache is deleted and the node reverts
+	  to using_cache = 0. A daemon would be needed to detect when the .vfc/cache
+	  directory has been removed to pkill vfc, call vfc makecache, and re-launch
+	  the node while keeping track of how often this occurs. (should be rare)
 ~~
 
     NOTES:
