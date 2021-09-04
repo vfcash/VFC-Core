@@ -3064,13 +3064,13 @@ uint isNodeRunning()
 {
     struct sockaddr_in server;
 
-    int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP); //socket(AF_INET, SOCK_STREAM, IPPROTO_TCP); - might be a better option for the mutex
     if(s == -1)
         return 1; //Might be running, we can't risk it, say it's running
 
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons(31963);
+    server.sin_port = htons(31963); // could just use gport here
     
     if(bind(s, (struct sockaddr*)&server, sizeof(server)) == 0)
     {
@@ -5601,7 +5601,7 @@ while(1)
         exit(0);
     }
 
-    //Don't run a node twice
+    //DO NOT run a node twice
     if(isNodeRunning() == 1)
     {
         printf("The VFC node is already running.\n\n");
@@ -5662,18 +5662,6 @@ while(1)
 
 
     //Loop, until sigterm
-    struct sockaddr_in server;
-    int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if(s == -1)
-        return 0;
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons(31963);
-    if(bind(s, (struct sockaddr*)&server, sizeof(server)) < 0)
-    {
-        printf("Sorry the port %u seems to already be in use. Daemon must already be running, good bye.\n\n", gport);
-        exit(0);
-    }
     printf("Waiting for connections...\n\n");
     while(1)
     {
@@ -5681,6 +5669,7 @@ while(1)
         printf("STAT: Peers: %u/%u, UDP Que: %u/%u, Threads: %u/%u, Errors: %'llu\n", countLivingPeers(), num_peers, gQueSize(), MAX_TRANS_QUEUE, threads, max_replay_threads, err);
         sleep(180);
     }
+
     
     //Daemon
     return 0;
