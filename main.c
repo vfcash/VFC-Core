@@ -3551,7 +3551,7 @@ void *networkThread(void *arg)
             else
             {
                 //We allow non-peers to send one authentication request every 24 minutes per IPv4 addess.
-                //Preferably we prefer new peers where added manually via an existing peer on the network.
+                //Preferably we prefer new peers are added manually via an existing peer on the network.
                 const uint64_t nuid = (uint64_t)client.sin_addr.s_addr;
                 if(has_uid(nuid) == 0)
                     add_uid(nuid, 1600); //26 min gap between auth trans per IPv4
@@ -3879,18 +3879,18 @@ void truncate_at_error(const char* file, const size_t num)
 
     If there is a significant amount of duplicate transactions, which is only a risk in multi-threaded mode, then you can
     look at replacing blocks.dat with cblocks.dat and the running a `vfc sync 300` to resync the missing transactions that
-    where indeed unique.
+    are indeed unique.
 
     Or manually replay them.
 
     I should note that rather than freak out over the concept of duplicate transactions in multi-threaded mode, that this
-    release has been rigorously tested against duplicate writes to blocks.dat and to which none where recorded over a seven
-    day period.
+    release has been rigorously tested against duplicate writes to blocks.dat and to which none have been recorded over a
+    seven day period.
 
     Some tips to prevent accidentally creating race conditions:
     1. Do not fork this process after checking argv inputs and executing the runtime threads.
     2. Do not launch this process mutliple times, although the compile.sh creates a 6 minute cron as a "backup" this is
-        a quick and dirty solution, if the isNodeRunning() function where to ever fail, which I cannot guarentee your
+        a quick and dirty solution, if the isNodeRunning() function was ever to fail, which I cannot guarentee your
         network adaptor will always play nicely using ports as a process mutex. Generally speaking ... you should be alright.
     3. Obviously lock and unlock where necessary.
 
