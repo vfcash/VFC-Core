@@ -3072,13 +3072,9 @@ uint isNodeRunning()
     server.sin_addr.s_addr = INADDR_ANY;
     server.sin_port = htons(31963); // could just use gport here
     
-    if(bind(s, (struct sockaddr*)&server, sizeof(server)) == 0)
-    {
-        close(s);
+    if(bind(s, (struct sockaddr*)&server, sizeof(server)) < 0)
         return 0; //Bind success, process not already running.
-    }
 
-    close(s);
     return 1; //Say it's running
 }
 
