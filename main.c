@@ -1966,8 +1966,7 @@ void buildBalanceCache()
                     clearCache();
                     printf("ERROR: forceIncrement() in buildBalanceCache() failed on a timeout for %s.\n", path);
                     err++;
-                    munmap(m, len);
-                    return;
+                    break;
                 }
 
                 sprintf(path, ".vfc/cache/%s", frompub);
@@ -1976,8 +1975,7 @@ void buildBalanceCache()
                     clearCache();
                     printf("ERROR: forceIncrement() in buildBalanceCache() failed on a timeout for %s.\n", path);
                     err++;
-                    munmap(m, len);
-                    return;
+                    break;
                 }
 
                 // printf("INCD: %s : %s : %u\n\n", frompub, topub, t.amount);
@@ -2108,10 +2106,7 @@ void printTop(addr* a, const uint num)
                     printf("OUT,%lu,%s,%'.3f\n", t.uid, pub, toDB(t.amount));
                     tc++;
                     if(tc >= num)
-                    {
-                        munmap(m, len);
-                        return;
-                    }
+                        break;
                 }
                 else if(memcmp(&t.to.key, a->key, ECC_CURVE+1) == 0)
                 {
@@ -2123,10 +2118,7 @@ void printTop(addr* a, const uint num)
                     printf("IN,%lu,%s,%'.3f\n", t.uid, pub, toDB(t.amount));
                     tc++;
                     if(tc >= num)
-                    {
-                        munmap(m, len);
-                        return;
-                    }
+                        break;
                 }
             }
 
@@ -2326,9 +2318,7 @@ void printtrans(uint fromR, uint toR)
                 printf("%d,%lu,%s,%s,%s,%.3f\n", (int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
 
                 if(i >= toR * sizeof(struct trans))
-                {
                     break;
-                }
             }
 
             munmap(m, len);
@@ -2377,8 +2367,7 @@ void findTrans(const uint64_t uid)
                     //printf("%lu: %s > %'.3f\n", t.uid, pub, toDB(t.amount));
                     printf("%d,%lu,%s,%s,%s,%.3f\n",(int)(i/sizeof(struct trans)), t.uid, from, to, sig, toDB(t.amount));
 
-                    munmap(m, len);
-                    return;
+                    break;
                 }
             }
 
@@ -2431,10 +2420,7 @@ void broadcastBalance(addr* from, const uint topx, const uint delay)
                     
                     bc++;
                     if(bc > topx)
-                    {
-                        munmap(m, len);
-                        return;
-                    }
+                        break;
 
                     if(delay != 0)
                         sleep(delay); //prevent double-spend throttling
@@ -2687,7 +2673,6 @@ int hasbalance(const uint64_t uid, addr* from, mval amount)
         {
             if(t.uid == uid)
             {
-                munmap(m, len);
                 // if(amount == 333)
                 // {
                 //     printf("hasbalance(): UID exists failed\n");
