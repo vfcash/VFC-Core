@@ -3849,8 +3849,7 @@ void truncate_at_error(const char* file, const size_t num)
 
                     forceTruncate(file, i);
                     printf("Trunc at: %li\n", i);
-                    munmap(m, len);
-                    return;
+                    break;
                 }
             }
 
