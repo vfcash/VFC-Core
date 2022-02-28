@@ -224,11 +224,11 @@ void makHash(uint8_t *hash, const struct trans* t)
 //Time in microseconds
 uint64_t microtime()
 {
-	struct timeval tv;
-	struct timezone tz;
-	memset(&tz, 0, sizeof(struct timezone));
-	gettimeofday(&tv, &tz);
-	return 1000000 * tv.tv_sec + tv.tv_usec;
+    struct timeval tv;
+    struct timezone tz;
+    memset(&tz, 0, sizeof(struct timezone));
+    gettimeofday(&tv, &tz);
+    return 1000000 * tv.tv_sec + tv.tv_usec;
 }
 
 //Round a floating point
