@@ -3310,7 +3310,8 @@ pthread_mutex_lock(&mutex2);
 if(single_threaded == 0)
 pthread_mutex_unlock(&mutex2);
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            usleep(10000); // Don't thrash the CPU if there's no transactions
+            //usleep(333000); // Don't thrash the CPU if there's no transactions
+            sleep(1);
             continue;
         }
         lreplay = replay[i];
