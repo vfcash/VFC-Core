@@ -2003,7 +2003,7 @@ void dumptrans(const size_t offset)
             close(f);
 
             struct trans t;
-            for(size_t i = 0; i < len; i += sizeof(struct trans))
+            for(size_t i = offset; i < len; i += sizeof(struct trans))
             {
                 memcpy(&t, m+i, sizeof(struct trans));
 
@@ -4640,7 +4640,7 @@ int main(int argc , char *argv[])
         {
             struct stat st;
             stat(CHAIN_FILE, &st);
-            dumptrans((st.st_size / sizeof(struct trans)) - atoi(argv[2]));
+            dumptrans(st.st_size - (atoi(argv[2])*sizeof(struct trans)));
             exit(0);
         }
 
@@ -5667,4 +5667,3 @@ while(1)
     //Daemon
     return 0;
 }
-
