@@ -3297,7 +3297,6 @@ void *processThread(void *arg)
     while(1)
     {
         //See if there is a new transaction to process
-        memset(&t, 0, sizeof(struct trans));
         uint32_t lip=0, lipo=0;
         unsigned char lreplay = 0;
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -5648,3 +5647,4 @@ while(1)
     //Daemon
     return 0;
 }
+
