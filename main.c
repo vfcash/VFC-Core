@@ -275,35 +275,16 @@ void clearCache()
     mkdir(".vfc/cache", CHMOD);
 }
 
-uint qRand(const uint min, const uint umax)
+uint qRand(const uint min, const uint max)
 {
-    static float rndmax = (float)RAND_MAX;
-    static time_t ls = 0;
-    if(time(0) > ls)
-    {
-        srand(time(0));
-        ls = time(0) + 33;
-    }
-    const float rv = (float)rand();
-    const uint max = umax + 1;
-    if(rv == 0)
-        return min;
-    return ( (rv / rndmax) * (max-min) ) + min; //(rand()%(max-min))+min;
+    static float rndmax = 1.f/(float)RAND_MAX;
+    return (((float)rand()) * rndmax) * (max-min) + min;
 }
 
 float qRandFloat(const float min, const float max)
 {
-    static float rndmax = (float)RAND_MAX;
-    static time_t ls = 0;
-    if(time(0) > ls)
-    {
-        srand(time(0));
-        ls = time(0) + 33;
-    }
-    const float rv = (float)rand();
-    if(rv == 0)
-        return min;
-    return ( (rv / rndmax) * (max-min) ) + min;
+    static float rndmax = 1.f/(float)RAND_MAX;
+    return (((float)rand()) * rndmax) * (max-min) + min;
 }
 
 void timestamp()
