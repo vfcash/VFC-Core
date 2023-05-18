@@ -5,6 +5,7 @@
 #include "ecc.h"
 
 #include <string.h>
+#include <x86intrin.h>
 
 #define NUM_ECC_DIGITS (ECC_BYTES/8)
 #define MAX_TRIES 16
@@ -106,32 +107,37 @@ static int getRandomNumber(uint64_t *p_vli)
 
 static int getRandomNumber(uint64_t *p_vli)
 {
-    int l_fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
-    if(l_fd == -1)
-    {
-        l_fd = open("/dev/random", O_RDONLY | O_CLOEXEC);
-        if(l_fd == -1)
-        {
-            return 0;
-        }
-    }
-    
-    char *l_ptr = (char *)p_vli;
-    size_t l_left = ECC_BYTES;
-    while(l_left > 0)
-    {
-        int l_read = read(l_fd, l_ptr, l_left);
-        if(l_read <= 0)
-        { // read failed
-            close(l_fd);
-            return 0;
-        }
-        l_left -= l_read;
-        l_ptr += l_read;
-    }
-    
-    close(l_fd);
+    unsigned long long s = 0;
+    _rdseed64_step(&s);
+    *p_vli = (uint64_t)s;
     return 1;
+    
+//     int l_fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
+//     if(l_fd == -1)
+//     {
+//         l_fd = open("/dev/random", O_RDONLY | O_CLOEXEC);
+//         if(l_fd == -1)
+//         {
+//             return 0;
+//         }
+//     }
+    
+//     char *l_ptr = (char *)p_vli;
+//     size_t l_left = ECC_BYTES;
+//     while(l_left > 0)
+//     {
+//         int l_read = read(l_fd, l_ptr, l_left);
+//         if(l_read <= 0)
+//         { // read failed
+//             close(l_fd);
+//             return 0;
+//         }
+//         l_left -= l_read;
+//         l_ptr += l_read;
+//     }
+    
+//     close(l_fd);
+//     return 1;
 }
 
 #endif /* _WIN32 */
