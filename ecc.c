@@ -5,7 +5,6 @@
 #include "ecc.h"
 
 #include <string.h>
-#include <x86intrin.h>
 
 #define NUM_ECC_DIGITS (ECC_BYTES/8)
 #define MAX_TRIES 16
@@ -97,9 +96,10 @@ static int getRandomNumber(uint64_t *p_vli)
 #else /* _WIN32 */
 
 /* Assume that we are using a POSIX-like system with /dev/urandom or /dev/random. */
-#include <sys/types.h>
-#include <fcntl.h>
-#include <unistd.h>
+// #include <sys/types.h>
+// #include <fcntl.h>
+// #include <unistd.h>
+#include <x86intrin.h>
 
 #ifndef O_CLOEXEC
     #define O_CLOEXEC 0
