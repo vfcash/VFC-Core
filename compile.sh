@@ -16,7 +16,7 @@ rm bin/vfc
 rm /usr/bin/vfc
 rm /usr/bin/vfwallet
 rm /usr/bin/cminer
-gcc -std=gnu99 -Ofast -pthread base58.c crc64.c ecc.c sha3.c main.c -lm -o bin/vfc
+gcc -std=gnu99 -Ofast -mrdseed -pthread base58.c crc64.c ecc.c sha3.c main.c -lm -o bin/vfc
 cp bin/vfc /usr/bin/vfc
 cp bin/vfwallet /usr/bin/vfwallet
 cp bin/cminer /usr/bin/cminer
