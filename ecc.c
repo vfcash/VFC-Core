@@ -109,7 +109,13 @@ static int getRandomNumber(uint64_t *p_vli)
 {
     unsigned long long s = 0;
     _rdseed64_step(&s);
-    *p_vli = (uint64_t)s;
+    p_vli[0] = (uint64_t)s;
+    _rdseed64_step(&s);
+    p_vli[1] = (uint64_t)s;
+    _rdseed64_step(&s);
+    p_vli[2] = (uint64_t)s;
+    _rdseed64_step(&s);
+    p_vli[3] = (uint64_t)s;
     return 1;
     
 //     int l_fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
