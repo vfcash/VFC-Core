@@ -3611,7 +3611,7 @@ void *networkThread(void *arg)
         else if(rb[0] == 'r' && read_size == 1)
         {
             //Is this peer even registered? if not, suspect foul play, not part of verified network.
-            if(peerid != 1)
+            if(peerid != -1)
             {
                 //Launch replay
                 launchReplayThread(client.sin_addr.s_addr);
